@@ -51,20 +51,8 @@ export const About: React.FC = () => {
   ];
 
   return (
-    <section id="about" className="py-24 relative bg-dark-950/60 border-t border-white/5">
+    <section id="about" className="py-16 relative bg-dark-950/60">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        {/* Section Header */}
-        <div className="text-center max-w-3xl mx-auto space-y-3 mb-16">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyber-dim border border-cyber-accent/30 text-cyber-neon text-xs font-mono font-bold tracking-widest uppercase">
-            About Me
-          </div>
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight font-sans">
-            Make Your Dreams Come True With Me
-          </h2>
-          <p className="text-gray-400 text-sm sm:text-base leading-relaxed">
-            Combining technical engineering with educator clarity. Discover how my multi-disciplinary expertise helps individuals level up and businesses scale seamlessly.
-          </p>
-        </div>
 
         {/* 3 Detailed Narrative Cards */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useStore } from '../../store/useStore';
-import { ExternalLink, Layers, Code, Sparkles } from 'lucide-react';
+import { ExternalLink, Layers, Code } from 'lucide-react';
 import { GithubIcon } from '../ui/Icons';
 
 export const Projects: React.FC = () => {
@@ -15,21 +15,8 @@ export const Projects: React.FC = () => {
     : projects.filter((p) => p.tags && p.tags.includes(selectedTag));
 
   return (
-    <section id="projects" className="py-24 relative bg-dark-950 border-t border-white/5">
+    <section id="projects" className="py-16 relative bg-dark-950">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        {/* Section Heading */}
-        <div className="text-center max-w-3xl mx-auto space-y-3 mb-12">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyber-dim border border-cyber-accent/30 text-cyber-neon text-xs font-mono font-bold tracking-widest uppercase">
-            Portfolio Showcase
-          </div>
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight font-sans">
-            Crafted for Performance & Conversions
-          </h2>
-          <p className="text-gray-400 text-sm sm:text-base">
-            Hover over any project mockup to smoothly preview the full long-page layout.
-          </p>
-        </div>
-
         {/* Filter Pills */}
         <div className="flex flex-wrap items-center justify-center gap-2 mb-14">
           {allTags.map((tag) => (
@@ -63,10 +50,6 @@ export const Projects: React.FC = () => {
                   <span className="text-[11px] font-mono text-gray-400 ml-2 truncate max-w-[200px]">
                     {project.title.toLowerCase().replace(/\s+/g, '-')}.fazal.dev
                   </span>
-                </div>
-                <div className="flex items-center gap-1.5 text-[10px] font-mono text-cyber-neon bg-cyber-dim px-2 py-0.5 rounded border border-cyber-accent/20">
-                  <Sparkles className="w-2.5 h-2.5" />
-                  <span>Hover to Scroll Page</span>
                 </div>
               </div>
 

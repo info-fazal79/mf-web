@@ -14,21 +14,8 @@ export const Tutorials: React.FC = () => {
     : tutorials.filter((t) => t.category === activeCategory);
 
   return (
-    <section id="tutorials" className="py-24 relative bg-dark-900/50 border-t border-white/5">
+    <section id="tutorials" className="py-16 relative bg-dark-900/50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        {/* Section Heading */}
-        <div className="text-center max-w-3xl mx-auto space-y-3 mb-12">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyber-dim border border-cyber-accent/30 text-cyber-neon text-xs font-mono font-bold tracking-widest uppercase">
-            Free Video Education
-          </div>
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight font-sans">
-            YouTube Masterclasses & Tutorials
-          </h2>
-          <p className="text-gray-400 text-sm sm:text-base">
-            Watch free, high-impact tutorials designed to fast-track your office productivity, coding, and analytics proficiency.
-          </p>
-        </div>
-
         {/* Category Filter */}
         <div className="flex flex-wrap items-center justify-center gap-2 mb-14">
           {categories.map((cat) => (

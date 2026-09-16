@@ -29,20 +29,8 @@ export const EbookStore: React.FC = () => {
   };
 
   return (
-    <section id="ebooks" className="py-24 relative bg-dark-900/60 border-t border-white/5">
+    <section id="ebooks" className="py-16 relative bg-dark-900/60">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        {/* Section Heading */}
-        <div className="text-center max-w-3xl mx-auto space-y-3 mb-16">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyber-dim border border-cyber-accent/30 text-cyber-neon text-xs font-mono font-bold tracking-widest uppercase">
-            Digital Store
-          </div>
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight font-sans">
-            Authoritative Guides & e-Books
-          </h2>
-          <p className="text-gray-400 text-sm sm:text-base">
-            Curated blueprints, practical templates, and master manuals authored by Muhammad Fazal to accelerate your career.
-          </p>
-        </div>
 
         {/* Books Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
