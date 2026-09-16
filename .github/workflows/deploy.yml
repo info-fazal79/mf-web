@@ -27,7 +27,7 @@ jobs:
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY || 'sb_publishable_J2b_VMJh7CMZXH_jKj3qWQ_6xBA31f8' }}
         run: npm run build
 
-      - name: 🚀 FTP Deploy to cPanel
+      - name: 🚀 FTP Deploy to cPanel (Plain FTP / Bypass Port Block)
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER }}
@@ -35,8 +35,8 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}
           protocol: ftp
           port: 21
-          security: loose
+          security: false
           local-dir: ./dist/
           server-dir: ./
-          timeout: 60000
+          timeout: 120000
           dangerous-clean-slate: false
