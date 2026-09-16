@@ -10,8 +10,7 @@ export const Hero: React.FC = () => {
   const roles = [
     'Data Analyst',
     'WordPress Developer',
-    'Lead Instructor of MS Office',
-    'Workflow Automation Specialist',
+    'MS Office Instructor',
   ];
 
   const currentRole = useTypingEffect(roles, 85, 45, 1800);
@@ -96,15 +95,15 @@ export const Hero: React.FC = () => {
             {/* Quick Metrics */}
             <div className="pt-6 grid grid-cols-3 gap-4 border-t border-white/5 max-w-lg mx-auto lg:mx-0">
               <div>
-                <div className="text-2xl sm:text-3xl font-extrabold font-mono text-white">120+</div>
+                <div className="text-2xl sm:text-3xl font-extrabold font-mono text-white">50+</div>
                 <div className="text-xs text-gray-400 font-mono mt-0.5">Projects Delivered</div>
               </div>
               <div>
-                <div className="text-2xl sm:text-3xl font-extrabold font-mono text-cyber-neon">8+ Yrs</div>
+                <div className="text-2xl sm:text-3xl font-extrabold font-mono text-cyber-neon">4+ Yrs</div>
                 <div className="text-xs text-gray-400 font-mono mt-0.5">MS Office Mastery</div>
               </div>
               <div>
-                <div className="text-2xl sm:text-3xl font-extrabold font-mono text-white">1.5K+</div>
+                <div className="text-2xl sm:text-3xl font-extrabold font-mono text-white">1.2k+</div>
                 <div className="text-xs text-gray-400 font-mono mt-0.5">Students Trained</div>
               </div>
             </div>

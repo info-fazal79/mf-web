@@ -71,7 +71,7 @@ export const Navbar: React.FC = () => {
           )}
         </Link>
 
-        {/* Desktop Nav Links - Clean natural text menu without container */}
+        {/* Desktop Nav Links - Clean natural text menu with neon underline on hover */}
         <nav className="hidden lg:flex items-center gap-8">
           {navLinks.map((link) => (
             <NavLink
@@ -79,14 +79,23 @@ export const Navbar: React.FC = () => {
               to={link.to}
               end={link.to === '/'}
               className={({ isActive }) =>
-                `text-sm font-medium transition-colors ${
+                `text-sm font-medium transition-colors relative py-1.5 group ${
                   isActive
                     ? 'text-cyber-neon font-semibold'
                     : 'text-gray-300 hover:text-cyber-neon'
                 }`
               }
             >
-              {link.name}
+              {({ isActive }) => (
+                <>
+                  <span>{link.name}</span>
+                  <span
+                    className={`absolute bottom-0 left-0 h-0.5 bg-[#00E599] transition-all duration-300 ${
+                      isActive ? 'w-full shadow-neon-sm' : 'w-0 group-hover:w-full'
+                    }`}
+                  />
+                </>
+              )}
             </NavLink>
           ))}
         </nav>
