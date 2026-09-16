@@ -110,8 +110,8 @@ export const Hero: React.FC = () => {
           </div>
 
           {/* Right Column: Hero Image inside Developer Badge Frame */}
-          <div className="lg:col-span-5 flex justify-center">
-            <div className="relative w-72 sm:w-80 md:w-96">
+          <div className="lg:col-span-5 flex justify-center lg:justify-end">
+            <div className="relative w-72 sm:w-80 md:w-96 lg:ml-auto">
               {/* Outer Glowing Cyber Border */}
               <div className="absolute -inset-2 rounded-3xl bg-gradient-to-tr from-cyber-accent/40 via-emerald-400/20 to-cyber-neon/60 blur-xl opacity-75 animate-pulse-glow" />
 
