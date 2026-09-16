@@ -60,54 +60,39 @@ export const Navbar: React.FC = () => {
               className="h-auto object-contain transition-transform group-hover:scale-105"
             />
           ) : (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2.5">
               <div className="w-9 h-9 rounded-xl bg-dark-900 border border-cyber-accent/40 flex items-center justify-center shadow-neon-sm group-hover:border-cyber-accent transition-all">
                 <span className="font-mono text-cyber-neon font-black text-lg">F</span>
               </div>
-              <div className="flex flex-col">
-                <span className="text-xl font-bold tracking-wider font-mono bg-gradient-to-r from-white via-gray-200 to-cyber-neon bg-clip-text text-transparent group-hover:text-cyber-neon transition-colors">
-                  {siteSettings.logo_text || 'FAZAL'}
-                </span>
-                <span className="text-[10px] text-gray-400 font-mono tracking-widest uppercase -mt-1 flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-cyber-accent animate-ping" />
-                  Portfolio & Store
-                </span>
-              </div>
+              <span className="text-xl font-bold tracking-wider font-mono bg-gradient-to-r from-white via-gray-200 to-cyber-neon bg-clip-text text-transparent group-hover:text-cyber-neon transition-colors">
+                {siteSettings.logo_text || 'FAZAL'}
+              </span>
             </div>
           )}
         </Link>
 
-        {/* Desktop Nav Links */}
-        <nav className="hidden lg:flex items-center gap-7 glass-panel px-6 py-2 rounded-full border border-white/5 shadow-inner">
+        {/* Desktop Nav Links - Clean natural text menu without container */}
+        <nav className="hidden lg:flex items-center gap-8">
           {navLinks.map((link) => (
             <NavLink
               key={link.name}
               to={link.to}
               end={link.to === '/'}
               className={({ isActive }) =>
-                `text-sm font-medium transition-all relative py-1 group ${
+                `text-sm font-medium transition-colors ${
                   isActive
-                    ? 'text-cyber-neon font-bold text-glow'
+                    ? 'text-cyber-neon font-semibold'
                     : 'text-gray-300 hover:text-cyber-neon'
                 }`
               }
             >
-              {({ isActive }) => (
-                <>
-                  <span>{link.name}</span>
-                  <span
-                    className={`absolute bottom-0 left-0 h-0.5 bg-cyber-accent transition-all duration-300 ${
-                      isActive ? 'w-full shadow-neon-sm' : 'w-0 group-hover:w-full'
-                    }`}
-                  />
-                </>
-              )}
+              {link.name}
             </NavLink>
           ))}
         </nav>
 
         {/* Right Header Actions */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4">
           {/* Admin shortcut if logged in */}
           {isAdminAuthenticated && (
             <Link
@@ -120,19 +105,19 @@ export const Navbar: React.FC = () => {
             </Link>
           )}
 
-          {/* Cart Trigger */}
-          <button
-            onClick={() => setIsCartOpen(true)}
-            className="relative p-2.5 rounded-xl bg-dark-900/90 border border-white/10 hover:border-cyber-accent/50 text-gray-300 hover:text-cyber-neon transition-all group"
-            aria-label="View Shopping Cart"
-          >
-            <ShoppingBag className="w-5 h-5 transition-transform group-hover:scale-110" />
-            {totalCartCount > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 min-w-5 h-5 px-1 rounded-full bg-cyber-accent text-dark-950 text-xs font-bold flex items-center justify-center shadow-neon-sm animate-pulse">
+          {/* Cart Trigger - only visible when totalCartCount > 0, simple icon link without border or background */}
+          {totalCartCount > 0 && (
+            <button
+              onClick={() => setIsCartOpen(true)}
+              className="relative p-1.5 text-gray-300 hover:text-cyber-neon transition-colors group"
+              aria-label="View Shopping Cart"
+            >
+              <ShoppingBag className="w-5 h-5 transition-transform group-hover:scale-110" />
+              <span className="absolute -top-1 -right-1.5 min-w-4 h-4 px-1 rounded-full bg-cyber-accent text-dark-950 text-[10px] font-bold flex items-center justify-center shadow-neon-sm animate-pulse">
                 {totalCartCount}
               </span>
-            )}
-          </button>
+            </button>
+          )}
 
           {/* Consultation Neon CTA */}
           <button
@@ -146,7 +131,7 @@ export const Navbar: React.FC = () => {
           {/* Mobile Menu Toggle */}
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="lg:hidden p-2.5 rounded-xl bg-dark-900 border border-white/10 text-gray-300 hover:text-white"
+            className="lg:hidden p-2 text-gray-300 hover:text-white"
             aria-label="Toggle navigation menu"
           >
             {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -165,10 +150,10 @@ export const Navbar: React.FC = () => {
                 end={link.to === '/'}
                 onClick={() => setIsMobileMenuOpen(false)}
                 className={({ isActive }) =>
-                  `flex items-center justify-between py-2.5 px-3 rounded-xl text-sm font-mono border transition-all ${
+                  `flex items-center justify-between py-2 text-sm font-medium transition-colors ${
                     isActive
-                      ? 'bg-cyber-dim border-cyber-accent/40 text-cyber-neon font-bold'
-                      : 'border-transparent text-gray-300 hover:text-white hover:bg-dark-900'
+                      ? 'text-cyber-neon font-bold'
+                      : 'text-gray-300 hover:text-cyber-neon'
                   }`
                 }
               >
@@ -177,7 +162,7 @@ export const Navbar: React.FC = () => {
               </NavLink>
             ))}
 
-            <div className="pt-3 border-t border-white/10 flex flex-col gap-3">
+            <div className="pt-4 border-t border-white/10 flex flex-col gap-3">
               <button
                 onClick={() => {
                   setIsMobileMenuOpen(false);
@@ -188,14 +173,16 @@ export const Navbar: React.FC = () => {
                 <MessageSquareQuote className="w-4 h-4" />
                 <span>Get Consultation</span>
               </button>
-              <Link
-                to="/admin"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-dark-900 border border-white/10 text-gray-400 hover:text-cyber-neon text-sm font-mono"
-              >
-                <Shield className="w-4 h-4" />
-                <span>Admin Dashboard</span>
-              </Link>
+              {isAdminAuthenticated && (
+                <Link
+                  to="/admin"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-dark-900 border border-white/10 text-gray-400 hover:text-cyber-neon text-sm font-mono"
+                >
+                  <Shield className="w-4 h-4" />
+                  <span>Admin Dashboard</span>
+                </Link>
+              )}
             </div>
           </div>
         </div>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowUp, Mail, Heart, CheckCircle2 } from 'lucide-react';
+import { ArrowUp, Mail, CheckCircle2 } from 'lucide-react';
 import { GithubIcon, LinkedinIcon, YoutubeIcon, FacebookIcon } from '../ui/Icons';
 import { useStore } from '../../store/useStore';
 import { Link } from 'react-router-dom';
@@ -207,28 +207,17 @@ export const Footer: React.FC = () => {
           </div>
         </div>
 
-        {/* Bottom Bar with Copyright & Admin Link */}
+        {/* Bottom Bar with Copyright & Top Button */}
         <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-500">
-          <div className="flex items-center gap-2">
-            <span>© {new Date().getFullYear()} Muhammad Fazal. All rights reserved.</span>
-            <span>•</span>
-            <span className="flex items-center gap-1">
-              Crafted with <Heart className="w-3 h-3 text-red-500 fill-red-500" /> & Cyber Neon
-            </span>
-          </div>
-          <div className="flex items-center gap-6">
-            <Link to="/admin" className="hover:text-cyber-neon transition-colors font-mono">
-              Admin Portal
-            </Link>
-            <button
-              onClick={scrollToTop}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-dark-900 border border-white/10 hover:border-cyber-accent/50 text-gray-300 hover:text-cyber-neon transition-all"
-              aria-label="Back to top"
-            >
-              <span>Top</span>
-              <ArrowUp className="w-3.5 h-3.5" />
-            </button>
-          </div>
+          <p>© {new Date().getFullYear()} Muhammad Fazal. All rights reserved.</p>
+          <button
+            onClick={scrollToTop}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-dark-900 border border-white/10 hover:border-cyber-accent/50 text-gray-300 hover:text-cyber-neon transition-all"
+            aria-label="Back to top"
+          >
+            <span>Top</span>
+            <ArrowUp className="w-3.5 h-3.5" />
+          </button>
         </div>
       </div>
     </footer>
