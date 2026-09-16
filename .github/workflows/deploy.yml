@@ -19,7 +19,7 @@ jobs:
           cache: 'npm'
 
       - name: 📦 Install Dependencies
-        run: npm ci
+        run: npm install
 
       - name: 🏗️ Build Project with Supabase Env
         env:
@@ -33,6 +33,10 @@ jobs:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftp
+          port: 21
+          security: loose
           local-dir: ./dist/
           server-dir: ./
+          timeout: 60000
           dangerous-clean-slate: false
