@@ -95,7 +95,7 @@ export const BlogPage: React.FC = () => {
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredPosts.map((post) => {
                 const postCommentsCount = comments.filter(
                   (c) => c.post_id === post.id && c.is_approved
