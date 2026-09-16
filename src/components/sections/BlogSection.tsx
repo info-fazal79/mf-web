@@ -1,10 +1,11 @@
 import React from 'react';
 import { useStore } from '../../store/useStore';
 import { formatDate } from '../../lib/utils';
-import { Calendar, Clock, ArrowRight, BookOpen, MessageSquare } from 'lucide-react';
+import { Calendar, Clock, ArrowRight, MessageSquare, Tag } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 export const BlogSection: React.FC = () => {
-  const { posts, setActiveBlogPost, comments } = useStore();
+  const { posts, comments } = useStore();
 
   const publishedPosts = posts.filter((p) => p.published);
 
@@ -12,16 +13,22 @@ export const BlogSection: React.FC = () => {
     <section id="blog" className="py-24 relative bg-dark-950 border-t border-white/5">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         {/* Section Heading */}
-        <div className="text-center max-w-3xl mx-auto space-y-3 mb-16">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyber-dim border border-cyber-accent/30 text-cyber-neon text-xs font-mono font-bold tracking-widest uppercase">
-            Knowledge Base
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-12">
+          <div>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyber-dim border border-cyber-accent/30 text-cyber-neon text-xs font-mono font-bold tracking-widest uppercase">
+              Knowledge Base
+            </div>
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight font-sans mt-2">
+              Insights, Articles & Case Studies
+            </h2>
           </div>
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight font-sans">
-            Insights, Articles & Case Studies
-          </h2>
-          <p className="text-gray-400 text-sm sm:text-base">
-            In-depth guides on WordPress speed architecture, Google Apps Script automation, and data productivity.
-          </p>
+          <Link
+            to="/blog"
+            className="inline-flex items-center gap-1.5 text-xs font-mono font-bold text-cyber-neon hover:underline"
+          >
+            <span>View All Articles</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
         </div>
 
         {/* Blog Posts Grid */}
@@ -32,10 +39,10 @@ export const BlogSection: React.FC = () => {
             ).length;
 
             return (
-              <div
+              <Link
                 key={post.id}
-                onClick={() => setActiveBlogPost(post)}
-                className="group glass-panel rounded-2xl border border-white/10 hover:border-cyber-accent/40 transition-all duration-300 overflow-hidden cursor-pointer flex flex-col justify-between hover:-translate-y-1.5 shadow-2xl"
+                to={`/blog/${post.slug || post.id}`}
+                className="group glass-panel rounded-2xl border border-white/10 hover:border-cyber-accent/40 transition-all duration-300 overflow-hidden flex flex-col justify-between hover:-translate-y-1.5 shadow-2xl"
               >
                 {/* Featured Image */}
                 <div className="relative aspect-[16/9] bg-dark-950 overflow-hidden border-b border-white/10">
@@ -97,7 +104,7 @@ export const BlogSection: React.FC = () => {
                     </span>
                   </div>
                 </div>
-              </div>
+              </Link>
             );
           })}
         </div>

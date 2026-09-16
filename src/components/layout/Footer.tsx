@@ -119,19 +119,22 @@ export const Footer: React.FC = () => {
             </h4>
             <ul className="space-y-2.5 text-sm text-gray-400">
               <li>
-                <a href="#about" className="hover:text-cyber-neon transition-colors">About Muhammad</a>
+                <Link to="/about" className="hover:text-cyber-neon transition-colors">About Muhammad</Link>
               </li>
               <li>
-                <a href="#projects" className="hover:text-cyber-neon transition-colors">Featured Projects</a>
+                <Link to="/projects" className="hover:text-cyber-neon transition-colors">Featured Projects</Link>
               </li>
               <li>
-                <a href="#ebooks" className="hover:text-cyber-neon transition-colors">Digital eBooks Store</a>
+                <Link to="/ebooks" className="hover:text-cyber-neon transition-colors">Digital eBooks Store</Link>
               </li>
               <li>
-                <a href="#tutorials" className="hover:text-cyber-neon transition-colors">Video Tutorials</a>
+                <Link to="/tutorials" className="hover:text-cyber-neon transition-colors">Video Tutorials</Link>
               </li>
               <li>
-                <a href="#blog" className="hover:text-cyber-neon transition-colors">Tech & Productivity Blog</a>
+                <Link to="/blog" className="hover:text-cyber-neon transition-colors">Tech & Productivity Blog</Link>
+              </li>
+              <li>
+                <Link to="/contact" className="hover:text-cyber-neon transition-colors">Contact & Consultation</Link>
               </li>
             </ul>
           </div>

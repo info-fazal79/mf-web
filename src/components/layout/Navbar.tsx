@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ShoppingBag, MessageSquareQuote, Menu, X, Shield, Sparkles } from 'lucide-react';
 import { useStore } from '../../store/useStore';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, NavLink, useLocation } from 'react-router-dom';
 
 export const Navbar: React.FC = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -26,34 +26,27 @@ export const Navbar: React.FC = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const navLinks = [
-    { name: 'Home', href: '#home' },
-    { name: 'About', href: '#about' },
-    { name: 'e-Book', href: '#ebooks' },
-    { name: 'Projects', href: '#projects' },
-    { name: 'Tutorials', href: '#tutorials' },
-    { name: 'Blog', href: '#blog' },
-    { name: 'Contact', href: '#contact' },
-  ];
-
-  const handleNavClick = (href: string) => {
+  // Close mobile menu on route change
+  useEffect(() => {
     setIsMobileMenuOpen(false);
-    if (location.pathname !== '/') {
-      window.location.href = `/${href}`;
-      return;
-    }
-    const element = document.querySelector(href);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
-    }
-  };
+  }, [location.pathname]);
+
+  const navLinks = [
+    { name: 'Home', to: '/' },
+    { name: 'About', to: '/about' },
+    { name: 'e-Book', to: '/ebooks' },
+    { name: 'Projects', to: '/projects' },
+    { name: 'Tutorials', to: '/tutorials' },
+    { name: 'Blog', to: '/blog' },
+    { name: 'Contact', to: '/contact' },
+  ];
 
   return (
     <header
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
         isScrolled
-          ? 'bg-dark-950/85 backdrop-blur-xl border-b border-white/10 py-3 shadow-2xl'
-          : 'bg-transparent py-5'
+          ? 'bg-dark-950/90 backdrop-blur-xl border-b border-white/10 py-3 shadow-2xl'
+          : 'bg-dark-950/60 backdrop-blur-md border-b border-white/5 py-4'
       }`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
@@ -85,16 +78,31 @@ export const Navbar: React.FC = () => {
         </Link>
 
         {/* Desktop Nav Links */}
-        <nav className="hidden lg:flex items-center gap-8 glass-panel px-6 py-2 rounded-full border border-white/5 shadow-inner">
+        <nav className="hidden lg:flex items-center gap-7 glass-panel px-6 py-2 rounded-full border border-white/5 shadow-inner">
           {navLinks.map((link) => (
-            <button
+            <NavLink
               key={link.name}
-              onClick={() => handleNavClick(link.href)}
-              className="text-sm font-medium text-gray-300 hover:text-cyber-neon transition-all relative py-1 group"
+              to={link.to}
+              end={link.to === '/'}
+              className={({ isActive }) =>
+                `text-sm font-medium transition-all relative py-1 group ${
+                  isActive
+                    ? 'text-cyber-neon font-bold text-glow'
+                    : 'text-gray-300 hover:text-cyber-neon'
+                }`
+              }
             >
-              {link.name}
-              <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-cyber-accent transition-all duration-300 group-hover:w-full" />
-            </button>
+              {({ isActive }) => (
+                <>
+                  <span>{link.name}</span>
+                  <span
+                    className={`absolute bottom-0 left-0 h-0.5 bg-cyber-accent transition-all duration-300 ${
+                      isActive ? 'w-full shadow-neon-sm' : 'w-0 group-hover:w-full'
+                    }`}
+                  />
+                </>
+              )}
+            </NavLink>
           ))}
         </nav>
 
@@ -148,24 +156,34 @@ export const Navbar: React.FC = () => {
 
       {/* Mobile Drawer Menu */}
       {isMobileMenuOpen && (
-        <div className="lg:hidden fixed inset-x-0 top-[65px] bg-dark-950/95 backdrop-blur-2xl border-b border-white/10 px-6 py-6 shadow-2xl transition-all">
-          <div className="flex flex-col gap-4">
+        <div className="lg:hidden fixed inset-x-0 top-[69px] bg-dark-950/95 backdrop-blur-2xl border-b border-white/10 px-6 py-6 shadow-2xl transition-all max-h-[85vh] overflow-y-auto">
+          <div className="flex flex-col gap-3">
             {navLinks.map((link) => (
-              <button
+              <NavLink
                 key={link.name}
-                onClick={() => handleNavClick(link.href)}
-                className="text-left py-2 text-base font-medium text-gray-200 hover:text-cyber-neon border-b border-white/5"
+                to={link.to}
+                end={link.to === '/'}
+                onClick={() => setIsMobileMenuOpen(false)}
+                className={({ isActive }) =>
+                  `flex items-center justify-between py-2.5 px-3 rounded-xl text-sm font-mono border transition-all ${
+                    isActive
+                      ? 'bg-cyber-dim border-cyber-accent/40 text-cyber-neon font-bold'
+                      : 'border-transparent text-gray-300 hover:text-white hover:bg-dark-900'
+                  }`
+                }
               >
-                {link.name}
-              </button>
+                <span>{link.name}</span>
+                <span className="text-xs text-cyber-neon">&rarr;</span>
+              </NavLink>
             ))}
-            <div className="pt-2 flex flex-col gap-3">
+
+            <div className="pt-3 border-t border-white/10 flex flex-col gap-3">
               <button
                 onClick={() => {
                   setIsMobileMenuOpen(false);
                   setIsConsultationOpen(true);
                 }}
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-cyber-accent text-dark-950 font-semibold shadow-neon-sm"
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-cyber-accent text-dark-950 font-semibold shadow-neon-sm font-mono text-sm"
               >
                 <MessageSquareQuote className="w-4 h-4" />
                 <span>Get Consultation</span>

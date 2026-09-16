@@ -1,27 +1,43 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { MainLayout } from './components/layout/MainLayout';
 import { HomePage } from './pages/HomePage';
+import { AboutPage } from './pages/AboutPage';
+import { EbooksPage } from './pages/EbooksPage';
+import { ProjectsPage } from './pages/ProjectsPage';
+import { TutorialsPage } from './pages/TutorialsPage';
+import { BlogPage } from './pages/BlogPage';
+import { BlogPostPage } from './pages/BlogPostPage';
+import { ContactPage } from './pages/ContactPage';
 import { AdminLogin } from './pages/admin/AdminLogin';
 import { AdminLayout } from './pages/admin/AdminLayout';
 import { useSupabaseData } from './hooks/useSupabaseData';
 
 export const App: React.FC = () => {
-  // Sync Supabase backend data or fallback on mount
+  // Synchronize Supabase database entities on mount
   useSupabaseData();
 
   return (
     <BrowserRouter>
       <Routes>
-        {/* Public Portfolio & Digital Store */}
-        <Route path="/" element={<HomePage />} />
+        {/* Public Multi-Page Routes Wrapped in MainLayout */}
+        <Route path="/" element={<MainLayout />}>
+          <Route index element={<HomePage />} />
+          <Route path="about" element={<AboutPage />} />
+          <Route path="ebooks" element={<EbooksPage />} />
+          <Route path="store" element={<Navigate to="/ebooks" replace />} />
+          <Route path="projects" element={<ProjectsPage />} />
+          <Route path="tutorials" element={<TutorialsPage />} />
+          <Route path="blog" element={<BlogPage />} />
+          <Route path="blog/:slug" element={<BlogPostPage />} />
+          <Route path="contact" element={<ContactPage />} />
+        </Route>
 
-        {/* Admin Authentication */}
+        {/* Admin Portal Routes */}
         <Route path="/admin/login" element={<AdminLogin />} />
-
-        {/* Secure Admin Dashboard */}
         <Route path="/admin/*" element={<AdminLayout />} />
 
-        {/* Fallback to Home */}
+        {/* Catch-all Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

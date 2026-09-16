@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { Download, Sparkles, Terminal, Code2, ArrowRight, ShieldCheck } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { useTypingEffect } from '../../hooks/useTypingEffect';
@@ -83,13 +84,13 @@ export const Hero: React.FC = () => {
               </button>
 
               {/* e-Book Store CTA */}
-              <a
-                href="#ebooks"
+              <Link
+                to="/ebooks"
                 className="inline-flex items-center gap-1.5 px-4 py-3.5 text-gray-400 hover:text-cyber-neon font-mono text-sm transition-colors group"
               >
                 <span>Digital eBooks</span>
                 <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-              </a>
+              </Link>
             </div>
 
             {/* Quick Metrics */}
