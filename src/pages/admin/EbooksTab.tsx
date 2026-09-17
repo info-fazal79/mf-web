@@ -66,7 +66,8 @@ export const EbooksTab: React.FC = () => {
       updateBook(editingBook.id, updated);
 
       if (isSupabaseConfigured()) {
-        await supabase.from('books').update(updated).eq('id', editingBook.id);
+        const { error } = await supabase.from('books').update(updated).eq('id', editingBook.id);
+        if (error) console.error('Supabase book update error:', error);
       }
 
       addToast({
@@ -76,8 +77,8 @@ export const EbooksTab: React.FC = () => {
       });
     } else {
       // Add
-      const newBook: Book = {
-        id: 'book-' + Date.now(),
+      let createdBook: Book = {
+        id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : 'book-' + Date.now(),
         ...form,
         slug,
         price: form.is_free ? 0 : Number(form.price),
@@ -86,11 +87,27 @@ export const EbooksTab: React.FC = () => {
         created_at: new Date().toISOString(),
       };
 
-      addBook(newBook);
-
       if (isSupabaseConfigured()) {
-        await supabase.from('books').insert([newBook]);
+        const insertPayload: any = {
+          title: form.title,
+          slug,
+          description: form.description,
+          price: form.is_free ? 0 : Number(form.price),
+          is_free: form.is_free,
+          cover_url: form.cover_url,
+          file_url: form.file_url,
+          pages: form.pages,
+          featured: true,
+        };
+        const { data, error } = await supabase.from('books').insert([insertPayload]).select().single();
+        if (error) {
+          console.error('Supabase book insert error:', error);
+        } else if (data) {
+          createdBook = data as Book;
+        }
       }
+
+      addBook(createdBook);
 
       addToast({
         title: 'Book Created',
@@ -107,7 +124,8 @@ export const EbooksTab: React.FC = () => {
 
     deleteBook(id);
     if (isSupabaseConfigured()) {
-      await supabase.from('books').delete().eq('id', id);
+      const { error } = await supabase.from('books').delete().eq('id', id);
+      if (error) console.error('Supabase book delete error:', error);
     }
 
     addToast({

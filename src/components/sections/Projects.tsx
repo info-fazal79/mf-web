@@ -1,11 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useStore } from '../../store/useStore';
 import { ExternalLink, Layers, Code } from 'lucide-react';
 import { GithubIcon } from '../ui/Icons';
+import { supabase, isSupabaseConfigured } from '../../lib/supabase';
+import { Project } from '../../types';
 
 export const Projects: React.FC = () => {
-  const { projects } = useStore();
+  const { projects, setProjects } = useStore();
   const [selectedTag, setSelectedTag] = useState<string>('All');
+
+  useEffect(() => {
+    async function fetchLiveProjects() {
+      if (!isSupabaseConfigured()) return;
+      try {
+        const { data } = await supabase.from('projects').select('*').order('sort_order', { ascending: true });
+        if (data) setProjects(data as Project[]);
+      } catch (err) {
+        console.warn('Live fetch for projects error:', err);
+      }
+    }
+    fetchLiveProjects();
+  }, [setProjects]);
 
   // Extract unique tags
   const allTags = ['All', ...Array.from(new Set(projects.flatMap((p) => p.tags || [])))];

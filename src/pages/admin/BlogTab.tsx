@@ -78,7 +78,8 @@ export const BlogTab: React.FC = () => {
       updatePost(editingPost.id, updated);
 
       if (isSupabaseConfigured()) {
-        await supabase.from('posts').update(updated).eq('id', editingPost.id);
+        const { error } = await supabase.from('posts').update(updated).eq('id', editingPost.id);
+        if (error) console.error('Supabase post update error:', error);
       }
 
       addToast({
@@ -87,8 +88,8 @@ export const BlogTab: React.FC = () => {
         type: 'success',
       });
     } else {
-      const newPost: BlogPost = {
-        id: 'post-' + Date.now(),
+      let createdPost: BlogPost = {
+        id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : 'post-' + Date.now(),
         title: form.title,
         slug,
         summary: form.summary,
@@ -101,11 +102,27 @@ export const BlogTab: React.FC = () => {
         created_at: new Date().toISOString(),
       };
 
-      addPost(newPost);
-
       if (isSupabaseConfigured()) {
-        await supabase.from('posts').insert([newPost]);
+        const insertPayload: any = {
+          title: form.title,
+          slug,
+          summary: form.summary,
+          content: form.content,
+          category: form.category,
+          tags,
+          featured_image: form.featured_image,
+          published: form.published,
+          read_time: form.read_time,
+        };
+        const { data, error } = await supabase.from('posts').insert([insertPayload]).select().single();
+        if (error) {
+          console.error('Supabase post insert error:', error);
+        } else if (data) {
+          createdPost = data as BlogPost;
+        }
       }
+
+      addPost(createdPost);
 
       addToast({
         title: 'Article Published',
@@ -122,7 +139,8 @@ export const BlogTab: React.FC = () => {
 
     deletePost(id);
     if (isSupabaseConfigured()) {
-      await supabase.from('posts').delete().eq('id', id);
+      const { error } = await supabase.from('posts').delete().eq('id', id);
+      if (error) console.error('Supabase post delete error:', error);
     }
 
     addToast({

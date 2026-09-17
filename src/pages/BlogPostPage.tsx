@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link, Navigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import { formatDate } from '../lib/utils';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
-import { Comment } from '../types';
+import { BlogPost, Comment } from '../types';
 import { 
   Calendar, 
   Clock, 
@@ -19,7 +19,22 @@ import {
 
 export const BlogPostPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
-  const { posts, comments, addComment, addToast } = useStore();
+  const { posts, setPosts, comments, setComments, addComment, addToast } = useStore();
+
+  useEffect(() => {
+    async function fetchLiveSingleBlog() {
+      if (!isSupabaseConfigured()) return;
+      try {
+        const { data: pData } = await supabase.from('posts').select('*').order('created_at', { ascending: false });
+        if (pData) setPosts(pData as BlogPost[]);
+        const { data: cData } = await supabase.from('comments').select('*').order('created_at', { ascending: false });
+        if (cData) setComments(cData as Comment[]);
+      } catch (err) {
+        console.warn('Live fetch for single blog post error:', err);
+      }
+    }
+    fetchLiveSingleBlog();
+  }, [setPosts, setComments]);
 
   const [authorName, setAuthorName] = useState('');
   const [authorEmail, setAuthorEmail] = useState('');

@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link, Navigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
-import { PlaylistVideo } from '../types';
+import { Playlist, PlaylistVideo } from '../types';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { 
   ArrowLeft, 
   Play, 
@@ -17,7 +18,22 @@ import { YoutubeIcon } from '../components/ui/Icons';
 
 export const PlaylistCoursePage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
-  const { playlists, playlistVideos } = useStore();
+  const { playlists, setPlaylists, playlistVideos, setPlaylistVideos } = useStore();
+
+  useEffect(() => {
+    async function fetchCourseData() {
+      if (!isSupabaseConfigured()) return;
+      try {
+        const { data: pData } = await supabase.from('playlists').select('*').order('created_at', { ascending: true });
+        if (pData) setPlaylists(pData as Playlist[]);
+        const { data: vData } = await supabase.from('playlist_videos').select('*').order('order_index', { ascending: true });
+        if (vData) setPlaylistVideos(vData as PlaylistVideo[]);
+      } catch (err) {
+        console.warn('Live fetch for playlist course error:', err);
+      }
+    }
+    fetchCourseData();
+  }, [setPlaylists, setPlaylistVideos]);
 
   // Find playlist by slug
   const playlist = playlists.find((p) => p.slug === slug);

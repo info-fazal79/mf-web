@@ -131,8 +131,8 @@ export const TutorialsTab: React.FC = () => {
         type: 'success',
       });
     } else {
-      const newPlaylist: Playlist = {
-        id: 'pl-' + Date.now(),
+      let createdPlaylist: Playlist = {
+        id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : 'pl-' + Date.now(),
         title: playlistForm.title,
         slug,
         category: playlistForm.category,
@@ -143,11 +143,25 @@ export const TutorialsTab: React.FC = () => {
         created_at: new Date().toISOString(),
       };
 
-      addPlaylist(newPlaylist);
-
       if (isSupabaseConfigured()) {
-        await supabase.from('playlists').insert([newPlaylist]);
+        const insertPayload: any = {
+          title: playlistForm.title,
+          slug,
+          category: playlistForm.category,
+          description: playlistForm.description,
+          thumbnail_url: playlistForm.thumbnail_url || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?q=80&w=800&auto=format&fit=crop',
+          youtube_playlist_url: playlistForm.youtube_playlist_url,
+          video_count: 0,
+        };
+        const { data, error } = await supabase.from('playlists').insert([insertPayload]).select().single();
+        if (error) {
+          console.error('Supabase playlist insert error:', error);
+        } else if (data) {
+          createdPlaylist = data as Playlist;
+        }
       }
+
+      addPlaylist(createdPlaylist);
 
       addToast({
         title: 'Playlist Created',
@@ -165,7 +179,8 @@ export const TutorialsTab: React.FC = () => {
     deletePlaylist(id);
 
     if (isSupabaseConfigured()) {
-      await supabase.from('playlists').delete().eq('id', id);
+      const { error } = await supabase.from('playlists').delete().eq('id', id);
+      if (error) console.error('Supabase playlist delete error:', error);
     }
 
     if (selectedPlaylist?.id === id) {
@@ -235,7 +250,8 @@ export const TutorialsTab: React.FC = () => {
       updatePlaylistVideo(editingVideo.id, updated);
 
       if (isSupabaseConfigured()) {
-        await supabase.from('playlist_videos').update(updated).eq('id', editingVideo.id);
+        const { error } = await supabase.from('playlist_videos').update(updated).eq('id', editingVideo.id);
+        if (error) console.error('Supabase video update error:', error);
       }
 
       addToast({
@@ -244,8 +260,8 @@ export const TutorialsTab: React.FC = () => {
         type: 'success',
       });
     } else {
-      const newVideo: PlaylistVideo = {
-        id: 'pv-' + Date.now(),
+      let createdVideo: PlaylistVideo = {
+        id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : 'pv-' + Date.now(),
         playlist_id: selectedPlaylist.id,
         title: videoForm.title,
         youtube_url: videoForm.youtube_url,
@@ -255,14 +271,27 @@ export const TutorialsTab: React.FC = () => {
         created_at: new Date().toISOString(),
       };
 
-      addPlaylistVideo(newVideo);
-
       if (isSupabaseConfigured()) {
-        await supabase.from('playlist_videos').insert([newVideo]);
-        // Update video_count on Supabase
+        const insertPayload: any = {
+          playlist_id: selectedPlaylist.id,
+          title: videoForm.title,
+          youtube_url: videoForm.youtube_url,
+          youtube_video_id: parsedVideoId,
+          duration: videoForm.duration,
+          order_index: Number(videoForm.order_index),
+        };
+        const { data, error } = await supabase.from('playlist_videos').insert([insertPayload]).select().single();
+        if (error) {
+          console.error('Supabase video insert error:', error);
+        } else if (data) {
+          createdVideo = data as PlaylistVideo;
+        }
+
         const currentCount = playlistVideos.filter((v) => v.playlist_id === selectedPlaylist.id).length + 1;
         await supabase.from('playlists').update({ video_count: currentCount }).eq('id', selectedPlaylist.id);
       }
+
+      addPlaylistVideo(createdVideo);
 
       addToast({
         title: 'Lecture Added',

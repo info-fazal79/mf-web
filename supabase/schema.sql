@@ -193,6 +193,7 @@ CREATE POLICY "Users can update own profile"
   ON public.profiles FOR UPDATE USING (auth.uid() = id);
 
 -- 2. Books Policies (Public can view, Authenticated can manage)
+DROP POLICY IF EXISTS "Allow public read books" ON public.books;
 CREATE POLICY "Allow public read books" 
   ON public.books FOR SELECT USING (true);
 CREATE POLICY "Allow admin manage books" 
@@ -205,6 +206,7 @@ CREATE POLICY "Allow admin manage orders"
   ON public.orders FOR ALL TO authenticated USING (true);
 
 -- 4. Projects Policies (Public can view, Admin can manage)
+DROP POLICY IF EXISTS "Allow public read projects" ON public.projects;
 CREATE POLICY "Allow public read projects" 
   ON public.projects FOR SELECT USING (true);
 CREATE POLICY "Allow admin manage projects" 
@@ -217,20 +219,24 @@ CREATE POLICY "Allow admin manage tutorials"
   ON public.tutorials FOR ALL TO authenticated USING (true);
 
 -- 5.1 Playlists Policies (Public can view, Admin can manage)
+DROP POLICY IF EXISTS "Allow public read playlists" ON public.playlists;
 CREATE POLICY "Allow public read playlists" 
   ON public.playlists FOR SELECT USING (true);
 CREATE POLICY "Allow admin manage playlists" 
   ON public.playlists FOR ALL TO authenticated USING (true);
 
 -- 5.2 Playlist Videos Policies (Public can view, Admin can manage)
+DROP POLICY IF EXISTS "Allow public read playlist_videos" ON public.playlist_videos;
 CREATE POLICY "Allow public read playlist_videos" 
   ON public.playlist_videos FOR SELECT USING (true);
 CREATE POLICY "Allow admin manage playlist_videos" 
   ON public.playlist_videos FOR ALL TO authenticated USING (true);
 
--- 6. Posts Policies (Public can view published, Admin can manage all)
-CREATE POLICY "Allow public read published posts" 
-  ON public.posts FOR SELECT USING (published = true);
+-- 6. Posts Policies (Public can view, Admin can manage all)
+DROP POLICY IF EXISTS "Allow public read published posts" ON public.posts;
+DROP POLICY IF EXISTS "Allow public read posts" ON public.posts;
+CREATE POLICY "Allow public read posts" 
+  ON public.posts FOR SELECT USING (true);
 CREATE POLICY "Allow admin manage all posts" 
   ON public.posts FOR ALL TO authenticated USING (true);
 
@@ -249,7 +255,9 @@ CREATE POLICY "Allow admin manage consultations"
   ON public.consultations FOR ALL TO authenticated USING (true);
 
 -- 9. Site Settings Policies (Public can read, Admin can update)
-CREATE POLICY "Allow public read site settings" 
+DROP POLICY IF EXISTS "Allow public read site settings" ON public.site_settings;
+DROP POLICY IF EXISTS "Allow public read site_settings" ON public.site_settings;
+CREATE POLICY "Allow public read site_settings" 
   ON public.site_settings FOR SELECT USING (true);
 CREATE POLICY "Allow admin update site settings" 
   ON public.site_settings FOR ALL TO authenticated USING (true);

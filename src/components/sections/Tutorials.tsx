@@ -1,12 +1,29 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useStore } from '../../store/useStore';
 import { Play, Video, ArrowRight, ExternalLink } from 'lucide-react';
 import { YoutubeIcon } from '../ui/Icons';
+import { supabase, isSupabaseConfigured } from '../../lib/supabase';
+import { Playlist, PlaylistVideo } from '../../types';
 
 export const Tutorials: React.FC = () => {
-  const { playlists, playlistVideos } = useStore();
+  const { playlists, setPlaylists, playlistVideos, setPlaylistVideos } = useStore();
   const [activeCategory, setActiveCategory] = useState<string>('All');
+
+  useEffect(() => {
+    async function fetchLivePlaylists() {
+      if (!isSupabaseConfigured()) return;
+      try {
+        const { data: pData } = await supabase.from('playlists').select('*').order('created_at', { ascending: true });
+        if (pData) setPlaylists(pData as Playlist[]);
+        const { data: vData } = await supabase.from('playlist_videos').select('*').order('order_index', { ascending: true });
+        if (vData) setPlaylistVideos(vData as PlaylistVideo[]);
+      } catch (err) {
+        console.warn('Live fetch for playlists error:', err);
+      }
+    }
+    fetchLivePlaylists();
+  }, [setPlaylists, setPlaylistVideos]);
 
   const categories = ['All', 'MS Office', 'WordPress', 'Automation', 'Data Analysis'];
 

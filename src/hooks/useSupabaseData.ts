@@ -35,63 +35,63 @@ export function useSupabaseData() {
           .from('books')
           .select('*')
           .order('created_at', { ascending: false });
-        if (booksData && booksData.length > 0) setBooks(booksData as Book[]);
+        if (booksData) setBooks(booksData as Book[]);
 
         // Fetch Projects
         const { data: projectsData } = await supabase
           .from('projects')
           .select('*')
           .order('sort_order', { ascending: true });
-        if (projectsData && projectsData.length > 0) setProjects(projectsData as Project[]);
+        if (projectsData) setProjects(projectsData as Project[]);
 
         // Fetch Tutorials
         const { data: tutsData } = await supabase
           .from('tutorials')
           .select('*')
           .order('created_at', { ascending: false });
-        if (tutsData && tutsData.length > 0) setTutorials(tutsData as Tutorial[]);
+        if (tutsData) setTutorials(tutsData as Tutorial[]);
 
         // Fetch Playlists
         const { data: playlistsData } = await supabase
           .from('playlists')
           .select('*')
-          .order('created_at', { ascending: false });
-        if (playlistsData && playlistsData.length > 0) setPlaylists(playlistsData as Playlist[]);
+          .order('created_at', { ascending: true });
+        if (playlistsData) setPlaylists(playlistsData as Playlist[]);
 
         // Fetch Playlist Videos
         const { data: playlistVideosData } = await supabase
           .from('playlist_videos')
           .select('*')
           .order('order_index', { ascending: true });
-        if (playlistVideosData && playlistVideosData.length > 0) setPlaylistVideos(playlistVideosData as PlaylistVideo[]);
+        if (playlistVideosData) setPlaylistVideos(playlistVideosData as PlaylistVideo[]);
 
         // Fetch Posts
         const { data: postsData } = await supabase
           .from('posts')
           .select('*')
           .order('created_at', { ascending: false });
-        if (postsData && postsData.length > 0) setPosts(postsData as BlogPost[]);
+        if (postsData) setPosts(postsData as BlogPost[]);
 
         // Fetch Comments
         const { data: commentsData } = await supabase
           .from('comments')
           .select('*')
           .order('created_at', { ascending: false });
-        if (commentsData && commentsData.length > 0) setComments(commentsData as Comment[]);
+        if (commentsData) setComments(commentsData as Comment[]);
 
         // Fetch Consultations
         const { data: consultData } = await supabase
           .from('consultations')
           .select('*')
           .order('created_at', { ascending: false });
-        if (consultData && consultData.length > 0) setConsultations(consultData as Consultation[]);
+        if (consultData) setConsultations(consultData as Consultation[]);
 
         // Fetch Orders
         const { data: ordersData } = await supabase
           .from('orders')
           .select('*, book:books(*)')
           .order('created_at', { ascending: false });
-        if (ordersData && ordersData.length > 0) setOrders(ordersData as Order[]);
+        if (ordersData) setOrders(ordersData as Order[]);
 
         // Fetch Site Settings
         const { data: settingsData } = await supabase

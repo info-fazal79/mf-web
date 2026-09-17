@@ -1,13 +1,30 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useStore } from '../store/useStore';
 import { formatDate } from '../lib/utils';
 import { Calendar, Clock, ArrowRight, MessageSquare, Search, BookOpen, Tag } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { BlogPost, Comment } from '../types';
 
 export const BlogPage: React.FC = () => {
-  const { posts, comments } = useStore();
+  const { posts, setPosts, comments, setComments } = useStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
+
+  useEffect(() => {
+    async function fetchLiveBlog() {
+      if (!isSupabaseConfigured()) return;
+      try {
+        const { data: pData } = await supabase.from('posts').select('*').order('created_at', { ascending: false });
+        if (pData) setPosts(pData as BlogPost[]);
+        const { data: cData } = await supabase.from('comments').select('*').order('created_at', { ascending: false });
+        if (cData) setComments(cData as Comment[]);
+      } catch (err) {
+        console.warn('Live fetch for blog posts error:', err);
+      }
+    }
+    fetchLiveBlog();
+  }, [setPosts, setComments]);
 
   const publishedPosts = posts.filter((p) => p.published);
 

@@ -66,10 +66,12 @@ export const ProjectsTab: React.FC = () => {
         tags,
         sort_order: Number(form.sort_order),
       };
+
       updateProject(editingProject.id, updated);
 
       if (isSupabaseConfigured()) {
-        await supabase.from('projects').update(updated).eq('id', editingProject.id);
+        const { error } = await supabase.from('projects').update(updated).eq('id', editingProject.id);
+        if (error) console.error('Supabase project update error:', error);
       }
 
       addToast({
@@ -78,8 +80,8 @@ export const ProjectsTab: React.FC = () => {
         type: 'success',
       });
     } else {
-      const newProj: Project = {
-        id: 'proj-' + Date.now(),
+      let createdProj: Project = {
+        id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : 'proj-' + Date.now(),
         title: form.title,
         description: form.description,
         image_url: form.image_url,
@@ -91,11 +93,26 @@ export const ProjectsTab: React.FC = () => {
         created_at: new Date().toISOString(),
       };
 
-      addProject(newProj);
-
       if (isSupabaseConfigured()) {
-        await supabase.from('projects').insert([newProj]);
+        const insertPayload: any = {
+          title: form.title,
+          description: form.description,
+          image_url: form.image_url,
+          live_url: form.live_url,
+          github_url: form.github_url,
+          tags,
+          featured: true,
+          sort_order: Number(form.sort_order),
+        };
+        const { data, error } = await supabase.from('projects').insert([insertPayload]).select().single();
+        if (error) {
+          console.error('Supabase project insert error:', error);
+        } else if (data) {
+          createdProj = data as Project;
+        }
       }
+
+      addProject(createdProj);
 
       addToast({
         title: 'Project Created',
@@ -111,8 +128,10 @@ export const ProjectsTab: React.FC = () => {
     if (!window.confirm(`Delete project "${title}"?`)) return;
 
     deleteProject(id);
+
     if (isSupabaseConfigured()) {
-      await supabase.from('projects').delete().eq('id', id);
+      const { error } = await supabase.from('projects').delete().eq('id', id);
+      if (error) console.error('Supabase project delete error:', error);
     }
 
     addToast({

@@ -1,16 +1,31 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useStore } from '../../store/useStore';
 import { formatPrice } from '../../lib/utils';
 import { BookOpen, ShoppingBag, Download, Sparkles, Check, FileText } from 'lucide-react';
 import { Book } from '../../types';
+import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 
 export const EbookStore: React.FC = () => {
   const {
     books,
+    setBooks,
     addToCart,
     cart,
     setCheckoutSuccessOrder,
   } = useStore();
+
+  useEffect(() => {
+    async function fetchLiveBooks() {
+      if (!isSupabaseConfigured()) return;
+      try {
+        const { data } = await supabase.from('books').select('*').order('created_at', { ascending: false });
+        if (data) setBooks(data as Book[]);
+      } catch (err) {
+        console.warn('Live fetch for books error:', err);
+      }
+    }
+    fetchLiveBooks();
+  }, [setBooks]);
 
   const handleInstantFreeDownload = (book: Book) => {
     // Directly open checkout success modal with this free book
