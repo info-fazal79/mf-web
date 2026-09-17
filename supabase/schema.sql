@@ -73,6 +73,31 @@ CREATE TABLE IF NOT EXISTS public.tutorials (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- 5.1 PLAYLISTS TABLE
+CREATE TABLE IF NOT EXISTS public.playlists (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title TEXT NOT NULL,
+  slug TEXT UNIQUE NOT NULL,
+  description TEXT,
+  category TEXT NOT NULL, -- e.g., 'MS Office', 'WordPress', 'Automation', 'Data Analysis'
+  thumbnail_url TEXT,
+  youtube_playlist_url TEXT,
+  video_count INT DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 5.2 PLAYLIST VIDEOS TABLE
+CREATE TABLE IF NOT EXISTS public.playlist_videos (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  playlist_id UUID REFERENCES public.playlists(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  youtube_url TEXT NOT NULL,
+  youtube_video_id TEXT NOT NULL,
+  duration TEXT,
+  order_index INT DEFAULT 1,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- 6. BLOG POSTS TABLE
 CREATE TABLE IF NOT EXISTS public.posts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -154,6 +179,8 @@ ALTER TABLE public.books ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.projects ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tutorials ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.playlists ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.playlist_videos ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.posts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.comments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.consultations ENABLE ROW LEVEL SECURITY;
@@ -188,6 +215,18 @@ CREATE POLICY "Allow public read tutorials"
   ON public.tutorials FOR SELECT USING (true);
 CREATE POLICY "Allow admin manage tutorials" 
   ON public.tutorials FOR ALL TO authenticated USING (true);
+
+-- 5.1 Playlists Policies (Public can view, Admin can manage)
+CREATE POLICY "Allow public read playlists" 
+  ON public.playlists FOR SELECT USING (true);
+CREATE POLICY "Allow admin manage playlists" 
+  ON public.playlists FOR ALL TO authenticated USING (true);
+
+-- 5.2 Playlist Videos Policies (Public can view, Admin can manage)
+CREATE POLICY "Allow public read playlist_videos" 
+  ON public.playlist_videos FOR SELECT USING (true);
+CREATE POLICY "Allow admin manage playlist_videos" 
+  ON public.playlist_videos FOR ALL TO authenticated USING (true);
 
 -- 6. Posts Policies (Public can view published, Admin can manage all)
 CREATE POLICY "Allow public read published posts" 
@@ -347,6 +386,72 @@ INSERT INTO public.tutorials (title, youtube_url, video_id, category, duration, 
   '18:40',
   12800
 );
+
+-- Playlists Seed Data
+INSERT INTO public.playlists (id, title, slug, description, category, thumbnail_url, youtube_playlist_url, video_count) VALUES
+(
+  'c0000000-0000-0000-0000-000000000001',
+  'Complete MS Office 365 & Excel Mastery Course',
+  'complete-ms-office-excel-mastery',
+  'Master high-impact Excel formulas, dynamic arrays, executive dashboard modeling, and Word document automation from corporate trainer Muhammad Fazal.',
+  'MS Office',
+  'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?q=80&w=800&auto=format&fit=crop',
+  'https://www.youtube.com/playlist?list=PLexample_msoffice',
+  3
+),
+(
+  'c0000000-0000-0000-0000-000000000002',
+  'Full-Stack WordPress & Custom Gutenberg Architecture',
+  'full-stack-wordpress-gutenberg-architecture',
+  'End-to-end masterclass on building lightning-fast WordPress websites, sub-second PageSpeed benchmarks, headless patterns, and custom block development.',
+  'WordPress',
+  'https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?q=80&w=800&auto=format&fit=crop',
+  'https://www.youtube.com/playlist?list=PLexample_wordpress',
+  3
+),
+(
+  'c0000000-0000-0000-0000-000000000003',
+  'Google Apps Script & Cloud Automation Engine',
+  'google-apps-script-cloud-automation',
+  'Automate enterprise workflows with Google Apps Script: sync Gmail, Google Sheets, Drive, REST APIs, and automated PDF invoice generation.',
+  'Automation',
+  'https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=800&auto=format&fit=crop',
+  'https://www.youtube.com/playlist?list=PLexample_automation',
+  3
+),
+(
+  'c0000000-0000-0000-0000-000000000004',
+  'Business Intelligence & Data Analysis Blueprint',
+  'business-intelligence-data-analysis-blueprint',
+  'Transform messy data into actionable executive insights: data cleaning, query modeling, KPI tracking, and automated reporting systems.',
+  'Data Analysis',
+  'https://images.unsplash.com/photo-1460925895917-afdab827c52f?q=80&w=800&auto=format&fit=crop',
+  'https://www.youtube.com/playlist?list=PLexample_dataanalysis',
+  2
+)
+ON CONFLICT (id) DO NOTHING;
+
+-- Playlist Videos Seed Data
+INSERT INTO public.playlist_videos (playlist_id, title, youtube_url, youtube_video_id, duration, order_index) VALUES
+-- MS Office Playlist Videos
+('c0000000-0000-0000-0000-000000000001', 'Lesson 1: Advanced Excel Formulas (XLOOKUP & Dynamic Arrays)', 'https://www.youtube.com/watch?v=0kPspP8z908', '0kPspP8z908', '24:15', 1),
+('c0000000-0000-0000-0000-000000000001', 'Lesson 2: Interactive Executive KPI Dashboards in Excel', 'https://www.youtube.com/watch?v=r-uOLxNrNk8', 'r-uOLxNrNk8', '35:20', 2),
+('c0000000-0000-0000-0000-000000000001', 'Lesson 3: Automating Reports with Power Query & Pivot Tables', 'https://www.youtube.com/watch?v=k_OkA4hYv2w', 'k_OkA4hYv2w', '28:40', 3),
+
+-- WordPress Playlist Videos
+('c0000000-0000-0000-0000-000000000002', 'Lesson 1: Building a Blazing-Fast WordPress Site (Complete Setup)', 'https://www.youtube.com/watch?v=8AZ8GqW5iak', '8AZ8GqW5iak', '42:10', 1),
+('c0000000-0000-0000-0000-000000000002', 'Lesson 2: Developing Custom Gutenberg Block Patterns with Tailwind', 'https://www.youtube.com/watch?v=0kPspP8z908', '0kPspP8z908', '38:50', 2),
+('c0000000-0000-0000-0000-000000000002', 'Lesson 3: Achieving 99+ Google PageSpeed and Core Web Vitals', 'https://www.youtube.com/watch?v=r-uOLxNrNk8', 'r-uOLxNrNk8', '29:15', 3),
+
+-- Automation Playlist Videos
+('c0000000-0000-0000-0000-000000000003', 'Lesson 1: Automate Google Sheets with Apps Script (Email Invoices)', 'https://www.youtube.com/watch?v=k_OkA4hYv2w', 'k_OkA4hYv2w', '31:05', 1),
+('c0000000-0000-0000-0000-000000000003', 'Lesson 2: Connecting External REST APIs to Google Sheets', 'https://www.youtube.com/watch?v=8AZ8GqW5iak', '8AZ8GqW5iak', '26:40', 2),
+('c0000000-0000-0000-0000-000000000003', 'Lesson 3: Scheduled Cron Triggers and Automatic PDF Generation', 'https://www.youtube.com/watch?v=0kPspP8z908', '0kPspP8z908', '33:10', 3),
+
+-- Data Analysis Playlist Videos
+('c0000000-0000-0000-0000-000000000004', 'Lesson 1: Data Cleaning & Transformation Crash Course', 'https://www.youtube.com/watch?v=r-uOLxNrNk8', 'r-uOLxNrNk8', '18:40', 1),
+('c0000000-0000-0000-0000-000000000004', 'Lesson 2: Designing Modern Business Intelligence Decks', 'https://www.youtube.com/watch?v=k_OkA4hYv2w', 'k_OkA4hYv2w', '25:30', 2)
+ON CONFLICT DO NOTHING;
 
 -- Blog Posts
 INSERT INTO public.posts (title, slug, content, summary, category, tags, featured_image, published, read_time) VALUES

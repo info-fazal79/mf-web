@@ -10,7 +10,9 @@ import {
   Project, 
   SiteSettings, 
   ToastNotification, 
-  Tutorial 
+  Tutorial,
+  Playlist,
+  PlaylistVideo 
 } from '../types';
 import { 
   INITIAL_BOOKS, 
@@ -20,7 +22,9 @@ import {
   INITIAL_POSTS, 
   INITIAL_PROJECTS, 
   INITIAL_SITE_SETTINGS, 
-  INITIAL_TUTORIALS 
+  INITIAL_TUTORIALS,
+  INITIAL_PLAYLISTS,
+  INITIAL_PLAYLIST_VIDEOS 
 } from '../lib/initialData';
 
 interface AppState {
@@ -79,6 +83,18 @@ interface AppState {
   addTutorial: (tutorial: Tutorial) => void;
   updateTutorial: (id: string, tutorial: Partial<Tutorial>) => void;
   deleteTutorial: (id: string) => void;
+
+  playlists: Playlist[];
+  setPlaylists: (playlists: Playlist[]) => void;
+  addPlaylist: (playlist: Playlist) => void;
+  updatePlaylist: (id: string, playlist: Partial<Playlist>) => void;
+  deletePlaylist: (id: string) => void;
+
+  playlistVideos: PlaylistVideo[];
+  setPlaylistVideos: (videos: PlaylistVideo[]) => void;
+  addPlaylistVideo: (video: PlaylistVideo) => void;
+  updatePlaylistVideo: (id: string, video: Partial<PlaylistVideo>) => void;
+  deletePlaylistVideo: (id: string) => void;
 
   setPosts: (posts: BlogPost[]) => void;
   addPost: (post: BlogPost) => void;
@@ -236,6 +252,55 @@ export const useStore = create<AppState>()(
           tutorials: state.tutorials.filter((t) => t.id !== id),
         })),
 
+      // Playlist Actions
+      playlists: INITIAL_PLAYLISTS,
+      setPlaylists: (playlists) => set({ playlists }),
+      addPlaylist: (playlist) =>
+        set((state) => ({
+          playlists: [playlist, ...state.playlists],
+        })),
+      updatePlaylist: (id, plUpdate) =>
+        set((state) => ({
+          playlists: state.playlists.map((p) => (p.id === id ? { ...p, ...plUpdate } : p)),
+        })),
+      deletePlaylist: (id) =>
+        set((state) => ({
+          playlists: state.playlists.filter((p) => p.id !== id),
+          playlistVideos: state.playlistVideos.filter((v) => v.playlist_id !== id),
+        })),
+
+      // Playlist Videos Actions
+      playlistVideos: INITIAL_PLAYLIST_VIDEOS,
+      setPlaylistVideos: (playlistVideos) => set({ playlistVideos }),
+      addPlaylistVideo: (video) =>
+        set((state) => {
+          const updatedVideos = [...state.playlistVideos, video];
+          const count = updatedVideos.filter((v) => v.playlist_id === video.playlist_id).length;
+          const updatedPlaylists = state.playlists.map((p) =>
+            p.id === video.playlist_id ? { ...p, video_count: count } : p
+          );
+          return { playlistVideos: updatedVideos, playlists: updatedPlaylists };
+        }),
+      updatePlaylistVideo: (id, videoUpdate) =>
+        set((state) => ({
+          playlistVideos: state.playlistVideos.map((v) =>
+            v.id === id ? { ...v, ...videoUpdate } : v
+          ),
+        })),
+      deletePlaylistVideo: (id) =>
+        set((state) => {
+          const target = state.playlistVideos.find((v) => v.id === id);
+          const updatedVideos = state.playlistVideos.filter((v) => v.id !== id);
+          let updatedPlaylists = state.playlists;
+          if (target) {
+            const count = updatedVideos.filter((v) => v.playlist_id === target.playlist_id).length;
+            updatedPlaylists = state.playlists.map((p) =>
+              p.id === target.playlist_id ? { ...p, video_count: count } : p
+            );
+          }
+          return { playlistVideos: updatedVideos, playlists: updatedPlaylists };
+        }),
+
       // Post Actions
       setPosts: (posts) => set({ posts }),
       addPost: (post) =>
@@ -312,6 +377,8 @@ export const useStore = create<AppState>()(
         books: state.books,
         projects: state.projects,
         tutorials: state.tutorials,
+        playlists: state.playlists,
+        playlistVideos: state.playlistVideos,
         posts: state.posts,
         comments: state.comments,
         consultations: state.consultations,

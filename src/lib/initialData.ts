@@ -1,4 +1,4 @@
-import { Book, BlogPost, Project, SiteSettings, Tutorial, Comment, Consultation, Order } from '../types';
+import { Book, BlogPost, Project, SiteSettings, Tutorial, Comment, Consultation, Order, Playlist, PlaylistVideo } from '../types';
 
 export const INITIAL_SITE_SETTINGS: SiteSettings = {
   id: 1,
@@ -155,6 +155,173 @@ export const INITIAL_TUTORIALS: Tutorial[] = [
     duration: '18:40',
     views_count: 12800,
     created_at: '2025-02-22T00:00:00Z',
+  },
+];
+
+export const INITIAL_PLAYLISTS: Playlist[] = [
+  {
+    id: 'pl-1',
+    title: 'Complete MS Office 365 & Excel Mastery Course',
+    slug: 'complete-ms-office-excel-mastery',
+    description: 'Master high-impact Excel formulas, dynamic arrays, executive dashboard modeling, and Word document automation from corporate trainer Muhammad Fazal.',
+    category: 'MS Office',
+    thumbnail_url: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?q=80&w=800&auto=format&fit=crop',
+    youtube_playlist_url: 'https://www.youtube.com/playlist?list=PLexample_msoffice',
+    video_count: 3,
+    created_at: '2025-01-10T00:00:00Z',
+  },
+  {
+    id: 'pl-2',
+    title: 'Full-Stack WordPress & Custom Gutenberg Architecture',
+    slug: 'full-stack-wordpress-gutenberg-architecture',
+    description: 'End-to-end masterclass on building lightning-fast WordPress websites, sub-second PageSpeed benchmarks, headless patterns, and custom block development.',
+    category: 'WordPress',
+    thumbnail_url: 'https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?q=80&w=800&auto=format&fit=crop',
+    youtube_playlist_url: 'https://www.youtube.com/playlist?list=PLexample_wordpress',
+    video_count: 3,
+    created_at: '2025-01-15T00:00:00Z',
+  },
+  {
+    id: 'pl-3',
+    title: 'Google Apps Script & Cloud Automation Engine',
+    slug: 'google-apps-script-cloud-automation',
+    description: 'Automate enterprise workflows with Google Apps Script: sync Gmail, Google Sheets, Drive, REST APIs, and automated PDF invoice generation.',
+    category: 'Automation',
+    thumbnail_url: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=800&auto=format&fit=crop',
+    youtube_playlist_url: 'https://www.youtube.com/playlist?list=PLexample_automation',
+    video_count: 3,
+    created_at: '2025-02-01T00:00:00Z',
+  },
+  {
+    id: 'pl-4',
+    title: 'Business Intelligence & Data Analysis Blueprint',
+    slug: 'business-intelligence-data-analysis-blueprint',
+    description: 'Transform messy data into actionable executive insights: data cleaning, query modeling, KPI tracking, and automated reporting systems.',
+    category: 'Data Analysis',
+    thumbnail_url: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?q=80&w=800&auto=format&fit=crop',
+    youtube_playlist_url: 'https://www.youtube.com/playlist?list=PLexample_dataanalysis',
+    video_count: 2,
+    created_at: '2025-02-15T00:00:00Z',
+  },
+];
+
+export const INITIAL_PLAYLIST_VIDEOS: PlaylistVideo[] = [
+  // MS Office
+  {
+    id: 'pv-1',
+    playlist_id: 'pl-1',
+    title: 'Lesson 1: Advanced Excel Formulas (XLOOKUP, INDEX-MATCH & Nested Dynamic Arrays)',
+    youtube_url: 'https://www.youtube.com/watch?v=0kPspP8z908',
+    youtube_video_id: '0kPspP8z908',
+    duration: '24:15',
+    order_index: 1,
+    created_at: '2025-01-10T00:00:00Z',
+  },
+  {
+    id: 'pv-2',
+    playlist_id: 'pl-1',
+    title: 'Lesson 2: Interactive Executive KPI Dashboards in Excel',
+    youtube_url: 'https://www.youtube.com/watch?v=r-uOLxNrNk8',
+    youtube_video_id: 'r-uOLxNrNk8',
+    duration: '35:20',
+    order_index: 2,
+    created_at: '2025-01-11T00:00:00Z',
+  },
+  {
+    id: 'pv-3',
+    playlist_id: 'pl-1',
+    title: 'Lesson 3: Automating Reports with Power Query & Pivot Tables',
+    youtube_url: 'https://www.youtube.com/watch?v=k_OkA4hYv2w',
+    youtube_video_id: 'k_OkA4hYv2w',
+    duration: '28:40',
+    order_index: 3,
+    created_at: '2025-01-12T00:00:00Z',
+  },
+
+  // WordPress
+  {
+    id: 'pv-4',
+    playlist_id: 'pl-2',
+    title: 'Lesson 1: Building a Blazing-Fast WordPress Site from Scratch (Complete Guide)',
+    youtube_url: 'https://www.youtube.com/watch?v=8AZ8GqW5iak',
+    youtube_video_id: '8AZ8GqW5iak',
+    duration: '42:10',
+    order_index: 1,
+    created_at: '2025-01-15T00:00:00Z',
+  },
+  {
+    id: 'pv-5',
+    playlist_id: 'pl-2',
+    title: 'Lesson 2: Developing Custom Gutenberg Block Patterns with Tailwind',
+    youtube_url: 'https://www.youtube.com/watch?v=0kPspP8z908',
+    youtube_video_id: '0kPspP8z908',
+    duration: '38:50',
+    order_index: 2,
+    created_at: '2025-01-16T00:00:00Z',
+  },
+  {
+    id: 'pv-6',
+    playlist_id: 'pl-2',
+    title: 'Lesson 3: Achieving 99+ Google PageSpeed and Core Web Vitals',
+    youtube_url: 'https://www.youtube.com/watch?v=r-uOLxNrNk8',
+    youtube_video_id: 'r-uOLxNrNk8',
+    duration: '29:15',
+    order_index: 3,
+    created_at: '2025-01-17T00:00:00Z',
+  },
+
+  // Automation
+  {
+    id: 'pv-7',
+    playlist_id: 'pl-3',
+    title: 'Lesson 1: Automate Google Sheets with Apps Script: Auto-Email Reports & Invoices',
+    youtube_url: 'https://www.youtube.com/watch?v=k_OkA4hYv2w',
+    youtube_video_id: 'k_OkA4hYv2w',
+    duration: '31:05',
+    order_index: 1,
+    created_at: '2025-02-01T00:00:00Z',
+  },
+  {
+    id: 'pv-8',
+    playlist_id: 'pl-3',
+    title: 'Lesson 2: Connecting External REST APIs to Google Sheets with OAuth',
+    youtube_url: 'https://www.youtube.com/watch?v=8AZ8GqW5iak',
+    youtube_video_id: '8AZ8GqW5iak',
+    duration: '26:40',
+    order_index: 2,
+    created_at: '2025-02-02T00:00:00Z',
+  },
+  {
+    id: 'pv-9',
+    playlist_id: 'pl-3',
+    title: 'Lesson 3: Scheduled Cron Triggers and Automatic PDF Generation',
+    youtube_url: 'https://www.youtube.com/watch?v=0kPspP8z908',
+    youtube_video_id: '0kPspP8z908',
+    duration: '33:10',
+    order_index: 3,
+    created_at: '2025-02-03T00:00:00Z',
+  },
+
+  // Data Analysis
+  {
+    id: 'pv-10',
+    playlist_id: 'pl-4',
+    title: 'Lesson 1: Data Cleaning & Transformation Crash Course for Business Analysts',
+    youtube_url: 'https://www.youtube.com/watch?v=r-uOLxNrNk8',
+    youtube_video_id: 'r-uOLxNrNk8',
+    duration: '18:40',
+    order_index: 1,
+    created_at: '2025-02-15T00:00:00Z',
+  },
+  {
+    id: 'pv-11',
+    playlist_id: 'pl-4',
+    title: 'Lesson 2: Designing Modern Executive Business Intelligence Decks',
+    youtube_url: 'https://www.youtube.com/watch?v=k_OkA4hYv2w',
+    youtube_video_id: 'k_OkA4hYv2w',
+    duration: '25:30',
+    order_index: 2,
+    created_at: '2025-02-16T00:00:00Z',
   },
 ];
 

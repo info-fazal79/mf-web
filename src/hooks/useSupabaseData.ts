@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { useStore } from '../store/useStore';
-import { Book, BlogPost, Project, Tutorial, Comment, Consultation, Order, SiteSettings } from '../types';
+import { Book, BlogPost, Project, Tutorial, Comment, Consultation, Order, SiteSettings, Playlist, PlaylistVideo } from '../types';
 
 export function useSupabaseData() {
   const [isLoading, setIsLoading] = useState(true);
@@ -11,6 +11,8 @@ export function useSupabaseData() {
     setBooks,
     setProjects,
     setTutorials,
+    setPlaylists,
+    setPlaylistVideos,
     setPosts,
     setComments,
     setConsultations,
@@ -48,6 +50,20 @@ export function useSupabaseData() {
           .select('*')
           .order('created_at', { ascending: false });
         if (tutsData && tutsData.length > 0) setTutorials(tutsData as Tutorial[]);
+
+        // Fetch Playlists
+        const { data: playlistsData } = await supabase
+          .from('playlists')
+          .select('*')
+          .order('created_at', { ascending: false });
+        if (playlistsData && playlistsData.length > 0) setPlaylists(playlistsData as Playlist[]);
+
+        // Fetch Playlist Videos
+        const { data: playlistVideosData } = await supabase
+          .from('playlist_videos')
+          .select('*')
+          .order('order_index', { ascending: true });
+        if (playlistVideosData && playlistVideosData.length > 0) setPlaylistVideos(playlistVideosData as PlaylistVideo[]);
 
         // Fetch Posts
         const { data: postsData } = await supabase
@@ -93,7 +109,7 @@ export function useSupabaseData() {
     }
 
     syncData();
-  }, [isConnected, setBooks, setProjects, setTutorials, setPosts, setComments, setConsultations, setOrders, setSiteSettings]);
+  }, [isConnected, setBooks, setProjects, setTutorials, setPlaylists, setPlaylistVideos, setPosts, setComments, setConsultations, setOrders, setSiteSettings]);
 
   return { isLoading, isConnected };
 }

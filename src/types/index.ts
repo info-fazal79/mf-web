@@ -56,6 +56,29 @@ export interface Tutorial {
   created_at?: string;
 }
 
+export interface Playlist {
+  id: string;
+  title: string;
+  slug: string;
+  description: string;
+  category: string;
+  thumbnail_url?: string;
+  youtube_playlist_url?: string;
+  video_count?: number;
+  created_at?: string;
+}
+
+export interface PlaylistVideo {
+  id: string;
+  playlist_id: string;
+  title: string;
+  youtube_url: string;
+  youtube_video_id: string;
+  duration?: string;
+  order_index: number;
+  created_at?: string;
+}
+
 export interface BlogPost {
   id: string;
   title: string;
