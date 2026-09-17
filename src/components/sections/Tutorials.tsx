@@ -35,13 +35,9 @@ export const Tutorials: React.FC = () => {
         </div>
 
         {/* Playlists Course Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
           {filteredPlaylists.map((playlist) => {
             const lectureCount = playlistVideos.filter((v) => v.playlist_id === playlist.id).length || playlist.video_count || 0;
-            const courseVideos = playlistVideos
-              .filter((v) => v.playlist_id === playlist.id)
-              .sort((a, b) => a.order_index - b.order_index)
-              .slice(0, 3); // Preview first 3 lectures
 
             return (
               <div
@@ -92,31 +88,6 @@ export const Tutorials: React.FC = () => {
                         {playlist.description}
                       </p>
                     </div>
-
-                    {/* Curriculum Preview snippet */}
-                    {courseVideos.length > 0 && (
-                      <div className="p-3.5 rounded-xl bg-dark-950/60 border border-white/5 space-y-2">
-                        <div className="text-[11px] font-mono text-gray-400 uppercase tracking-wider flex items-center justify-between">
-                          <span>Curriculum Highlights:</span>
-                          <span className="text-cyber-neon">{lectureCount} total</span>
-                        </div>
-                        <div className="space-y-1.5">
-                          {courseVideos.map((v) => (
-                            <div key={v.id} className="flex items-center gap-2 text-xs text-gray-300 font-mono">
-                              <span className="w-4 h-4 rounded-full bg-cyber-dim border border-cyber-accent/30 text-[10px] text-cyber-neon flex items-center justify-center shrink-0">
-                                {v.order_index}
-                              </span>
-                              <span className="truncate">{v.title}</span>
-                              {v.duration && (
-                                <span className="ml-auto text-gray-500 text-[10px] shrink-0">
-                                  {v.duration}
-                                </span>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
                   </div>
                 </div>
 
