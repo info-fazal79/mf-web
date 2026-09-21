@@ -15,7 +15,6 @@ import {
   FolderGit2,
   CheckCircle2,
   Sparkles,
-  Loader2,
   RefreshCw
 } from 'lucide-react';
 import { YoutubeIcon } from '../../components/ui/Icons';
@@ -56,7 +55,6 @@ export const TutorialsTab: React.FC = () => {
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
   const [editingVideo, setEditingVideo] = useState<PlaylistVideo | null>(null);
   const [isFetchingMetadata, setIsFetchingMetadata] = useState(false);
-  const [metadataSuccess, setMetadataSuccess] = useState(false);
   const [videoForm, setVideoForm] = useState({
     title: '',
     youtube_url: '',
@@ -209,7 +207,6 @@ export const TutorialsTab: React.FC = () => {
 
     setEditingVideo(null);
     setIsFetchingMetadata(false);
-    setMetadataSuccess(false);
     setVideoForm({
       title: '',
       youtube_url: '',
@@ -223,7 +220,6 @@ export const TutorialsTab: React.FC = () => {
   const openEditVideoModal = (video: PlaylistVideo) => {
     setEditingVideo(video);
     setIsFetchingMetadata(false);
-    setMetadataSuccess(false);
     setVideoForm({
       title: video.title,
       youtube_url: video.youtube_url,
@@ -237,7 +233,6 @@ export const TutorialsTab: React.FC = () => {
   const fetchYouTubeMetadata = async (videoId: string) => {
     if (!videoId || videoId.length < 5) return;
     setIsFetchingMetadata(true);
-    setMetadataSuccess(false);
 
     try {
       // 1. Concurrently start duration extraction
@@ -286,10 +281,6 @@ export const TutorialsTab: React.FC = () => {
         // Auto-populate duration if returned
         duration: detectedDuration || prev.duration,
       }));
-
-      if (fetchedTitle || detectedDuration) {
-        setMetadataSuccess(true);
-      }
     } catch (err) {
       console.warn('Could not auto-fetch YouTube metadata:', err);
     } finally {
@@ -798,23 +789,9 @@ export const TutorialsTab: React.FC = () => {
 
             <form onSubmit={handleSaveVideo} className="space-y-4">
               <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="block text-xs font-mono text-gray-300 uppercase">
-                    Lecture Title *
-                  </label>
-                  {isFetchingMetadata && (
-                    <span className="inline-flex items-center gap-1.5 text-[11px] font-mono text-cyber-neon animate-pulse">
-                      <Loader2 className="w-3 h-3 animate-spin" />
-                      <span>Fetching YouTube title...</span>
-                    </span>
-                  )}
-                  {metadataSuccess && !isFetchingMetadata && (
-                    <span className="inline-flex items-center gap-1 text-[11px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/30">
-                      <CheckCircle2 className="w-3 h-3" />
-                      <span>✓ Title auto-detected from YouTube</span>
-                    </span>
-                  )}
-                </div>
+                <label className="block text-xs font-mono text-gray-300 uppercase mb-1">
+                  Lecture Title *
+                </label>
                 <input
                   type="text"
                   required
@@ -875,20 +852,9 @@ export const TutorialsTab: React.FC = () => {
                 </div>
 
                 <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="block text-xs font-mono text-gray-300 uppercase">
-                      Duration (MM:SS)
-                    </label>
-                    {isFetchingMetadata ? (
-                      <span className="text-[10px] font-mono text-cyber-neon animate-pulse">
-                        Detecting...
-                      </span>
-                    ) : videoForm.duration ? (
-                      <span className="text-[10px] font-mono text-emerald-400 flex items-center gap-0.5">
-                        <CheckCircle2 className="w-2.5 h-2.5" /> Auto-set
-                      </span>
-                    ) : null}
-                  </div>
+                  <label className="block text-xs font-mono text-gray-300 uppercase mb-1">
+                    Duration (MM:SS)
+                  </label>
                   <input
                     type="text"
                     value={videoForm.duration}

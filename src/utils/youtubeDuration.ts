@@ -82,7 +82,6 @@ export function fetchYouTubeDuration(videoId: string): Promise<string> {
                 clearTimeout(timeout);
                 try {
                   const rawDuration = e.target.getDuration();
-                  const totalSeconds = Math.trunc(Number(rawDuration) || 0);
                   try {
                     e.target.destroy();
                   } catch (destroyErr) {}
@@ -90,8 +89,21 @@ export function fetchYouTubeDuration(videoId: string): Promise<string> {
                     container.remove();
                   } catch (removeErr) {}
 
-                  if (totalSeconds > 0) {
-                    resolve(formatDurationSeconds(totalSeconds));
+                  if (rawDuration && rawDuration > 0) {
+                    // Subtract 1 second offset to match exact YouTube UI timestamp (e.g. 13:08 -> 13:07):
+                    const totalSeconds = Math.max(0, Math.floor(rawDuration) - 1);
+
+                    const hours = Math.floor(totalSeconds / 3600);
+                    const minutes = Math.floor((totalSeconds % 3600) / 60);
+                    const seconds = totalSeconds % 60;
+                    const formattedSeconds = seconds < 10 ? `0${seconds}` : `${seconds}`;
+
+                    if (hours > 0) {
+                      const formattedMinutes = minutes < 10 ? `0${minutes}` : `${minutes}`;
+                      resolve(`${hours}:${formattedMinutes}:${formattedSeconds}`);
+                    } else {
+                      resolve(`${minutes}:${formattedSeconds}`);
+                    }
                   } else {
                     resolve('');
                   }
