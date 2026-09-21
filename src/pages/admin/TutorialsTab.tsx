@@ -22,6 +22,7 @@ import { YoutubeIcon } from '../../components/ui/Icons';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { extractYouTubeId } from '../../lib/utils';
 import { ImageUpload } from '../../components/admin/ImageUpload';
+import { fetchYouTubeDuration } from '../../utils/youtubeDuration';
 
 export const TutorialsTab: React.FC = () => {
   const { 
@@ -239,9 +240,12 @@ export const TutorialsTab: React.FC = () => {
     setMetadataSuccess(false);
 
     try {
+      // 1. Concurrently start duration extraction
+      const durationPromise = fetchYouTubeDuration(videoId);
+
       let fetchedTitle = '';
 
-      // 1. Fetch from noembed.com (CORS friendly)
+      // 2. Fetch Title from noembed.com (CORS friendly)
       try {
         const url = `https://noembed.com/embed?url=https://www.youtube.com/watch?v=${videoId}`;
         const res = await fetch(url);
@@ -255,7 +259,7 @@ export const TutorialsTab: React.FC = () => {
         console.warn('noembed fetch failed, attempting fallback:', err);
       }
 
-      // 2. Fallback to youtube oembed
+      // 3. Fallback to youtube oembed for title
       if (!fetchedTitle) {
         try {
           const res = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`);
@@ -270,14 +274,20 @@ export const TutorialsTab: React.FC = () => {
         }
       }
 
-      if (fetchedTitle) {
-        setVideoForm((prev) => ({
-          ...prev,
-          // Auto-populate Title if current title is empty or generic
-          title: (!prev.title || prev.title.trim() === '' || /^Lesson \d+:?$/i.test(prev.title.trim()))
-            ? fetchedTitle 
-            : prev.title,
-        }));
+      // 4. Await duration result
+      const detectedDuration = await durationPromise;
+
+      setVideoForm((prev) => ({
+        ...prev,
+        // Auto-populate Title if current title is empty or generic
+        title: (fetchedTitle && (!prev.title || prev.title.trim() === '' || /^Lesson \d+:?$/i.test(prev.title.trim())))
+          ? fetchedTitle 
+          : prev.title,
+        // Auto-populate duration if returned
+        duration: detectedDuration || prev.duration,
+      }));
+
+      if (fetchedTitle || detectedDuration) {
         setMetadataSuccess(true);
       }
     } catch (err) {
@@ -865,15 +875,26 @@ export const TutorialsTab: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-mono text-gray-300 uppercase mb-1">
-                    Duration (MM:SS)
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-mono text-gray-300 uppercase">
+                      Duration (MM:SS)
+                    </label>
+                    {isFetchingMetadata ? (
+                      <span className="text-[10px] font-mono text-cyber-neon animate-pulse">
+                        Detecting...
+                      </span>
+                    ) : videoForm.duration ? (
+                      <span className="text-[10px] font-mono text-emerald-400 flex items-center gap-0.5">
+                        <CheckCircle2 className="w-2.5 h-2.5" /> Auto-set
+                      </span>
+                    ) : null}
+                  </div>
                   <input
                     type="text"
                     value={videoForm.duration}
                     onChange={(e) => setVideoForm({ ...videoForm, duration: e.target.value })}
                     placeholder="MM:SS (e.g. 24:15)"
-                    className="w-full px-3 py-2 rounded-xl bg-dark-950 border border-white/10 text-white text-xs focus:border-cyber-accent focus:outline-none"
+                    className="w-full px-3 py-2 rounded-xl bg-dark-950 border border-white/10 text-white text-xs focus:border-cyber-accent focus:outline-none font-mono"
                   />
                 </div>
 
