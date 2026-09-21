@@ -80,7 +80,7 @@ export function fetchYouTubeDuration(videoId: string): Promise<string> {
               onReady: (e: any) => {
                 clearTimeout(timeout);
                 try {
-                  const totalSeconds = Math.round(e.target.getDuration());
+                  const totalSeconds = Math.floor(e.target.getDuration());
                   try {
                     e.target.destroy();
                   } catch (destroyErr) {}
