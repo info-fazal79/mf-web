@@ -1,9 +1,12 @@
 import React from 'react';
 import { About } from '../components/sections/About';
 import { Experience } from '../components/sections/Experience';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, Download } from 'lucide-react';
+import { useStore } from '../store/useStore';
 
 export const AboutPage: React.FC = () => {
+  const { siteSettings } = useStore();
+
   return (
     <div className="pt-24 space-y-0">
       {/* Page Header Banner */}
@@ -19,6 +22,20 @@ export const AboutPage: React.FC = () => {
           <p className="text-gray-400 text-sm sm:text-base max-w-2xl mx-auto leading-relaxed">
             WordPress Developer, Data Analyst & MS Office Instructor
           </p>
+          {siteSettings.cv_url && (
+            <div className="pt-2">
+              <a
+                href={siteSettings.cv_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                download="Muhammad_Fazal_Resume.pdf"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-cyber-accent text-dark-950 font-bold font-mono text-xs tracking-wider hover:bg-cyber-neon transition-all shadow-neon hover:shadow-neon-lg transform hover:-translate-y-0.5 active:translate-y-0"
+              >
+                <Download className="w-4 h-4" />
+                <span>Download CV</span>
+              </a>
+            </div>
+          )}
         </div>
       </section>
 

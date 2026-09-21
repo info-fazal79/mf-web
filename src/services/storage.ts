@@ -131,3 +131,74 @@ export async function uploadImageFile(
     compressionRatio,
   };
 }
+
+/**
+ * Upload a PDF document (e.g., CV / Resume, eBook PDF) directly to Supabase storage.
+ * Uploads to 'media/resumes/' or 'resumes/' bucket with 'application/pdf' contentType.
+ */
+export async function uploadPdfFile(
+  file: File,
+  folder: string = 'resumes'
+): Promise<string> {
+  const cleanBaseName = file.name
+    .replace(/\.[^/.]+$/, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 30) || 'resume';
+
+  const uniqueId = typeof crypto !== 'undefined' && crypto.randomUUID
+    ? crypto.randomUUID().slice(0, 8)
+    : Math.random().toString(36).substring(2, 10);
+
+  const fileName = `${cleanBaseName}-${Date.now()}-${uniqueId}.pdf`;
+
+  if (!isSupabaseConfigured()) {
+    console.warn('[Storage] Supabase is not configured. Falling back to local data URL.');
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.readAsDataURL(file);
+    });
+  }
+
+  let targetBucket = 'media';
+  let targetPath = `${folder}/${fileName}`;
+
+  let { data, error } = await supabase.storage
+    .from(targetBucket)
+    .upload(targetPath, file, {
+      contentType: 'application/pdf',
+      cacheControl: '31536000',
+      upsert: true,
+    });
+
+  if (error && (error.message.toLowerCase().includes('bucket') || error.message.toLowerCase().includes('not found'))) {
+    targetBucket = folder;
+    targetPath = fileName;
+    const fallbackAttempt = await supabase.storage
+      .from(targetBucket)
+      .upload(targetPath, file, {
+        contentType: 'application/pdf',
+        cacheControl: '31536000',
+        upsert: true,
+      });
+    data = fallbackAttempt.data;
+    error = fallbackAttempt.error;
+  }
+
+  if (error) {
+    console.error('[Storage] Supabase PDF upload failed:', error);
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.readAsDataURL(file);
+    });
+  }
+
+  const { data: publicUrlData } = supabase.storage
+    .from(targetBucket)
+    .getPublicUrl(targetPath);
+
+  return publicUrlData.publicUrl;
+}

@@ -1,6 +1,6 @@
 import React from 'react';
 import { TIMELINE_EXPERIENCE } from '../../lib/initialData';
-import { Briefcase, Calendar, CheckCircle2, Award, Sparkles, MapPin } from 'lucide-react';
+import { Briefcase, Calendar, CheckCircle2, Award, Sparkles, MapPin, Download } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 
 export const Experience: React.FC = () => {
@@ -70,13 +70,26 @@ export const Experience: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="pt-2">
+                <div className="pt-2 flex flex-col sm:flex-row gap-3">
                   <button
                     onClick={() => setIsConsultationOpen(true)}
-                    className="w-full py-3 rounded-xl bg-cyber-accent text-dark-950 font-bold font-mono text-xs tracking-wider hover:bg-cyber-neon transition-all shadow-neon"
+                    className="flex-1 py-3 rounded-xl bg-cyber-accent text-dark-950 font-bold font-mono text-xs tracking-wider hover:bg-cyber-neon transition-all shadow-neon text-center"
                   >
                     Discuss a Project with Fazal
                   </button>
+                  {siteSettings.cv_url && (
+                    <a
+                      href={siteSettings.cv_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      download="Muhammad_Fazal_Resume.pdf"
+                      className="px-4 py-3 rounded-xl bg-dark-900 border border-white/10 hover:border-cyber-accent/40 text-gray-300 hover:text-cyber-neon font-bold font-mono text-xs tracking-wider transition-all flex items-center justify-center gap-2"
+                      title="Download CV"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>Download CV</span>
+                    </a>
+                  )}
                 </div>
               </div>
             </div>

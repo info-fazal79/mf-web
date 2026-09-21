@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ShoppingBag, MessageSquareQuote, Menu, X, Shield, Sparkles } from 'lucide-react';
+import { ShoppingBag, MessageSquareQuote, Menu, X, Shield, Sparkles, Download } from 'lucide-react';
 import { FacebookIcon } from '../ui/Icons';
 import { useStore } from '../../store/useStore';
 import { Link, NavLink, useLocation } from 'react-router-dom';
@@ -117,6 +117,21 @@ export const Navbar: React.FC = () => {
             </a>
           )}
 
+          {/* Download CV shortcut */}
+          {siteSettings.cv_url && (
+            <a
+              href={siteSettings.cv_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              download="Muhammad_Fazal_Resume.pdf"
+              className="hidden xl:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-dark-900 border border-white/10 text-gray-300 hover:text-cyber-neon hover:border-cyber-accent/40 text-xs font-mono font-medium transition-all"
+              title="Download Muhammad Fazal's CV / Resume"
+            >
+              <Download className="w-3.5 h-3.5 text-cyber-neon" />
+              <span>CV</span>
+            </a>
+          )}
+
           {/* Admin shortcut if logged in */}
           {isAdminAuthenticated && (
             <Link
@@ -207,6 +222,20 @@ export const Navbar: React.FC = () => {
                 >
                   <FacebookIcon className="w-4 h-4 text-cyber-neon" />
                   <span>Facebook Profile</span>
+                </a>
+              )}
+
+              {siteSettings.cv_url && (
+                <a
+                  href={siteSettings.cv_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  download="Muhammad_Fazal_Resume.pdf"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-dark-900 border border-white/10 text-gray-300 hover:text-cyber-neon text-sm font-mono transition-colors"
+                >
+                  <Download className="w-4 h-4 text-cyber-neon" />
+                  <span>Download CV</span>
                 </a>
               )}
 

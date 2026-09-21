@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useStore } from '../../store/useStore';
-import { Settings, Save, Sparkles, Image, Type, Link2, Download, Mail } from 'lucide-react';
+import { Settings, Save, Sparkles, Image, Type, Link2, Download, Mail, Upload, FileUp, CheckCircle2, ExternalLink, Loader2 } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { ImageUpload } from '../../components/admin/ImageUpload';
+import { uploadPdfFile } from '../../services/storage';
 
 export const SettingsTab: React.FC = () => {
   const { siteSettings, setSiteSettings, addToast } = useStore();
@@ -23,6 +24,38 @@ export const SettingsTab: React.FC = () => {
   });
 
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploadingPdf, setIsUploadingPdf] = useState(false);
+  const [uploadedPdfName, setUploadedPdfName] = useState('');
+  const pdfInputRef = useRef<HTMLInputElement>(null);
+
+  const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.toLowerCase().endsWith('.pdf') && file.type !== 'application/pdf') {
+      alert('Please select a valid .pdf document.');
+      if (pdfInputRef.current) pdfInputRef.current.value = '';
+      return;
+    }
+
+    try {
+      setIsUploadingPdf(true);
+      const publicUrl = await uploadPdfFile(file, 'resumes');
+      setForm((prev) => ({ ...prev, cv_url: publicUrl }));
+      setUploadedPdfName(file.name);
+      addToast({
+        title: 'CV Uploaded',
+        message: `"${file.name}" uploaded to storage successfully.`,
+        type: 'success',
+      });
+    } catch (err: any) {
+      console.error('PDF upload error:', err);
+      alert('Failed to upload PDF. Please try again or enter a direct link.');
+    } finally {
+      setIsUploadingPdf(false);
+      if (pdfInputRef.current) pdfInputRef.current.value = '';
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -267,18 +300,95 @@ export const SettingsTab: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-mono text-gray-300 uppercase mb-1">
-                CV / Resume Download URL *
-              </label>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-mono text-gray-300 uppercase">
+                  CV / Resume Download URL *
+                </label>
+                <button
+                  type="button"
+                  onClick={() => pdfInputRef.current?.click()}
+                  disabled={isUploadingPdf}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-cyber-dim border border-cyber-accent/40 text-cyber-neon hover:bg-cyber-accent/20 text-[11px] font-mono font-bold transition-all disabled:opacity-50"
+                  title="Choose PDF from computer"
+                >
+                  {isUploadingPdf ? (
+                    <>
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                      <span>Uploading PDF...</span>
+                    </>
+                  ) : (
+                    <>
+                      <FileUp className="w-3 h-3" />
+                      <span>Upload CV (PDF)</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Hidden PDF File Input */}
               <input
-                type="url"
-                required
-                value={form.cv_url}
-                onChange={(e) => setForm({ ...form, cv_url: e.target.value })}
-                placeholder="https://..."
-                className="w-full px-3 py-2 rounded-xl bg-dark-950 border border-white/10 text-white text-xs focus:border-cyber-accent focus:outline-none"
+                ref={pdfInputRef}
+                type="file"
+                accept=".pdf,application/pdf"
+                className="hidden"
+                onChange={handlePdfUpload}
               />
+
+              {/* Manual URL Input with action shortcuts */}
+              <div className="relative">
+                <input
+                  type="url"
+                  required
+                  value={form.cv_url}
+                  onChange={(e) => setForm({ ...form, cv_url: e.target.value })}
+                  placeholder="https://... or click 'Upload CV (PDF)'"
+                  className="w-full pl-3.5 pr-20 py-2.5 rounded-xl bg-dark-950 border border-white/10 text-white text-xs font-mono focus:border-cyber-accent focus:outline-none"
+                />
+                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => pdfInputRef.current?.click()}
+                    disabled={isUploadingPdf}
+                    className="p-1 rounded-lg text-gray-400 hover:text-cyber-neon hover:bg-dark-900 transition-colors"
+                    title="Upload PDF from device"
+                  >
+                    <Upload className="w-3.5 h-3.5" />
+                  </button>
+                  {form.cv_url && (
+                    <a
+                      href={form.cv_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-1 rounded-lg text-gray-400 hover:text-cyber-neon hover:bg-dark-900 transition-colors"
+                      title="Open CV file in new tab"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
+                  )}
+                </div>
+              </div>
+
+              {/* Uploaded Badge / Preview */}
+              {form.cv_url && (
+                <div className="flex items-center justify-between px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-mono">
+                  <span className="flex items-center gap-1.5 truncate">
+                    <CheckCircle2 className="w-3.5 h-3.5 shrink-0 text-emerald-400" />
+                    <span className="truncate">
+                      ✓ CV Active: {uploadedPdfName || (form.cv_url.split('/').pop()?.split('?')[0] || 'Resume.pdf')}
+                    </span>
+                  </span>
+                  <a
+                    href={form.cv_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="shrink-0 underline hover:text-white ml-2 flex items-center gap-1 text-[11px] font-bold"
+                  >
+                    <span>View</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+              )}
             </div>
 
             <div>
