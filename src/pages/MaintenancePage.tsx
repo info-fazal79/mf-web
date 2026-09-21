@@ -1,7 +1,6 @@
-﻿import React, { useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { useStore } from '../store/useStore';
-import { Link } from 'react-router-dom';
-import { Wrench, Mail, Lock, Server } from 'lucide-react';
+import { Wrench, Mail, Server } from 'lucide-react';
 import { GithubIcon, LinkedinIcon, YoutubeIcon, FacebookIcon } from '../components/ui/Icons';
 
 export const MaintenancePage: React.FC = () => {
@@ -156,19 +155,11 @@ export const MaintenancePage: React.FC = () => {
         </div>
       </main>
 
-      {/* Subtle Footer with Admin Access Link */}
-      <footer className="relative z-10 max-w-6xl mx-auto w-full px-6 py-6 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between text-xs text-gray-500 font-mono gap-3">
+      {/* Footer */}
+      <footer className="relative z-10 max-w-6xl mx-auto w-full px-6 py-6 border-t border-white/5 flex items-center justify-center text-xs text-gray-500 font-mono text-center">
         <div>
           &copy; {new Date().getFullYear()} Muhammad Fazal. All rights reserved.
         </div>
-        <Link
-          to="/admin/login"
-          className="flex items-center gap-1.5 text-gray-500 hover:text-cyber-neon transition-colors"
-          title="Admin Portal Access"
-        >
-          <Lock className="w-3.5 h-3.5" />
-          <span>Admin Access</span>
-        </Link>
       </footer>
     </div>
   );
