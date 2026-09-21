@@ -383,8 +383,16 @@ export const useStore = create<AppState>()(
         comments: state.comments,
         consultations: state.consultations,
         orders: state.orders,
-        siteSettings: state.siteSettings,
+        siteSettings: {
+          ...state.siteSettings,
+          is_maintenance_mode: false,
+        },
       }),
+      onRehydrateStorage: () => (state) => {
+        if (state?.siteSettings) {
+          state.siteSettings.is_maintenance_mode = false;
+        }
+      },
     }
   )
 );
