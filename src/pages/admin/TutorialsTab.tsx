@@ -14,7 +14,9 @@ import {
   Clock, 
   FolderGit2,
   CheckCircle2,
-  Sparkles
+  Sparkles,
+  Loader2,
+  RefreshCw
 } from 'lucide-react';
 import { YoutubeIcon } from '../../components/ui/Icons';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
@@ -52,6 +54,8 @@ export const TutorialsTab: React.FC = () => {
   // Video / Lecture Modal State
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
   const [editingVideo, setEditingVideo] = useState<PlaylistVideo | null>(null);
+  const [isFetchingMetadata, setIsFetchingMetadata] = useState(false);
+  const [metadataSuccess, setMetadataSuccess] = useState(false);
   const [videoForm, setVideoForm] = useState({
     title: '',
     youtube_url: '',
@@ -203,6 +207,8 @@ export const TutorialsTab: React.FC = () => {
     const nextOrder = currentVideos.length + 1;
 
     setEditingVideo(null);
+    setIsFetchingMetadata(false);
+    setMetadataSuccess(false);
     setVideoForm({
       title: '',
       youtube_url: '',
@@ -215,6 +221,8 @@ export const TutorialsTab: React.FC = () => {
 
   const openEditVideoModal = (video: PlaylistVideo) => {
     setEditingVideo(video);
+    setIsFetchingMetadata(false);
+    setMetadataSuccess(false);
     setVideoForm({
       title: video.title,
       youtube_url: video.youtube_url,
@@ -225,6 +233,60 @@ export const TutorialsTab: React.FC = () => {
     setIsVideoModalOpen(true);
   };
 
+  const fetchYouTubeMetadata = async (videoId: string) => {
+    if (!videoId || videoId.length < 5) return;
+    setIsFetchingMetadata(true);
+    setMetadataSuccess(false);
+
+    try {
+      let fetchedTitle = '';
+
+      // 1. Fetch from noembed.com (CORS friendly)
+      try {
+        const url = `https://noembed.com/embed?url=https://www.youtube.com/watch?v=${videoId}`;
+        const res = await fetch(url);
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.title) {
+            fetchedTitle = data.title;
+          }
+        }
+      } catch (err) {
+        console.warn('noembed fetch failed, attempting fallback:', err);
+      }
+
+      // 2. Fallback to youtube oembed
+      if (!fetchedTitle) {
+        try {
+          const res = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data && data.title) {
+              fetchedTitle = data.title;
+            }
+          }
+        } catch (err) {
+          console.warn('YouTube oembed fetch error:', err);
+        }
+      }
+
+      if (fetchedTitle) {
+        setVideoForm((prev) => ({
+          ...prev,
+          // Auto-populate Title if current title is empty or generic
+          title: (!prev.title || prev.title.trim() === '' || /^Lesson \d+:?$/i.test(prev.title.trim()))
+            ? fetchedTitle 
+            : prev.title,
+        }));
+        setMetadataSuccess(true);
+      }
+    } catch (err) {
+      console.warn('Could not auto-fetch YouTube metadata:', err);
+    } finally {
+      setIsFetchingMetadata(false);
+    }
+  };
+
   const handleVideoUrlChange = (url: string) => {
     const extractedId = extractYouTubeId(url);
     setVideoForm((prev) => ({
@@ -232,6 +294,12 @@ export const TutorialsTab: React.FC = () => {
       youtube_url: url,
       youtube_video_id: extractedId || prev.youtube_video_id,
     }));
+
+    if (extractedId && extractedId !== url && extractedId.length >= 6) {
+      fetchYouTubeMetadata(extractedId);
+    } else if (extractedId && extractedId.length === 11) {
+      fetchYouTubeMetadata(extractedId);
+    }
   };
 
   const handleSaveVideo = async (e: React.FormEvent) => {
@@ -720,30 +788,61 @@ export const TutorialsTab: React.FC = () => {
 
             <form onSubmit={handleSaveVideo} className="space-y-4">
               <div>
-                <label className="block text-xs font-mono text-gray-300 uppercase mb-1">
-                  Lecture Title *
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-mono text-gray-300 uppercase">
+                    Lecture Title *
+                  </label>
+                  {isFetchingMetadata && (
+                    <span className="inline-flex items-center gap-1.5 text-[11px] font-mono text-cyber-neon animate-pulse">
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                      <span>Fetching YouTube title...</span>
+                    </span>
+                  )}
+                  {metadataSuccess && !isFetchingMetadata && (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/30">
+                      <CheckCircle2 className="w-3 h-3" />
+                      <span>✓ Title auto-detected from YouTube</span>
+                    </span>
+                  )}
+                </div>
                 <input
                   type="text"
                   required
                   value={videoForm.title}
                   onChange={(e) => setVideoForm({ ...videoForm, title: e.target.value })}
-                  placeholder="Lesson 1: Advanced Excel Formulas & Nested Arrays..."
+                  placeholder="e.g. Lesson 1: Advanced Excel Formulas & Dynamic Arrays..."
                   className="w-full px-3.5 py-2.5 rounded-xl bg-dark-950 border border-white/10 text-white text-xs focus:border-cyber-accent focus:outline-none"
                 />
+                <p className="text-[11px] text-gray-500 font-sans mt-1">
+                  Auto-populated when a valid YouTube link is pasted. Fully editable anytime.
+                </p>
               </div>
 
               <div>
-                <label className="block text-xs font-mono text-gray-300 uppercase mb-1">
-                  YouTube Video URL (or youtu.be / ID) *
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-mono text-gray-300 uppercase">
+                    YouTube Video URL (or youtu.be / ID) *
+                  </label>
+                  {videoForm.youtube_video_id && (
+                    <button
+                      type="button"
+                      onClick={() => fetchYouTubeMetadata(videoForm.youtube_video_id)}
+                      disabled={isFetchingMetadata}
+                      className="text-[11px] font-mono text-cyber-neon hover:underline flex items-center gap-1"
+                      title="Re-fetch title from YouTube"
+                    >
+                      <RefreshCw className={`w-3 h-3 ${isFetchingMetadata ? 'animate-spin' : ''}`} />
+                      <span>Re-fetch title</span>
+                    </button>
+                  )}
+                </div>
                 <input
                   type="text"
                   required
                   value={videoForm.youtube_url}
                   onChange={(e) => handleVideoUrlChange(e.target.value)}
-                  placeholder="https://www.youtube.com/watch?v=0kPspP8z908"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-dark-950 border border-white/10 text-white text-xs focus:border-cyber-accent focus:outline-none"
+                  placeholder="https://www.youtube.com/watch?v=0kPspP8z908 or https://youtu.be/..."
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-dark-950 border border-white/10 text-white text-xs focus:border-cyber-accent focus:outline-none font-mono"
                 />
               </div>
 
@@ -755,7 +854,11 @@ export const TutorialsTab: React.FC = () => {
                   <input
                     type="text"
                     value={videoForm.youtube_video_id}
-                    onChange={(e) => setVideoForm({ ...videoForm, youtube_video_id: e.target.value })}
+                    onChange={(e) => {
+                      const id = e.target.value;
+                      setVideoForm({ ...videoForm, youtube_video_id: id });
+                      if (id && id.length === 11) fetchYouTubeMetadata(id);
+                    }}
                     placeholder="0kPspP8z908"
                     className="w-full px-3 py-2 rounded-xl bg-dark-950 border border-white/10 text-white text-xs font-mono focus:border-cyber-accent focus:outline-none"
                   />
@@ -763,13 +866,13 @@ export const TutorialsTab: React.FC = () => {
 
                 <div>
                   <label className="block text-xs font-mono text-gray-300 uppercase mb-1">
-                    Duration (e.g. 24:15)
+                    Duration (MM:SS)
                   </label>
                   <input
                     type="text"
                     value={videoForm.duration}
                     onChange={(e) => setVideoForm({ ...videoForm, duration: e.target.value })}
-                    placeholder="24:15"
+                    placeholder="MM:SS (e.g. 24:15)"
                     className="w-full px-3 py-2 rounded-xl bg-dark-950 border border-white/10 text-white text-xs focus:border-cyber-accent focus:outline-none"
                   />
                 </div>
