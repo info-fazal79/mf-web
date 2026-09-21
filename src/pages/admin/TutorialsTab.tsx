@@ -13,11 +13,13 @@ import {
   Video, 
   Clock, 
   FolderGit2,
-  CheckCircle2
+  CheckCircle2,
+  Sparkles
 } from 'lucide-react';
 import { YoutubeIcon } from '../../components/ui/Icons';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { extractYouTubeId } from '../../lib/utils';
+import { ImageUpload } from '../../components/admin/ImageUpload';
 
 export const TutorialsTab: React.FC = () => {
   const { 
@@ -658,18 +660,14 @@ export const TutorialsTab: React.FC = () => {
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-mono text-gray-300 uppercase mb-1">
-                  Thumbnail Image URL (Unsplash or custom CDN)
-                </label>
-                <input
-                  type="text"
-                  value={playlistForm.thumbnail_url}
-                  onChange={(e) => setPlaylistForm({ ...playlistForm, thumbnail_url: e.target.value })}
-                  placeholder="https://images.unsplash.com/photo-..."
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-dark-950 border border-white/10 text-white text-xs focus:border-cyber-accent focus:outline-none"
-                />
-              </div>
+              {/* Course Playlist Thumbnail Upload (WebP) */}
+              <ImageUpload
+                label="Course Playlist Thumbnail (WebP Auto-Compression)"
+                value={playlistForm.thumbnail_url}
+                onChange={(url) => setPlaylistForm({ ...playlistForm, thumbnail_url: url })}
+                folder="tutorials"
+                helperText="Upload course cover card JPG/PNG — auto-compressed to WebP or paste external URL."
+              />
 
               <div>
                 <label className="block text-xs font-mono text-gray-300 uppercase mb-1">
@@ -790,20 +788,39 @@ export const TutorialsTab: React.FC = () => {
                 </div>
               </div>
 
-              {/* Realtime Thumbnail Preview */}
-              {videoForm.youtube_video_id && (
-                <div className="p-3 rounded-xl bg-dark-950 border border-white/5 flex items-center gap-3">
-                  <img
-                    src={`https://img.youtube.com/vi/${videoForm.youtube_video_id}/hqdefault.jpg`}
-                    alt="Preview"
-                    className="w-20 aspect-video object-cover rounded-lg"
-                  />
-                  <div className="text-xs font-mono text-gray-400">
-                    <span className="text-emerald-400 font-bold flex items-center gap-1">
-                      <CheckCircle2 className="w-3 h-3" /> Valid YouTube Video Connected
+              {/* YouTube Auto-Thumbnail Extractor */}
+              {videoForm.youtube_video_id ? (
+                <div className="p-4 rounded-xl bg-dark-950 border border-cyber-accent/30 space-y-3 shadow-neon-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-mono font-bold text-cyber-neon flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>YouTube Auto-Thumbnail Extracted</span>
                     </span>
-                    <span className="block text-[11px] mt-0.5 text-gray-500">ID: {videoForm.youtube_video_id}</span>
+                    <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/30 flex items-center gap-1">
+                      <CheckCircle2 className="w-2.5 h-2.5" />
+                      <span>No Manual Upload Required</span>
+                    </span>
                   </div>
+
+                  <div className="flex items-center gap-3">
+                    <img
+                      src={`https://i.ytimg.com/vi/${videoForm.youtube_video_id}/hqdefault.jpg`}
+                      alt="YouTube Preview"
+                      className="w-28 aspect-video object-cover rounded-lg border border-white/10 shrink-0"
+                    />
+                    <div className="space-y-1 min-w-0">
+                      <div className="text-[11px] font-mono text-gray-300 truncate">
+                        https://i.ytimg.com/vi/{videoForm.youtube_video_id}/hqdefault.jpg
+                      </div>
+                      <div className="text-[11px] text-gray-500 font-sans">
+                        Thumbnails for video lectures are automatically fetched in HD directly from YouTube.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-3 rounded-xl bg-dark-950/60 border border-white/5 text-center text-xs font-mono text-gray-500">
+                  Paste a YouTube URL above to automatically generate the lecture HD thumbnail
                 </div>
               )}
 

@@ -4,6 +4,7 @@ import { Project } from '../../types';
 import { Plus, Edit2, Trash2, FolderGit2, ExternalLink, X, Sparkles } from 'lucide-react';
 import { GithubIcon } from '../../components/ui/Icons';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
+import { ImageUpload } from '../../components/admin/ImageUpload';
 
 export const ProjectsTab: React.FC = () => {
   const { projects, addProject, updateProject, deleteProject, addToast } = useStore();
@@ -292,19 +293,15 @@ export const ProjectsTab: React.FC = () => {
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-mono text-gray-300 uppercase mb-1">
-                  Long Webpage Screenshot URL *
-                </label>
-                <input
-                  type="url"
-                  required
-                  value={form.image_url}
-                  onChange={(e) => setForm({ ...form, image_url: e.target.value })}
-                  placeholder="https://..."
-                  className="w-full px-3 py-2 rounded-xl bg-dark-950 border border-white/10 text-white text-xs focus:border-cyber-accent focus:outline-none"
-                />
-              </div>
+              {/* Project Screenshot Upload (WebP) */}
+              <ImageUpload
+                label="Project Screenshot (WebP Auto-Compression)"
+                value={form.image_url}
+                onChange={(url) => setForm({ ...form, image_url: url })}
+                folder="projects"
+                required
+                helperText="Upload project mockup or screenshot JPG/PNG — auto-compressed to WebP or paste external URL."
+              />
 
               <div className="grid grid-cols-2 gap-4">
                 <div>

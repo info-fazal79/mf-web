@@ -4,6 +4,7 @@ import { BlogPost } from '../../types';
 import { Plus, Edit2, Trash2, FileText, Calendar, Clock, X, Eye, EyeOff } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { formatDate } from '../../lib/utils';
+import { ImageUpload } from '../../components/admin/ImageUpload';
 
 export const BlogTab: React.FC = () => {
   const { posts, addPost, updatePost, deletePost, addToast } = useStore();
@@ -314,19 +315,15 @@ export const BlogTab: React.FC = () => {
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-mono text-gray-300 uppercase mb-1">
-                  Featured Image URL *
-                </label>
-                <input
-                  type="url"
-                  required
-                  value={form.featured_image}
-                  onChange={(e) => setForm({ ...form, featured_image: e.target.value })}
-                  placeholder="https://..."
-                  className="w-full px-3 py-2 rounded-xl bg-dark-950 border border-white/10 text-white text-xs focus:border-cyber-accent focus:outline-none"
-                />
-              </div>
+              {/* Blog Featured Image Upload (WebP) */}
+              <ImageUpload
+                label="Featured Article Cover (WebP Auto-Compression)"
+                value={form.featured_image}
+                onChange={(url) => setForm({ ...form, featured_image: url })}
+                folder="blogs"
+                required
+                helperText="Upload article banner JPG/PNG — auto-compressed to WebP or paste external URL."
+              />
 
               <div>
                 <label className="block text-xs font-mono text-gray-300 uppercase mb-1">

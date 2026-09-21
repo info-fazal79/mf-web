@@ -164,12 +164,35 @@ CREATE TABLE IF NOT EXISTS public.site_settings (
 -- ==============================================================================
 INSERT INTO storage.buckets (id, name, public) 
 VALUES 
+  ('media', 'media', true),
   ('ebooks', 'ebooks', true),
   ('covers', 'covers', true),
   ('projects', 'projects', true),
   ('blogs', 'blogs', true),
+  ('tutorials', 'tutorials', true),
   ('resumes', 'resumes', true)
 ON CONFLICT (id) DO UPDATE SET public = true;
+
+-- Storage Policies for Direct Admin WebP Uploads
+DROP POLICY IF EXISTS "Public Storage Read" ON storage.objects;
+CREATE POLICY "Public Storage Read" 
+  ON storage.objects FOR SELECT 
+  USING (bucket_id IN ('media', 'ebooks', 'covers', 'projects', 'blogs', 'tutorials', 'resumes'));
+
+DROP POLICY IF EXISTS "Public Storage Insert" ON storage.objects;
+CREATE POLICY "Public Storage Insert" 
+  ON storage.objects FOR INSERT 
+  WITH CHECK (bucket_id IN ('media', 'ebooks', 'covers', 'projects', 'blogs', 'tutorials', 'resumes'));
+
+DROP POLICY IF EXISTS "Public Storage Update" ON storage.objects;
+CREATE POLICY "Public Storage Update" 
+  ON storage.objects FOR UPDATE 
+  USING (bucket_id IN ('media', 'ebooks', 'covers', 'projects', 'blogs', 'tutorials', 'resumes'));
+
+DROP POLICY IF EXISTS "Public Storage Delete" ON storage.objects;
+CREATE POLICY "Public Storage Delete" 
+  ON storage.objects FOR DELETE 
+  USING (bucket_id IN ('media', 'ebooks', 'covers', 'projects', 'blogs', 'tutorials', 'resumes'));
 
 -- ==============================================================================
 -- ROW LEVEL SECURITY (RLS) POLICIES

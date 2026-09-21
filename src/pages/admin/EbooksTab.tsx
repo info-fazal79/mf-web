@@ -4,6 +4,7 @@ import { Book } from '../../types';
 import { formatPrice } from '../../lib/utils';
 import { Plus, Edit2, Trash2, BookOpen, ExternalLink, X, Check, UploadCloud } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
+import { ImageUpload } from '../../components/admin/ImageUpload';
 
 export const EbooksTab: React.FC = () => {
   const { books, addBook, updateBook, deleteBook, addToast } = useStore();
@@ -316,34 +317,28 @@ export const EbooksTab: React.FC = () => {
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-mono text-gray-300 uppercase mb-1">
-                    Cover Image URL / Storage URL *
-                  </label>
-                  <input
-                    type="url"
-                    required
-                    value={form.cover_url}
-                    onChange={(e) => setForm({ ...form, cover_url: e.target.value })}
-                    placeholder="https://..."
-                    className="w-full px-3 py-2 rounded-xl bg-dark-950 border border-white/10 text-white text-xs focus:border-cyber-accent focus:outline-none"
-                  />
-                </div>
+              {/* Cover Image Upload (WebP) */}
+              <ImageUpload
+                label="Cover Image (WebP Auto-Compression)"
+                value={form.cover_url}
+                onChange={(url) => setForm({ ...form, cover_url: url })}
+                folder="ebooks"
+                required
+                helperText="Upload book cover JPG/PNG — auto-compressed to WebP or paste external URL."
+              />
 
-                <div>
-                  <label className="block text-xs font-mono text-gray-300 uppercase mb-1">
-                    PDF File Download URL *
-                  </label>
-                  <input
-                    type="url"
-                    required
-                    value={form.file_url}
-                    onChange={(e) => setForm({ ...form, file_url: e.target.value })}
-                    placeholder="https://..."
-                    className="w-full px-3 py-2 rounded-xl bg-dark-950 border border-white/10 text-white text-xs focus:border-cyber-accent focus:outline-none"
-                  />
-                </div>
+              <div>
+                <label className="block text-xs font-mono text-gray-300 uppercase mb-1">
+                  PDF File Download URL *
+                </label>
+                <input
+                  type="url"
+                  required
+                  value={form.file_url}
+                  onChange={(e) => setForm({ ...form, file_url: e.target.value })}
+                  placeholder="https://..."
+                  className="w-full px-3 py-2 rounded-xl bg-dark-950 border border-white/10 text-white text-xs focus:border-cyber-accent focus:outline-none"
+                />
               </div>
 
               <div>
