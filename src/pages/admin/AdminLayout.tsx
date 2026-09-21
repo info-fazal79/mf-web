@@ -46,11 +46,16 @@ export const AdminLayout: React.FC = () => {
     setAdminAuthenticated, 
     consultations, 
     comments,
-    addToast 
+    addToast,
+    siteSettings 
   } = useStore();
 
   const [activeTab, setActiveTab] = useState<AdminTab>('overview');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  React.useEffect(() => {
+    document.title = 'Admin Dashboard — Muhammad Fazal';
+  }, []);
 
   // Protected route check
   if (!isAdminAuthenticated) {
@@ -132,14 +137,15 @@ export const AdminLayout: React.FC = () => {
 
         {/* Right Actions */}
         <div className="flex items-center gap-3">
-          <Link
-            to="/"
+          <a
+            href={siteSettings.site_url || 'https://muhammadfazal.com'}
             target="_blank"
+            rel="noopener noreferrer"
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-dark-950 border border-white/10 text-gray-300 hover:text-cyber-neon text-xs font-mono transition-colors"
           >
             <span>View Public Site</span>
             <ExternalLink className="w-3.5 h-3.5" />
-          </Link>
+          </a>
 
           <button
             onClick={handleLogout}

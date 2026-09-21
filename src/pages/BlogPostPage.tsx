@@ -44,6 +44,12 @@ export const BlogPostPage: React.FC = () => {
   // Find post by slug or id
   const post = posts.find((p) => p.slug === slug || p.id === slug);
 
+  useEffect(() => {
+    if (post) {
+      document.title = `${post.title} — Muhammad Fazal`;
+    }
+  }, [post]);
+
   if (!post) {
     return (
       <div className="pt-32 pb-20 max-w-4xl mx-auto px-4 text-center space-y-4">

@@ -38,6 +38,12 @@ export const PlaylistCoursePage: React.FC = () => {
   // Find playlist by slug
   const playlist = playlists.find((p) => p.slug === slug);
 
+  useEffect(() => {
+    if (playlist) {
+      document.title = `${playlist.title} — Muhammad Fazal`;
+    }
+  }, [playlist]);
+
   // Active playing lecture in player modal / theater
   const [activeLecture, setActiveLecture] = useState<PlaylistVideo | null>(null);
 

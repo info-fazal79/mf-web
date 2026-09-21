@@ -13,6 +13,10 @@ export const AdminLogin: React.FC = () => {
   const { setAdminAuthenticated, addToast } = useStore();
   const navigate = useNavigate();
 
+  React.useEffect(() => {
+    document.title = 'Admin Login — Muhammad Fazal';
+  }, []);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');

@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import { Navbar } from './Navbar';
 import { Footer } from './Footer';
 import { CartDrawer } from './CartDrawer';
@@ -11,6 +11,27 @@ import { ScrollToTop } from './ScrollToTop';
 import Lenis from 'lenis';
 
 export const MainLayout: React.FC = () => {
+  const location = useLocation();
+
+  useEffect(() => {
+    const titles: Record<string, string> = {
+      '/': 'Muhammad Fazal',
+      '/about': 'About — Muhammad Fazal',
+      '/ebooks': 'e-Books — Muhammad Fazal',
+      '/store': 'e-Books — Muhammad Fazal',
+      '/projects': 'Projects — Muhammad Fazal',
+      '/tutorials': 'Tutorials — Muhammad Fazal',
+      '/blog': 'Blog — Muhammad Fazal',
+      '/contact': 'Contact — Muhammad Fazal',
+    };
+
+    if (titles[location.pathname]) {
+      document.title = titles[location.pathname];
+    } else if (!location.pathname.startsWith('/tutorials/') && !location.pathname.startsWith('/blog/')) {
+      document.title = 'Muhammad Fazal';
+    }
+  }, [location.pathname]);
+
   useEffect(() => {
     // Initialize Lenis Smooth Scrolling across all public pages
     const lenis = new Lenis({
