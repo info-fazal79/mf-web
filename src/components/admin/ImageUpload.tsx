@@ -33,8 +33,8 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFile = async (file: File) => {
-    if (!file.type.startsWith('image/')) {
-      alert('Please upload a valid image file (JPG, PNG, WebP, etc.).');
+    if (!file.type.startsWith('image/') && !file.name.toLowerCase().endsWith('.svg')) {
+      alert('Please upload a valid image file (JPG, PNG, WebP, SVG, etc.).');
       return;
     }
 
@@ -137,7 +137,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/*"
+              accept="image/*,.svg"
               className="hidden"
               onChange={(e) => {
                 if (e.target.files && e.target.files.length > 0) {
@@ -149,17 +149,17 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
             {isUploading ? (
               <div className="py-6 flex flex-col items-center justify-center gap-2 text-center">
                 <Loader2 className="w-6 h-6 text-cyber-neon animate-spin" />
-                <div className="text-xs font-mono text-white font-bold">Compressing to WebP & Uploading...</div>
-                <div className="text-[11px] text-gray-400 font-mono">Converting high-res image to optimized WebP format</div>
+                <div className="text-xs font-mono text-white font-bold">Uploading & Optimizing...</div>
+                <div className="text-[11px] text-gray-400 font-mono">Converting raster image to WebP or preserving vector SVG</div>
               </div>
             ) : value ? (
               <div className="flex flex-col sm:flex-row items-center gap-4">
                 {/* Thumbnail Preview */}
-                <div className="relative w-28 h-20 shrink-0 rounded-lg overflow-hidden border border-white/10 bg-dark-900 group/preview">
+                <div className="relative w-28 h-20 shrink-0 rounded-lg overflow-hidden border border-white/10 bg-dark-900 group/preview flex items-center justify-center p-1">
                   <img
                     src={value}
                     alt="Uploaded preview"
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-contain"
                   />
                   <div className="absolute inset-0 bg-dark-950/60 opacity-0 group-hover/preview:opacity-100 transition-opacity flex items-center justify-center">
                     <span className="text-[10px] font-mono text-white font-bold">Change</span>
@@ -171,7 +171,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
                   <div className="flex items-center gap-2">
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[10px] font-mono font-bold">
                       <Check className="w-2.5 h-2.5" />
-                      <span>WebP Ready</span>
+                      <span>{value.includes('.svg') ? 'Vector SVG Ready' : 'Optimized WebP'}</span>
                     </span>
                     {stats && (
                       <span className="inline-flex items-center gap-1 text-[10px] font-mono text-cyber-neon bg-cyber-dim px-2 py-0.5 rounded border border-cyber-accent/30">

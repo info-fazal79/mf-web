@@ -1,7 +1,7 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { compressImageWithStats, CompressionResult } from '../utils/imageCompressor';
 
-export type StorageFolder = 'ebooks' | 'projects' | 'blogs' | 'tutorials' | 'covers';
+export type StorageFolder = 'ebooks' | 'projects' | 'blogs' | 'tutorials' | 'covers' | 'logos' | 'media';
 
 export interface UploadResult {
   url: string;
@@ -12,7 +12,8 @@ export interface UploadResult {
 
 /**
  * Upload an image file directly to Supabase storage with automatic client-side WebP compression.
- * Organized into target folders (ebooks/, projects/, blogs/, tutorials/).
+ * Organized into target folders (ebooks/, projects/, blogs/, tutorials/, logos/).
+ * Preserves vector SVGs without rasterization; compresses JPG/PNG/WebP to WebP.
  */
 export async function uploadImageFile(
   file: File,
@@ -20,11 +21,9 @@ export async function uploadImageFile(
   options: { maxWidth?: number; quality?: number } = {}
 ): Promise<UploadResult> {
   const { maxWidth = 1200, quality = 0.8 } = options;
+  const isSvg = file.type === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg');
 
-  // 1. Client-Side WebP Compression
-  const stats: CompressionResult = await compressImageWithStats(file, maxWidth, quality);
-
-  // 2. Generate clean, unique filename
+  // 1. Generate clean, unique filename
   const cleanBaseName = file.name
     .replace(/\.[^/.]+$/, '')
     .toLowerCase()
@@ -36,34 +35,53 @@ export async function uploadImageFile(
     ? crypto.randomUUID().slice(0, 8)
     : Math.random().toString(36).substring(2, 10);
 
-  const fileName = `${cleanBaseName}-${Date.now()}-${uniqueId}.webp`;
+  let uploadBlob: Blob;
+  let fileName: string;
+  let contentType: string;
+  let originalSize = file.size;
+  let compressedSize = file.size;
+  let compressionRatio = 'Vector SVG';
 
-  // 3. Fallback to Data URL if Supabase is not configured
+  if (isSvg) {
+    uploadBlob = file;
+    fileName = `${cleanBaseName}-${Date.now()}-${uniqueId}.svg`;
+    contentType = 'image/svg+xml';
+  } else {
+    // Client-Side WebP Compression for raster images
+    const stats: CompressionResult = await compressImageWithStats(file, maxWidth, quality);
+    uploadBlob = stats.blob;
+    compressedSize = stats.compressedSize;
+    compressionRatio = stats.compressionRatio;
+    fileName = `${cleanBaseName}-${Date.now()}-${uniqueId}.webp`;
+    contentType = 'image/webp';
+  }
+
+  // 2. Fallback to Data URL if Supabase is not configured
   if (!isSupabaseConfigured()) {
     console.warn('[Storage] Supabase is not configured. Falling back to local data URL for preview.');
     const dataUrl = await new Promise<string>((resolve) => {
       const reader = new FileReader();
       reader.onloadend = () => resolve(reader.result as string);
-      reader.readAsDataURL(stats.blob);
+      reader.readAsDataURL(uploadBlob);
     });
 
     return {
       url: dataUrl,
-      originalSize: stats.originalSize,
-      compressedSize: stats.compressedSize,
-      compressionRatio: stats.compressionRatio,
+      originalSize,
+      compressedSize,
+      compressionRatio,
     };
   }
 
-  // 4. Try upload to 'media' bucket first (media/${folder}/${fileName})
+  // 3. Try upload to 'media' bucket first (media/${folder}/${fileName})
   // If 'media' bucket is not available, fallback to specific bucket (${folder}/${fileName})
   let targetBucket = 'media';
   let targetPath = `${folder}/${fileName}`;
 
   let { data, error } = await supabase.storage
     .from(targetBucket)
-    .upload(targetPath, stats.blob, {
-      contentType: 'image/webp',
+    .upload(targetPath, uploadBlob, {
+      contentType,
       cacheControl: '31536000', // 1 year cache
       upsert: true,
     });
@@ -74,8 +92,8 @@ export async function uploadImageFile(
     targetPath = fileName;
     const fallbackAttempt = await supabase.storage
       .from(targetBucket)
-      .upload(targetPath, stats.blob, {
-        contentType: 'image/webp',
+      .upload(targetPath, uploadBlob, {
+        contentType,
         cacheControl: '31536000',
         upsert: true,
       });
@@ -90,14 +108,14 @@ export async function uploadImageFile(
     const dataUrl = await new Promise<string>((resolve) => {
       const reader = new FileReader();
       reader.onloadend = () => resolve(reader.result as string);
-      reader.readAsDataURL(stats.blob);
+      reader.readAsDataURL(uploadBlob);
     });
 
     return {
       url: dataUrl,
-      originalSize: stats.originalSize,
-      compressedSize: stats.compressedSize,
-      compressionRatio: stats.compressionRatio,
+      originalSize,
+      compressedSize,
+      compressionRatio,
     };
   }
 
@@ -108,8 +126,8 @@ export async function uploadImageFile(
 
   return {
     url: publicUrlData.publicUrl,
-    originalSize: stats.originalSize,
-    compressedSize: stats.compressedSize,
-    compressionRatio: stats.compressionRatio,
+    originalSize,
+    compressedSize,
+    compressionRatio,
   };
 }

@@ -14,7 +14,6 @@ export const INITIAL_SITE_SETTINGS: SiteSettings = {
     linkedin: 'https://linkedin.com/in',
     youtube: 'https://youtube.com',
     github: 'https://github.com',
-    fiverr: 'https://fiverr.com',
   },
 };
 

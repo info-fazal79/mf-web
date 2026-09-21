@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useStore } from '../../store/useStore';
 import { Settings, Save, Sparkles, Image, Type, Link2, Download, Mail } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
+import { ImageUpload } from '../../components/admin/ImageUpload';
 
 export const SettingsTab: React.FC = () => {
   const { siteSettings, setSiteSettings, addToast } = useStore();
@@ -19,7 +20,6 @@ export const SettingsTab: React.FC = () => {
     linkedin: siteSettings.social_links?.linkedin || '',
     youtube: siteSettings.social_links?.youtube || '',
     github: siteSettings.social_links?.github || '',
-    fiverr: siteSettings.social_links?.fiverr || '',
   });
 
   const [isSaving, setIsSaving] = useState(false);
@@ -42,7 +42,6 @@ export const SettingsTab: React.FC = () => {
         linkedin: form.linkedin,
         youtube: form.youtube,
         github: form.github,
-        fiverr: form.fiverr,
       },
     };
 
@@ -90,12 +89,12 @@ export const SettingsTab: React.FC = () => {
             <span>Brand Logo Customization</span>
           </h3>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-5">
             <div>
               <label className="block text-xs font-mono text-gray-300 uppercase mb-2">
                 Logo Display Mode
               </label>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-2 max-w-xs">
                 <button
                   type="button"
                   onClick={() => setForm({ ...form, logo_type: 'text' })}
@@ -134,37 +133,105 @@ export const SettingsTab: React.FC = () => {
                   value={form.logo_text}
                   onChange={(e) => setForm({ ...form, logo_text: e.target.value })}
                   placeholder="FAZAL"
-                  className="w-full px-3 py-2 rounded-xl bg-dark-950 border border-white/10 text-white text-xs font-mono focus:border-cyber-accent focus:outline-none"
+                  className="w-full max-w-md px-3.5 py-2.5 rounded-xl bg-dark-950 border border-white/10 text-white text-xs font-mono focus:border-cyber-accent focus:outline-none"
                 />
               </div>
             ) : (
-              <div>
-                <label className="block text-xs font-mono text-gray-300 uppercase mb-1">
-                  Logo Image URL (SVG/PNG)
-                </label>
-                <input
-                  type="url"
+              <div className="space-y-4">
+                {/* Direct File Upload Zone */}
+                <ImageUpload
+                  label="Brand Logo Upload"
                   value={form.logo_image_url}
-                  onChange={(e) => setForm({ ...form, logo_image_url: e.target.value })}
-                  placeholder="https://.../logo.png"
-                  className="w-full px-3 py-2 rounded-xl bg-dark-950 border border-white/10 text-white text-xs focus:border-cyber-accent focus:outline-none"
+                  onChange={(url) => setForm({ ...form, logo_image_url: url })}
+                  folder="logos"
+                  helperText="Upload PNG, SVG, WebP, or JPG. SVGs preserve sharp vector scaling; raster images are automatically compressed to WebP."
                 />
+
+                {/* Direct URL Input fallback / manual entry */}
+                <div>
+                  <label className="block text-xs font-mono text-gray-300 uppercase mb-1">
+                    Or Direct Logo Image URL
+                  </label>
+                  <input
+                    type="url"
+                    value={form.logo_image_url}
+                    onChange={(e) => setForm({ ...form, logo_image_url: e.target.value })}
+                    placeholder="https://.../logo.png (or paste external/SVG URL)"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-dark-950 border border-white/10 text-white text-xs font-mono focus:border-cyber-accent focus:outline-none"
+                  />
+                </div>
               </div>
             )}
-          </div>
 
-          <div>
-            <label className="block text-xs font-mono text-gray-300 uppercase mb-1">
-              Logo Width: {form.logo_width}px
-            </label>
-            <input
-              type="range"
-              min="80"
-              max="240"
-              value={form.logo_width}
-              onChange={(e) => setForm({ ...form, logo_width: parseInt(e.target.value) || 120 })}
-              className="w-full accent-cyber-accent"
-            />
+            {/* Logo Width Slider */}
+            <div className="pt-2 border-t border-white/10">
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-xs font-mono text-gray-300 uppercase">
+                  Logo Rendered Width: <span className="text-cyber-neon font-bold">{form.logo_width}px</span>
+                </label>
+                <span className="text-[11px] font-mono text-gray-500">Min 60px — Max 300px</span>
+              </div>
+              <input
+                type="range"
+                min="60"
+                max="300"
+                value={form.logo_width}
+                onChange={(e) => setForm({ ...form, logo_width: parseInt(e.target.value) || 120 })}
+                className="w-full accent-cyber-accent cursor-pointer"
+              />
+            </div>
+
+            {/* Interactive Live Logo Preview Box */}
+            <div className="p-4 rounded-xl bg-dark-950/80 border border-white/10 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-mono font-bold text-gray-300 uppercase flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-cyber-neon" />
+                  <span>Live Header Navbar Preview</span>
+                </span>
+                <span className="text-[10px] font-mono text-cyber-neon bg-cyber-dim px-2 py-0.5 rounded border border-cyber-accent/30">
+                  {form.logo_width}px applied
+                </span>
+              </div>
+
+              <div className="p-4 rounded-xl bg-dark-900 border border-white/5 flex items-center justify-between min-h-[72px] overflow-hidden">
+                <div className="flex items-center">
+                  {form.logo_type === 'image' ? (
+                    form.logo_image_url ? (
+                      <img
+                        src={form.logo_image_url}
+                        alt={form.logo_text || 'Brand Logo'}
+                        style={{ width: `${form.logo_width}px` }}
+                        className="h-auto max-h-16 object-contain transition-all"
+                      />
+                    ) : (
+                      <div className="text-xs font-mono text-gray-500 italic py-2">
+                        No logo image selected. Drop a file above or enter a URL to preview.
+                      </div>
+                    )
+                  ) : (
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-9 h-9 rounded-xl bg-dark-950 border border-cyber-accent/40 flex items-center justify-center shadow-neon-sm">
+                        <span className="font-mono text-cyber-neon font-black text-lg">
+                          {form.logo_text ? form.logo_text.charAt(0).toUpperCase() : 'F'}
+                        </span>
+                      </div>
+                      <span className="text-xl font-bold tracking-wider font-mono bg-gradient-to-r from-white via-gray-200 to-cyber-neon bg-clip-text text-transparent">
+                        {form.logo_text || 'FAZAL'}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="hidden sm:flex items-center gap-4 text-xs font-mono text-gray-500">
+                  <span>Home</span>
+                  <span>About</span>
+                  <span>Projects</span>
+                  <span className="px-2.5 py-1 rounded-lg bg-cyber-dim border border-cyber-accent/30 text-cyber-neon text-[10px] font-bold">
+                    Navbar Simulation
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -278,13 +345,13 @@ export const SettingsTab: React.FC = () => {
 
             <div>
               <label className="block text-xs font-mono text-gray-300 uppercase mb-1">
-                Fiverr Profile URL
+                Facebook Profile URL
               </label>
               <input
                 type="url"
-                value={form.fiverr}
-                onChange={(e) => setForm({ ...form, fiverr: e.target.value })}
-                placeholder="https://fiverr.com/..."
+                value={form.facebook}
+                onChange={(e) => setForm({ ...form, facebook: e.target.value })}
+                placeholder="https://facebook.com/your-username"
                 className="w-full px-3 py-2 rounded-xl bg-dark-950 border border-white/10 text-white text-xs focus:border-cyber-accent focus:outline-none"
               />
             </div>

@@ -98,17 +98,6 @@ export const Footer: React.FC = () => {
                   <FacebookIcon className="w-4 h-4" />
                 </a>
               )}
-              {siteSettings.social_links?.fiverr && (
-                <a
-                  href={siteSettings.social_links.fiverr}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-2.5 h-9 rounded-xl bg-dark-900 border border-white/10 flex items-center justify-center text-xs font-mono font-bold text-gray-400 hover:text-cyber-neon hover:border-cyber-accent/40 transition-all hover:scale-105"
-                  aria-label="Fiverr Profile"
-                >
-                  fiverr
-                </a>
-              )}
             </div>
           </div>
 

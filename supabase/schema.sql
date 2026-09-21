@@ -151,8 +151,7 @@ CREATE TABLE IF NOT EXISTS public.site_settings (
     "facebook": "https://facebook.com",
     "linkedin": "https://linkedin.com",
     "youtube": "https://youtube.com",
-    "github": "https://github.com",
-    "fiverr": "https://fiverr.com"
+    "github": "https://github.com"
   }'::jsonb,
   contact_email TEXT DEFAULT 'contact@muhammadfazal.com',
   updated_at TIMESTAMPTZ DEFAULT NOW(),
@@ -165,6 +164,7 @@ CREATE TABLE IF NOT EXISTS public.site_settings (
 INSERT INTO storage.buckets (id, name, public) 
 VALUES 
   ('media', 'media', true),
+  ('logos', 'logos', true),
   ('ebooks', 'ebooks', true),
   ('covers', 'covers', true),
   ('projects', 'projects', true),
@@ -177,22 +177,22 @@ ON CONFLICT (id) DO UPDATE SET public = true;
 DROP POLICY IF EXISTS "Public Storage Read" ON storage.objects;
 CREATE POLICY "Public Storage Read" 
   ON storage.objects FOR SELECT 
-  USING (bucket_id IN ('media', 'ebooks', 'covers', 'projects', 'blogs', 'tutorials', 'resumes'));
+  USING (bucket_id IN ('media', 'logos', 'ebooks', 'covers', 'projects', 'blogs', 'tutorials', 'resumes'));
 
 DROP POLICY IF EXISTS "Public Storage Insert" ON storage.objects;
 CREATE POLICY "Public Storage Insert" 
   ON storage.objects FOR INSERT 
-  WITH CHECK (bucket_id IN ('media', 'ebooks', 'covers', 'projects', 'blogs', 'tutorials', 'resumes'));
+  WITH CHECK (bucket_id IN ('media', 'logos', 'ebooks', 'covers', 'projects', 'blogs', 'tutorials', 'resumes'));
 
 DROP POLICY IF EXISTS "Public Storage Update" ON storage.objects;
 CREATE POLICY "Public Storage Update" 
   ON storage.objects FOR UPDATE 
-  USING (bucket_id IN ('media', 'ebooks', 'covers', 'projects', 'blogs', 'tutorials', 'resumes'));
+  USING (bucket_id IN ('media', 'logos', 'ebooks', 'covers', 'projects', 'blogs', 'tutorials', 'resumes'));
 
 DROP POLICY IF EXISTS "Public Storage Delete" ON storage.objects;
 CREATE POLICY "Public Storage Delete" 
   ON storage.objects FOR DELETE 
-  USING (bucket_id IN ('media', 'ebooks', 'covers', 'projects', 'blogs', 'tutorials', 'resumes'));
+  USING (bucket_id IN ('media', 'logos', 'ebooks', 'covers', 'projects', 'blogs', 'tutorials', 'resumes'));
 
 -- ==============================================================================
 -- ROW LEVEL SECURITY (RLS) POLICIES
