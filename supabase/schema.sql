@@ -140,6 +140,7 @@ CREATE TABLE IF NOT EXISTS public.consultations (
 -- 9. SITE SETTINGS TABLE
 CREATE TABLE IF NOT EXISTS public.site_settings (
   id INT PRIMARY KEY DEFAULT 1,
+  site_url TEXT DEFAULT 'https://muhammadfazal.com',
   logo_type TEXT DEFAULT 'text', -- 'text' or 'image'
   logo_text TEXT DEFAULT 'FAZAL',
   logo_image_url TEXT,

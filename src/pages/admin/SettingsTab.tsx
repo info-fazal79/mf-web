@@ -9,6 +9,7 @@ export const SettingsTab: React.FC = () => {
   const { siteSettings, setSiteSettings, addToast } = useStore();
 
   const [form, setForm] = useState({
+    site_url: siteSettings.site_url || 'https://muhammadfazal.com',
     logo_type: siteSettings.logo_type || 'text',
     logo_text: siteSettings.logo_text || 'FAZAL',
     logo_image_url: siteSettings.logo_image_url || '',
@@ -62,6 +63,7 @@ export const SettingsTab: React.FC = () => {
     setIsSaving(true);
 
     const updatedSettings = {
+      site_url: form.site_url || 'https://muhammadfazal.com',
       logo_type: form.logo_type as 'text' | 'image',
       logo_text: form.logo_text,
       logo_image_url: form.logo_image_url,
@@ -299,7 +301,7 @@ export const SettingsTab: React.FC = () => {
             />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <label className="block text-xs font-mono text-gray-300 uppercase">
@@ -393,6 +395,22 @@ export const SettingsTab: React.FC = () => {
 
             <div>
               <label className="block text-xs font-mono text-gray-300 uppercase mb-1">
+                Primary Site URL / Domain
+              </label>
+              <input
+                type="url"
+                value={form.site_url}
+                onChange={(e) => setForm({ ...form, site_url: e.target.value })}
+                placeholder="https://muhammadfazal.com"
+                className="w-full px-3 py-2.5 rounded-xl bg-dark-950 border border-white/10 text-white text-xs font-mono focus:border-cyber-accent focus:outline-none"
+              />
+              <p className="text-[11px] text-gray-500 font-sans mt-1">
+                Root canonical production address used for SEO & metadata.
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-xs font-mono text-gray-300 uppercase mb-1">
                 Contact Email Address
               </label>
               <input
@@ -400,8 +418,11 @@ export const SettingsTab: React.FC = () => {
                 value={form.contact_email}
                 onChange={(e) => setForm({ ...form, contact_email: e.target.value })}
                 placeholder="contact@muhammadfazal.com"
-                className="w-full px-3 py-2 rounded-xl bg-dark-950 border border-white/10 text-white text-xs focus:border-cyber-accent focus:outline-none"
+                className="w-full px-3 py-2.5 rounded-xl bg-dark-950 border border-white/10 text-white text-xs focus:border-cyber-accent focus:outline-none"
               />
+              <p className="text-[11px] text-gray-500 font-sans mt-1">
+                Destination inbox for visitor contact inquiries.
+              </p>
             </div>
           </div>
         </div>

@@ -66,7 +66,7 @@ export const ConsultationDrawer: React.FC = () => {
       setIsSubmitted(true);
       addToast({
         title: 'Consultation Requested!',
-        message: `Thank you ${formData.name}. Muhammad Fazal will review your project details and reach out within 24 hours.`,
+        message: `Thank you ${formData.name}. Muhammad Fazal will review your project details and reach out from muhammadfazal.com within 24 hours.`,
         type: 'success',
       });
 

@@ -2,6 +2,7 @@ import { Book, BlogPost, Project, SiteSettings, Tutorial, Comment, Consultation,
 
 export const INITIAL_SITE_SETTINGS: SiteSettings = {
   id: 1,
+  site_url: 'https://muhammadfazal.com',
   logo_type: 'text',
   logo_text: 'FAZAL',
   logo_width: 130,

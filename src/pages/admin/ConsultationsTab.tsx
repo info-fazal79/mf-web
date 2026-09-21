@@ -118,8 +118,9 @@ export const ConsultationsTab: React.FC = () => {
                   </div>
                   <div className="flex items-center gap-3 text-xs font-mono text-gray-400">
                     <a
-                      href={`mailto:${lead.email}`}
+                      href={`mailto:${lead.email}?subject=Regarding your consultation request on muhammadfazal.com&body=Hi ${encodeURIComponent(lead.name)},%0D%0A%0D%0AThank you for reaching out via https://muhammadfazal.com regarding ${encodeURIComponent(lead.service)}.%0D%0A%0D%0ABest regards,%0D%0AMuhammad Fazal%0D%0Ahttps://muhammadfazal.com`}
                       className="text-cyber-neon hover:underline flex items-center gap-1"
+                      title="Send Email Reply via mailto"
                     >
                       <Mail className="w-3 h-3" />
                       <span>{lead.email}</span>

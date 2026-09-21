@@ -1,0 +1,18 @@
+﻿{
+  "name": "Muhammad Fazal - WordPress Developer & Data Analyst",
+  "short_name": "Muhammad Fazal",
+  "description": "Personal portfolio and digital store of Muhammad Fazal. WordPress Developer, Data Analyst, Lead Instructor of MS Office, and digital creator.",
+  "start_url": "https://muhammadfazal.com/",
+  "scope": "https://muhammadfazal.com/",
+  "display": "standalone",
+  "background_color": "#0D0F12",
+  "theme_color": "#00E599",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

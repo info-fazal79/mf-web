@@ -116,6 +116,7 @@ export interface Consultation {
 
 export interface SiteSettings {
   id?: number;
+  site_url?: string;
   logo_type: 'text' | 'image';
   logo_text: string;
   logo_image_url?: string;
