@@ -117,6 +117,9 @@ export interface Consultation {
 export interface SiteSettings {
   id?: number;
   site_url?: string;
+  is_maintenance_mode?: boolean;
+  maintenance_title?: string;
+  maintenance_message?: string;
   logo_type: 'text' | 'image';
   logo_text: string;
   logo_image_url?: string;

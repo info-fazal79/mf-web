@@ -12,6 +12,7 @@ import { BlogPostPage } from './pages/BlogPostPage';
 import { ContactPage } from './pages/ContactPage';
 import { AdminLogin } from './pages/admin/AdminLogin';
 import { AdminLayout } from './pages/admin/AdminLayout';
+import { MaintenanceGuard } from './components/MaintenanceGuard';
 import { useSupabaseData } from './hooks/useSupabaseData';
 
 export const App: React.FC = () => {
@@ -21,8 +22,15 @@ export const App: React.FC = () => {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Public Multi-Page Routes Wrapped in MainLayout */}
-        <Route path="/" element={<MainLayout />}>
+        {/* Public Multi-Page Routes Wrapped in MaintenanceGuard & MainLayout */}
+        <Route
+          path="/"
+          element={
+            <MaintenanceGuard>
+              <MainLayout />
+            </MaintenanceGuard>
+          }
+        >
           <Route index element={<HomePage />} />
           <Route path="about" element={<AboutPage />} />
           <Route path="ebooks" element={<EbooksPage />} />

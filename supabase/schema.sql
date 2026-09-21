@@ -155,9 +155,18 @@ CREATE TABLE IF NOT EXISTS public.site_settings (
     "github": "https://github.com"
   }'::jsonb,
   contact_email TEXT DEFAULT 'contact@muhammadfazal.com',
+  is_maintenance_mode BOOLEAN DEFAULT FALSE,
+  maintenance_title TEXT DEFAULT 'Upgrading System & Infrastructure',
+  maintenance_message TEXT DEFAULT 'We are currently deploying new features and performance enhancements. We will be back online shortly.',
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   CONSTRAINT single_settings_row CHECK (id = 1)
 );
+
+-- Migration statement if table already exists:
+ALTER TABLE public.site_settings 
+ADD COLUMN IF NOT EXISTS is_maintenance_mode BOOLEAN DEFAULT FALSE,
+ADD COLUMN IF NOT EXISTS maintenance_title TEXT DEFAULT 'Upgrading System & Infrastructure',
+ADD COLUMN IF NOT EXISTS maintenance_message TEXT DEFAULT 'We are currently deploying new features and performance enhancements. We will be back online shortly.';
 
 -- ==============================================================================
 -- STORAGE BUCKETS SETUP

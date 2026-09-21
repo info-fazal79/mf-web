@@ -10,6 +10,9 @@ export const SettingsTab: React.FC = () => {
 
   const [form, setForm] = useState({
     site_url: siteSettings.site_url || 'https://muhammadfazal.com',
+    is_maintenance_mode: Boolean(siteSettings.is_maintenance_mode),
+    maintenance_title: siteSettings.maintenance_title || 'Upgrading System & Infrastructure',
+    maintenance_message: siteSettings.maintenance_message || 'We are currently deploying new features and performance enhancements. We will be back online shortly.',
     logo_type: siteSettings.logo_type || 'text',
     logo_text: siteSettings.logo_text || 'FAZAL',
     logo_image_url: siteSettings.logo_image_url || '',
@@ -25,7 +28,82 @@ export const SettingsTab: React.FC = () => {
   });
 
   const [isSaving, setIsSaving] = useState(false);
+  const [isTogglingMaintenance, setIsTogglingMaintenance] = useState(false);
   const [isUploadingPdf, setIsUploadingPdf] = useState(false);
+
+  // Sync state when siteSettings loads from Supabase
+  React.useEffect(() => {
+    setForm((prev) => ({
+      ...prev,
+      site_url: siteSettings.site_url || prev.site_url,
+      is_maintenance_mode: Boolean(siteSettings.is_maintenance_mode),
+      maintenance_title: siteSettings.maintenance_title || prev.maintenance_title,
+      maintenance_message: siteSettings.maintenance_message || prev.maintenance_message,
+      logo_type: siteSettings.logo_type || prev.logo_type,
+      logo_text: siteSettings.logo_text || prev.logo_text,
+      logo_image_url: siteSettings.logo_image_url || prev.logo_image_url,
+      logo_width: siteSettings.logo_width || prev.logo_width,
+      hero_title: siteSettings.hero_title || prev.hero_title,
+      hero_bio: siteSettings.hero_bio || prev.hero_bio,
+      cv_url: siteSettings.cv_url || prev.cv_url,
+      contact_email: siteSettings.contact_email || prev.contact_email,
+      facebook: siteSettings.social_links?.facebook || prev.facebook,
+      linkedin: siteSettings.social_links?.linkedin || prev.linkedin,
+      youtube: siteSettings.social_links?.youtube || prev.youtube,
+      github: siteSettings.social_links?.github || prev.github,
+    }));
+  }, [siteSettings]);
+
+  const handleToggleMaintenance = async (newVal: boolean) => {
+    setIsTogglingMaintenance(true);
+    setForm((prev) => ({ ...prev, is_maintenance_mode: newVal }));
+
+    const updatedSettings = {
+      ...siteSettings,
+      is_maintenance_mode: newVal,
+      maintenance_title: form.maintenance_title,
+      maintenance_message: form.maintenance_message,
+    };
+
+    setSiteSettings(updatedSettings);
+
+    try {
+      if (isSupabaseConfigured()) {
+        const { error } = await supabase
+          .from('site_settings')
+          .update({
+            is_maintenance_mode: newVal,
+            maintenance_title: form.maintenance_title,
+            maintenance_message: form.maintenance_message,
+          })
+          .eq('id', 1);
+
+        if (error) {
+          console.error('Supabase maintenance toggle error:', error);
+          throw error;
+        }
+      }
+
+      addToast({
+        title: newVal ? 'Maintenance Mode Activated' : 'System Live',
+        message: newVal
+          ? 'Maintenance mode is now active. Public visitors will see the maintenance page.'
+          : 'Maintenance mode disabled. The site is live and accessible to all public visitors.',
+        type: newVal ? 'warning' : 'success',
+      });
+    } catch (err: any) {
+      console.error('Failed to toggle maintenance mode:', err);
+      setForm((prev) => ({ ...prev, is_maintenance_mode: !newVal }));
+      setSiteSettings({ ...siteSettings, is_maintenance_mode: !newVal });
+      addToast({
+        title: 'Error',
+        message: 'Failed to update maintenance mode. Please check connection.',
+        type: 'error',
+      });
+    } finally {
+      setIsTogglingMaintenance(false);
+    }
+  };
   const [uploadedPdfName, setUploadedPdfName] = useState('');
   const pdfInputRef = useRef<HTMLInputElement>(null);
 
@@ -64,6 +142,9 @@ export const SettingsTab: React.FC = () => {
 
     const updatedSettings = {
       site_url: form.site_url || 'https://muhammadfazal.com',
+      is_maintenance_mode: form.is_maintenance_mode,
+      maintenance_title: form.maintenance_title,
+      maintenance_message: form.maintenance_message,
       logo_type: form.logo_type as 'text' | 'image',
       logo_text: form.logo_text,
       logo_image_url: form.logo_image_url,
@@ -117,6 +198,91 @@ export const SettingsTab: React.FC = () => {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-8">
+        {/* System Maintenance Mode Card */}
+        <div className={`glass-panel p-6 rounded-2xl border transition-all duration-300 space-y-5 ${
+          form.is_maintenance_mode
+            ? 'border-red-500/40 bg-red-950/10 shadow-[0_0_25px_rgba(239,68,68,0.15)]'
+            : 'border-white/10 hover:border-white/20'
+        }`}>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-white/5">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <span className="text-base">⚙️</span>
+                <h3 className="text-sm font-bold text-white font-mono uppercase tracking-wider">
+                  SYSTEM MAINTENANCE MODE
+                </h3>
+                {form.is_maintenance_mode ? (
+                  <span className="px-2.5 py-0.5 rounded-full bg-red-500/20 border border-red-500/40 text-red-400 font-mono text-[10px] font-bold flex items-center gap-1.5 shadow-[0_0_10px_rgba(239,68,68,0.25)]">
+                    <span className="w-2 h-2 rounded-full bg-red-400 animate-pulse" />
+                    🔴 Maintenance Active
+                  </span>
+                ) : (
+                  <span className="px-2.5 py-0.5 rounded-full bg-green-500/20 border border-green-500/40 text-green-400 font-mono text-[10px] font-bold flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-green-400" />
+                    🟢 Live
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-gray-400">
+                When active, all public visitors are redirected to the developer maintenance page. You remain able to browse and preview the site because you are authenticated as Admin.
+              </p>
+            </div>
+
+            {/* Switch Toggle */}
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                disabled={isTogglingMaintenance}
+                onClick={() => handleToggleMaintenance(!form.is_maintenance_mode)}
+                className={`relative inline-flex h-7 w-14 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-cyber-accent focus:ring-offset-2 focus:ring-offset-dark-950 disabled:opacity-50 ${
+                  form.is_maintenance_mode ? 'bg-red-500 shadow-[0_0_15px_rgba(239,68,68,0.5)]' : 'bg-dark-800 border border-white/20'
+                }`}
+                role="switch"
+                aria-checked={form.is_maintenance_mode}
+              >
+                <span className="sr-only">Toggle maintenance mode</span>
+                <span
+                  aria-hidden="true"
+                  className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                    form.is_maintenance_mode ? 'translate-x-7' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
+
+          {/* Maintenance Notice Details */}
+          <div className="grid grid-cols-1 gap-4 pt-1">
+            <div>
+              <label className="block text-xs font-mono text-gray-300 uppercase mb-1 flex items-center justify-between">
+                <span>Maintenance Screen Headline</span>
+                <span className="text-[10px] text-gray-500 font-normal">Shown as primary title</span>
+              </label>
+              <input
+                type="text"
+                value={form.maintenance_title}
+                onChange={(e) => setForm({ ...form, maintenance_title: e.target.value })}
+                placeholder="Upgrading System & Infrastructure"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-dark-950 border border-white/10 text-white text-xs font-mono focus:border-cyber-accent focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-mono text-gray-300 uppercase mb-1 flex items-center justify-between">
+                <span>Maintenance Notice / Description</span>
+                <span className="text-[10px] text-gray-500 font-normal">Explanatory message for visitors</span>
+              </label>
+              <textarea
+                rows={2}
+                value={form.maintenance_message}
+                onChange={(e) => setForm({ ...form, maintenance_message: e.target.value })}
+                placeholder="We are currently deploying new features and performance enhancements. We will be back online shortly."
+                className="w-full px-3.5 py-2.5 rounded-xl bg-dark-950 border border-white/10 text-white text-xs leading-relaxed focus:border-cyber-accent focus:outline-none resize-none"
+              />
+            </div>
+          </div>
+        </div>
+
         {/* Logo Configuration */}
         <div className="glass-panel p-6 rounded-2xl border border-white/10 space-y-5">
           <h3 className="text-sm font-bold text-white font-mono uppercase tracking-wider flex items-center gap-2">

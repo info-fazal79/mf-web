@@ -104,14 +104,26 @@ export const Navbar: React.FC = () => {
         <div className="flex items-center gap-3 sm:gap-4">
           {/* Admin shortcut if logged in */}
           {isAdminAuthenticated && (
-            <Link
-              to="/admin"
-              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyber-dim border border-cyber-accent/40 text-cyber-neon text-xs font-mono font-medium hover:bg-cyber-accent/20 transition-all"
-              title="Admin Dashboard"
-            >
-              <Shield className="w-3.5 h-3.5" />
-              <span>Admin</span>
-            </Link>
+            <div className="hidden sm:flex items-center gap-2">
+              {siteSettings.is_maintenance_mode && (
+                <Link
+                  to="/admin"
+                  className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-red-500/20 border border-red-500/40 text-red-400 text-[11px] font-mono font-bold animate-pulse"
+                  title="Maintenance Mode is active for public visitors. Click to manage."
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
+                  <span>Maintenance ON</span>
+                </Link>
+              )}
+              <Link
+                to="/admin"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyber-dim border border-cyber-accent/40 text-cyber-neon text-xs font-mono font-medium hover:bg-cyber-accent/20 transition-all"
+                title="Admin Dashboard"
+              >
+                <Shield className="w-3.5 h-3.5" />
+                <span>Admin</span>
+              </Link>
+            </div>
           )}
 
           {/* Cart Trigger - only visible when totalCartCount > 0, simple icon link without border or background */}
