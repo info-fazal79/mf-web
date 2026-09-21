@@ -11,10 +11,11 @@ declare global {
  * Format total seconds into a clean MM:SS or H:MM:SS duration string.
  */
 export function formatDurationSeconds(totalSeconds: number): string {
-  if (!totalSeconds || totalSeconds <= 0) return '';
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
+  const safeSeconds = Math.trunc(Number(totalSeconds) || 0);
+  if (safeSeconds <= 0) return '';
+  const hours = Math.trunc(safeSeconds / 3600);
+  const minutes = Math.trunc((safeSeconds % 3600) / 60);
+  const seconds = Math.trunc(safeSeconds % 60);
   const formattedSeconds = seconds < 10 ? `0${seconds}` : `${seconds}`;
 
   if (hours > 0) {
@@ -80,7 +81,8 @@ export function fetchYouTubeDuration(videoId: string): Promise<string> {
               onReady: (e: any) => {
                 clearTimeout(timeout);
                 try {
-                  const totalSeconds = Math.floor(e.target.getDuration());
+                  const rawDuration = e.target.getDuration();
+                  const totalSeconds = Math.trunc(Number(rawDuration) || 0);
                   try {
                     e.target.destroy();
                   } catch (destroyErr) {}
