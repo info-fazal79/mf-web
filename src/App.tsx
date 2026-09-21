@@ -45,6 +45,7 @@ export const App: React.FC = () => {
 
         {/* Admin Portal Routes */}
         <Route path="/admin/login" element={<AdminLogin />} />
+        <Route path="/admin" element={<AdminLayout />} />
         <Route path="/admin/*" element={<AdminLayout />} />
 
         {/* Catch-all Fallback */}

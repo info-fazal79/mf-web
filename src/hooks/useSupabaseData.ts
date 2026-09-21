@@ -97,8 +97,8 @@ export function useSupabaseData() {
         const { data: settingsData } = await supabase
           .from('site_settings')
           .select('*')
-          .eq('id', 1)
-          .single();
+          .limit(1)
+          .maybeSingle();
         if (settingsData) setSiteSettings(settingsData as SiteSettings);
 
       } catch (error) {

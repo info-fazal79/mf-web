@@ -115,7 +115,7 @@ export interface Consultation {
 }
 
 export interface SiteSettings {
-  id?: number;
+  id?: number | string;
   site_url?: string;
   is_maintenance_mode?: boolean;
   maintenance_title?: string;

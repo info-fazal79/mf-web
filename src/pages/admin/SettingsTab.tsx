@@ -54,13 +54,13 @@ export const SettingsTab: React.FC = () => {
     }));
   }, [siteSettings]);
 
-  const handleToggleMaintenance = async (newVal: boolean) => {
+  const handleToggleMaintenance = async (nextState: boolean) => {
     setIsTogglingMaintenance(true);
-    setForm((prev) => ({ ...prev, is_maintenance_mode: newVal }));
+    setForm((prev) => ({ ...prev, is_maintenance_mode: nextState }));
 
     const updatedSettings = {
       ...siteSettings,
-      is_maintenance_mode: newVal,
+      is_maintenance_mode: nextState,
       maintenance_title: form.maintenance_title,
       maintenance_message: form.maintenance_message,
     };
@@ -69,14 +69,26 @@ export const SettingsTab: React.FC = () => {
 
     try {
       if (isSupabaseConfigured()) {
-        const { error } = await supabase
-          .from('site_settings')
-          .update({
-            is_maintenance_mode: newVal,
+        const targetId = siteSettings?.id || '00000000-0000-0000-0000-000000000001';
+        let { error } = await supabase.from('site_settings').upsert({
+          id: targetId,
+          is_maintenance_mode: nextState,
+          maintenance_title: form.maintenance_title,
+          maintenance_message: form.maintenance_message,
+          updated_at: new Date().toISOString(),
+        });
+
+        // Fallback retry with integer 1 if the Postgres table uses INT id instead of UUID
+        if (error && (error.message?.includes('integer') || error.code === '22P02')) {
+          const fallback = await supabase.from('site_settings').upsert({
+            id: 1,
+            is_maintenance_mode: nextState,
             maintenance_title: form.maintenance_title,
             maintenance_message: form.maintenance_message,
-          })
-          .eq('id', 1);
+            updated_at: new Date().toISOString(),
+          });
+          error = fallback.error;
+        }
 
         if (error) {
           console.error('Supabase maintenance toggle error:', error);
@@ -85,16 +97,16 @@ export const SettingsTab: React.FC = () => {
       }
 
       addToast({
-        title: newVal ? 'Maintenance Mode Activated' : 'System Live',
-        message: newVal
+        title: nextState ? 'Maintenance Mode Activated' : 'System Live',
+        message: nextState
           ? 'Maintenance mode is now active. Public visitors will see the maintenance page.'
           : 'Maintenance mode disabled. The site is live and accessible to all public visitors.',
-        type: newVal ? 'warning' : 'success',
+        type: nextState ? 'warning' : 'success',
       });
     } catch (err: any) {
       console.error('Failed to toggle maintenance mode:', err);
-      setForm((prev) => ({ ...prev, is_maintenance_mode: !newVal }));
-      setSiteSettings({ ...siteSettings, is_maintenance_mode: !newVal });
+      setForm((prev) => ({ ...prev, is_maintenance_mode: !nextState }));
+      setSiteSettings({ ...siteSettings, is_maintenance_mode: !nextState });
       addToast({
         title: 'Error',
         message: 'Failed to update maintenance mode. Please check connection.',
@@ -165,11 +177,27 @@ export const SettingsTab: React.FC = () => {
       setSiteSettings(updatedSettings);
 
       if (isSupabaseConfigured()) {
-        const { error } = await supabase
+        const targetId = siteSettings?.id || '00000000-0000-0000-0000-000000000001';
+        let { error } = await supabase
           .from('site_settings')
-          .update(updatedSettings)
-          .eq('id', 1);
-        if (error) console.error('Supabase settings update error:', error);
+          .upsert({
+            ...updatedSettings,
+            id: targetId,
+            updated_at: new Date().toISOString(),
+          });
+
+        if (error && (error.message?.includes('integer') || error.code === '22P02')) {
+          const fallback = await supabase
+            .from('site_settings')
+            .upsert({
+              ...updatedSettings,
+              id: 1,
+              updated_at: new Date().toISOString(),
+            });
+          error = fallback.error;
+        }
+
+        if (error) console.error('Supabase settings upsert error:', error);
       }
 
       addToast({
