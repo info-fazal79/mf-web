@@ -26,6 +26,7 @@ import Reader from '@/components/reader/Reader';
 <style is:global>
   .reader .r-btn { display: grid; place-items: center; width: 2.4rem; height: 2.4rem; border-radius: 0.7rem; opacity: 0.85; transition: background 0.15s, opacity 0.15s; }
   .reader .r-btn:hover { background: color-mix(in srgb, currentColor 10%, transparent); opacity: 1; }
+  @media (max-width: 480px) { .reader .r-btn { width: 2.05rem; height: 2.2rem; } }
   .reader .r-label { margin-bottom: 0.4rem; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--r-muted); }
   .reader .r-chip { border: 1px solid var(--r-line); border-radius: 0.55rem; padding: 0.3rem 0.6rem; font-size: 0.8rem; font-weight: 600; transition: border-color 0.15s; }
   .reader .r-chip:hover, .reader .r-chip[data-on='true'] { border-color: #22d38a; color: #22d38a; }

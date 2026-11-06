@@ -381,7 +381,7 @@ export default function Reader() {
         <button type="button" className={`r-btn ${isBookmarked ? 'text-[#22d38a]' : ''}`} onClick={toggleBookmark} aria-label="Bookmark this place"><I d={ICON.bookmark} /></button>
         <button type="button" className="r-btn" onClick={() => setPanel(panel === 'notes' ? null : 'notes')} aria-label="Highlights and notes"><I d={ICON.notes} /></button>
         <button type="button" className="r-btn" onClick={() => setShowType(!showType)} aria-label="Display settings"><I d={ICON.type} /></button>
-        <button type="button" className="r-btn hidden sm:grid" onClick={() => (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen?.())} aria-label="Fullscreen"><I d={ICON.full} /></button>
+        <span className="hidden sm:block"><button type="button" className="r-btn" onClick={() => (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen?.())} aria-label="Fullscreen"><I d={ICON.full} /></button></span>
       </header>
 
       {/* Progress bar */}
@@ -393,26 +393,26 @@ export default function Reader() {
           <p className="r-label">Theme</p>
           <div className="grid grid-cols-4 gap-2">
             {(Object.keys(themes) as (keyof typeof themes)[]).map((k) => (
-              <button key={k} type="button" onClick={() => setPrefs({ ...prefs, theme: k })} className="rounded-lg border py-2 text-xs font-semibold" style={{ background: themes[k].bg, color: themes[k].fg, borderColor: prefs.theme === k ? '#22d38a' : themes[k].line, borderWidth: prefs.theme === k ? 2 : 1 }}>{themes[k].label}</button>
+              <button key={k} type="button" onClick={() => setPrefs((p) => ({ ...p, theme: k }))} className="rounded-lg border py-2 text-xs font-semibold" style={{ background: themes[k].bg, color: themes[k].fg, borderColor: prefs.theme === k ? '#22d38a' : themes[k].line, borderWidth: prefs.theme === k ? 2 : 1 }}>{themes[k].label}</button>
             ))}
           </div>
           {mode === 'book' ? (
             <>
               <p className="r-label mt-4">Text size · {prefs.size}px</p>
               <div className="flex items-center gap-2">
-                <button type="button" className="r-chip" onClick={() => setPrefs({ ...prefs, size: Math.max(14, prefs.size - 1) })}>A−</button>
-                <input type="range" min={14} max={30} value={prefs.size} onChange={(e) => setPrefs({ ...prefs, size: Number(e.target.value) })} className="flex-1 accent-[#22d38a]" aria-label="Text size" />
-                <button type="button" className="r-chip" onClick={() => setPrefs({ ...prefs, size: Math.min(30, prefs.size + 1) })}>A+</button>
+                <button type="button" className="r-chip" onClick={() => setPrefs((p) => ({ ...p, size: Math.max(14, prefs.size - 1) }))}>A−</button>
+                <input type="range" min={14} max={30} value={prefs.size} onChange={(e) => setPrefs((p) => ({ ...p, size: Number(e.target.value) }))} className="flex-1 accent-[#22d38a]" aria-label="Text size" />
+                <button type="button" className="r-chip" onClick={() => setPrefs((p) => ({ ...p, size: Math.min(30, prefs.size + 1) }))}>A+</button>
               </div>
               <p className="r-label mt-4">Line spacing</p>
-              <div className="grid grid-cols-3 gap-2">{[1.5, 1.8, 2.1].map((l) => <button key={l} type="button" className="r-chip" data-on={prefs.leading === l} onClick={() => setPrefs({ ...prefs, leading: l })}>{l === 1.5 ? 'Tight' : l === 1.8 ? 'Normal' : 'Loose'}</button>)}</div>
+              <div className="grid grid-cols-3 gap-2">{[1.5, 1.8, 2.1].map((l) => <button key={l} type="button" className="r-chip" data-on={prefs.leading === l} onClick={() => setPrefs((p) => ({ ...p, leading: l }))}>{l === 1.5 ? 'Tight' : l === 1.8 ? 'Normal' : 'Loose'}</button>)}</div>
               <p className="r-label mt-4">Font</p>
-              <div className="grid grid-cols-3 gap-2">{(['serif', 'sans', 'bangla'] as const).map((f) => <button key={f} type="button" className="r-chip" data-on={prefs.font === f} style={{ fontFamily: fonts[f] }} onClick={() => setPrefs({ ...prefs, font: f })}>{f === 'bangla' ? 'বাংলা' : f === 'serif' ? 'Serif' : 'Sans'}</button>)}</div>
+              <div className="grid grid-cols-3 gap-2">{(['serif', 'sans', 'bangla'] as const).map((f) => <button key={f} type="button" className="r-chip" data-on={prefs.font === f} style={{ fontFamily: fonts[f] }} onClick={() => setPrefs((p) => ({ ...p, font: f }))}>{f === 'bangla' ? 'বাংলা' : f === 'serif' ? 'Serif' : 'Sans'}</button>)}</div>
               <p className="r-label mt-4">Page width</p>
-              <div className="grid grid-cols-3 gap-2">{(['narrow', 'normal', 'wide'] as const).map((w) => <button key={w} type="button" className="r-chip capitalize" data-on={prefs.width === w} onClick={() => setPrefs({ ...prefs, width: w })}>{w}</button>)}</div>
-              <label className="mt-4 flex items-center justify-between text-sm"><span>Justify text</span><input type="checkbox" checked={prefs.justify} onChange={(e) => setPrefs({ ...prefs, justify: e.target.checked })} className="accent-[#22d38a]" /></label>
+              <div className="grid grid-cols-3 gap-2">{(['narrow', 'normal', 'wide'] as const).map((w) => <button key={w} type="button" className="r-chip capitalize" data-on={prefs.width === w} onClick={() => setPrefs((p) => ({ ...p, width: w }))}>{w}</button>)}</div>
+              <label className="mt-4 flex items-center justify-between text-sm"><span>Justify text</span><input type="checkbox" checked={prefs.justify} onChange={(e) => setPrefs((p) => ({ ...p, justify: e.target.checked }))} className="accent-[#22d38a]" /></label>
               <p className="r-label mt-4">Read-aloud speed · {prefs.rate}×</p>
-              <input type="range" min={0.6} max={1.8} step={0.1} value={prefs.rate} onChange={(e) => setPrefs({ ...prefs, rate: Number(e.target.value) })} className="w-full accent-[#22d38a]" aria-label="Speech rate" />
+              <input type="range" min={0.6} max={1.8} step={0.1} value={prefs.rate} onChange={(e) => setPrefs((p) => ({ ...p, rate: Number(e.target.value) }))} className="w-full accent-[#22d38a]" aria-label="Speech rate" />
             </>
           ) : (
             <>
@@ -519,9 +519,11 @@ export default function Reader() {
               <p className="font-mono text-xs tracking-widest uppercase" style={{ color: t.muted }}>Chapter {chapter + 1}</p>
               <h1 className="mt-2 mb-8 text-3xl leading-tight font-bold" style={{ fontFamily: fonts[prefs.font] }}>{current?.title}</h1>
               {locked ? (
-                paywall
+                <div key="paywall">{paywall}</div>
               ) : (
+                // Keyed so React never reuses this node (its HTML is set manually) for the paywall.
                 <div
+                  key={`content-${loaded?.id}`}
                   ref={content}
                   onMouseUp={onPointerUp}
                   onTouchEnd={onPointerUp}

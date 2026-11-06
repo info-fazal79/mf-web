@@ -41,8 +41,8 @@ const jsonLd = {
   <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
   <section class="relative overflow-hidden pt-32 pb-16 sm:pt-40">
     <div class="bg-grid pointer-events-none absolute inset-0" aria-hidden="true"></div>
-    <div class="container-x relative grid gap-12 lg:grid-cols-[360px_1fr_320px]">
-      <div class="mx-auto w-64 sm:w-72 lg:w-full">
+    <div class="container-x relative grid gap-10 lg:grid-cols-[220px_1fr_300px] xl:grid-cols-[300px_1fr_320px] xl:gap-12">
+      <div class="mx-auto w-56 sm:w-64 lg:w-full">
         <BookCover title={b.title} cover={b.cover_url} author={b.author_name} eager class="float" />
       </div>
 
