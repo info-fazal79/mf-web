@@ -77,7 +77,7 @@ Paper leave forms get lost, approvals get delayed and nobody knows how many days
 2. A **Google Sheet** that collects every request.
 3. An **Apps Script** that emails the manager and updates the balance.
 
-## Step 1: Create the form
+## Step 1: Set up the form
 
 Add these fields: *Name*, *Email*, *Leave type*, *Start date*, *End date* and *Reason*. Link the form to a new spreadsheet.
 
@@ -132,7 +132,7 @@ Most people use Excel with the mouse. Learning a handful of shortcuts is the fas
 | --- | --- |
 | `Ctrl + Arrow` | Jump to the edge of your data |
 | `Ctrl + Shift + Arrow` | Select to the edge of your data |
-| `Ctrl + T` | Turn a range into a Table |
+| `Ctrl + T` | Format a range as an Excel list |
 | `Ctrl + ;` | Insert today's date |
 | `F4` | Lock a cell reference ($A$1) |
 | `Alt + =` | AutoSum |
@@ -314,7 +314,7 @@ $md$,
   'Small retail shop', date '2024-11-20',
   null, 'none', null,
   'The shop tracked stock in a notebook and often ran out of best-selling items.',
-  'Created an Excel template with transaction logs, automatic balances and red alerts when items fall below minimum stock.',
+  'Built an Excel template with transaction logs, automatic balances and red alerts when items fall below minimum stock.',
   'Stock-outs dropped noticeably in the first month and the owner gets a one-page summary for ordering.',
   false, 'published', 4
 ),
