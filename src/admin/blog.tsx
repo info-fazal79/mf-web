@@ -176,7 +176,7 @@ function PostList({ go }: { go: (r: string) => void }) {
 }
 
 /* ======================= Markdown editor ======================= */
-function MarkdownEditor({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+export function MarkdownEditor({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const ref = useRef<HTMLTextAreaElement>(null);
   const [tab, setTab] = useState<'write' | 'preview' | 'split'>('split');
   const [media, setMedia] = useState(false);

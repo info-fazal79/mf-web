@@ -1,0 +1,64 @@
+---
+import Icon from '@/components/Icon.astro';
+import { previewLabel, yearOf, type Project } from '@/lib/projects';
+interface Props {
+  project: Project;
+}
+const { project: p } = Astro.props;
+const year = yearOf(p.project_date);
+---
+
+<article
+  class="card card-hover group relative flex flex-col overflow-hidden"
+  data-project
+  data-category={p.category?.slug ?? ''}
+  data-search={`${p.title} ${p.summary ?? ''} ${p.tools.join(' ')} ${p.tags.join(' ')} ${p.client ?? ''}`.toLowerCase()}
+  data-date={p.project_date ?? ''}
+  data-views={p.views}
+  data-order={p.sort_order}
+>
+  <div class="relative aspect-[16/10] overflow-hidden border-b border-line bg-surface-2">
+    {
+      p.cover_url ? (
+        <img src={p.cover_url} alt="" loading="lazy" decoding="async" class="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+      ) : (
+        <div class="relative grid h-full place-items-center">
+          <div class="bg-grid absolute inset-0" />
+          <span class="relative font-mono text-sm text-accent">{p.category?.name ?? 'Project'}</span>
+        </div>
+      )
+    }
+    <div class="absolute top-3 left-3 flex gap-1.5">
+      {p.featured && <span class="rounded-md bg-accent px-2 py-0.5 text-[11px] font-bold text-accent-contrast">Featured</span>}
+      {p.preview_type !== 'none' && (
+        <span class="inline-flex items-center gap-1 rounded-md bg-black/60 px-2 py-0.5 text-[11px] font-semibold text-white backdrop-blur">
+          <Icon name="play" size={10} /> {previewLabel[p.preview_type]}
+        </span>
+      )}
+    </div>
+  </div>
+  <div class="flex flex-1 flex-col p-5">
+    <div class="flex items-center gap-2 text-xs text-muted">
+      {p.category && <span class="font-mono text-accent">{p.category.name}</span>}
+      {year && <span>· {year}</span>}
+      {p.client && <span class="truncate">· {p.client}</span>}
+    </div>
+    <h3 class="mt-2 text-lg font-bold">
+      <a href={`/projects/${p.slug}`} class="after:absolute after:inset-0">{p.title}</a>
+    </h3>
+    {p.summary && <p class="mt-2 line-clamp-2 text-sm leading-relaxed text-muted">{p.summary}</p>}
+    {
+      p.tools.length > 0 && (
+        <ul class="mt-4 flex flex-wrap gap-1.5">
+          {p.tools.slice(0, 4).map((t) => (
+            <li class="rounded-md border border-line bg-surface-2 px-2 py-0.5 font-mono text-[11px] text-muted">{t}</li>
+          ))}
+          {p.tools.length > 4 && <li class="px-1 font-mono text-[11px] text-muted">+{p.tools.length - 4}</li>}
+        </ul>
+      )
+    }
+    <span class="mt-auto inline-flex items-center gap-1.5 pt-5 text-sm font-semibold text-accent">
+      View project <Icon name="arrowRight" size={15} class="transition group-hover:translate-x-1" />
+    </span>
+  </div>
+</article>

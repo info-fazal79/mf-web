@@ -1,0 +1,106 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import PageHero from '@/components/PageHero.astro';
+import ProjectCard from '@/components/projects/ProjectCard.astro';
+import Icon from '@/components/Icon.astro';
+import { getProjects } from '@/lib/projects';
+
+const { projects, categories } = await getProjects();
+const usedCats = categories.filter((c) => projects.some((p) => p.category?.slug === c.slug));
+---
+
+<BaseLayout title="Projects" description="Websites, Google Sheets systems, Office templates, automations and mobile apps, with live previews.">
+  <PageHero eyebrow="portfolio" title="Projects & <span class='text-gradient'>case studies</span>" sub="Websites, Google Sheets systems, Office templates, automations and apps, each with a live preview." />
+
+  <section class="pb-24">
+    <div class="container-x">
+      {
+        projects.length === 0 ? (
+          <div class="card mx-auto max-w-xl p-10 text-center">
+            <span class="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-accent-soft text-accent"><Icon name="layers" size={24} /></span>
+            <h2 class="mt-5 text-xl font-bold">Projects are on their way</h2>
+            <p class="mt-2 text-muted">Case studies and live previews will appear here soon.</p>
+          </div>
+        ) : (
+          <>
+            <div class="mb-8 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div class="flex flex-wrap gap-2">
+                <button type="button" data-cat="" class="pill is-active">All <span>{projects.length}</span></button>
+                {usedCats.map((c) => (
+                  <button type="button" data-cat={c.slug} class="pill">
+                    {c.name} <span>{projects.filter((p) => p.category?.slug === c.slug).length}</span>
+                  </button>
+                ))}
+              </div>
+              <div class="flex gap-2">
+                <label class="relative block flex-1 lg:w-64">
+                  <span class="sr-only">Search projects</span>
+                  <Icon name="search" size={16} class="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-muted" />
+                  <input data-q type="search" placeholder="Search projects…" class="input pl-10" />
+                </label>
+                <select data-sort class="input w-auto" aria-label="Sort projects">
+                  <option value="order">Featured order</option>
+                  <option value="new">Newest</option>
+                  <option value="views">Most viewed</option>
+                </select>
+              </div>
+            </div>
+            <div data-grid class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {projects.map((p) => <ProjectCard project={p} />)}
+            </div>
+            <p data-empty class="hidden py-16 text-center text-muted">No projects match your filters.</p>
+          </>
+        )
+      }
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .pill {
+    border-radius: 0.6rem;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--muted);
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 0.45rem 0.85rem;
+    transition: all 0.2s;
+  }
+  .pill span { opacity: 0.6; margin-left: 0.2rem; }
+  .pill:hover { color: var(--text); border-color: var(--accent); }
+  .pill.is-active { background: var(--accent); color: var(--accent-contrast); border-color: var(--accent); }
+</style>
+
+<script>
+  const grid = document.querySelector<HTMLElement>('[data-grid]');
+  const cards = [...document.querySelectorAll<HTMLElement>('[data-project]')];
+  const q = document.querySelector<HTMLInputElement>('[data-q]');
+  const sort = document.querySelector<HTMLSelectElement>('[data-sort]');
+  const params = new URLSearchParams(location.search);
+  let cat = params.get('category') ?? '';
+
+  function apply() {
+    const term = (q?.value ?? '').trim().toLowerCase();
+    let shown = 0;
+    for (const c of cards) {
+      const ok = (!cat || c.dataset.category === cat) && (!term || (c.dataset.search ?? '').includes(term));
+      c.style.display = ok ? '' : 'none';
+      if (ok) shown++;
+    }
+    const by = sort?.value ?? 'order';
+    const sorted = [...cards].sort((a, b) =>
+      by === 'new' ? (b.dataset.date ?? '').localeCompare(a.dataset.date ?? '') : by === 'views' ? Number(b.dataset.views) - Number(a.dataset.views) : Number(a.dataset.order) - Number(b.dataset.order),
+    );
+    sorted.forEach((c) => grid?.appendChild(c));
+    document.querySelector('[data-empty]')?.classList.toggle('hidden', shown > 0);
+    document.querySelectorAll<HTMLElement>('.pill').forEach((b) => b.classList.toggle('is-active', (b.dataset.cat ?? '') === cat));
+    const u = new URL(location.href);
+    cat ? u.searchParams.set('category', cat) : u.searchParams.delete('category');
+    history.replaceState(null, '', u);
+  }
+  document.querySelectorAll<HTMLElement>('.pill').forEach((b) => b.addEventListener('click', () => { cat = b.dataset.cat ?? ''; apply(); }));
+  q?.addEventListener('input', apply);
+  sort?.addEventListener('change', apply);
+  if (cat) apply();
+</script>

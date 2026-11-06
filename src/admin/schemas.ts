@@ -171,7 +171,7 @@ export const settingsPages: SettingsPage[] = [
   {
     key: 'featured',
     title: 'Featured projects',
-    sub: 'Shown on the home page until the Projects module lands (Phase 5).',
+    sub: 'Fallback list for the home page. Once you publish projects in Projects, those are shown instead (featured first).',
     fields: [
       {
         key: 'items',

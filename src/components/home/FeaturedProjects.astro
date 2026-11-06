@@ -1,8 +1,14 @@
 ---
 import Icon from '@/components/Icon.astro';
 import SectionHeader from '@/components/SectionHeader.astro';
+import ProjectCard from '@/components/projects/ProjectCard.astro';
 import { getContent } from '@/lib/content';
-const featuredProjects = (await getContent()).featured.items;
+import { getProjects } from '@/lib/projects';
+
+// Real projects from the Projects module win; the settings list is the fallback.
+const { projects } = await getProjects();
+const real = [...projects.filter((p) => p.featured), ...projects.filter((p) => !p.featured)].slice(0, 3);
+const featuredProjects = real.length ? [] : (await getContent()).featured.items;
 ---
 
 <section class="section">
@@ -13,6 +19,7 @@ const featuredProjects = (await getContent()).featured.items;
     </div>
 
     <div class="mt-12 grid gap-5 md:grid-cols-3">
+      {real.map((p) => <ProjectCard project={p} />)}
       {
         featuredProjects.map((p, i) => (
           <article class="card card-hover reveal group overflow-hidden" style={`transition-delay:${i * 80}ms`}>
