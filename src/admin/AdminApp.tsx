@@ -226,7 +226,6 @@ function SideNav({ route }: { route: string }) {
               className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 font-mono text-[11px] font-semibold tracking-widest uppercase transition hover:bg-surface-2 ${hasActive ? 'text-accent' : 'text-muted hover:text-fg'}`}
             >
               <span className="flex-1 text-left">{g.title}</span>
-              {!isOpen && <span className="rounded bg-surface-2 px-1.5 text-[10px] tracking-normal">{g.items.length}</span>}
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`transition-transform ${isOpen ? 'rotate-90' : ''}`} aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
             </button>
             {isOpen && <ul className="mt-0.5 mb-2 grid gap-0.5 border-l border-line pl-2 ml-3">{g.items.map((it) => <li key={it.route}>{link(it)}</li>)}</ul>}
