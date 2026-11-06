@@ -255,10 +255,13 @@ export const settingsPages: SettingsPage[] = [
   {
     key: 'consultation',
     title: 'Consultation settings',
-    sub: 'Booking drawer options. Weekly availability arrives in Phase 3.',
+    sub: 'Booking drawer options. Set your open hours under Consultations → Availability.',
     fields: [
-      { key: 'calendarEnabled', label: 'Show calendar in the booking form', type: 'toggle', wide: true },
+      { key: 'calendarEnabled', label: 'Show calendar in the booking form', type: 'toggle', wide: true, help: 'When off, visitors send a request without choosing a time.' },
       { key: 'slotMinutes', label: 'Slot length (minutes)', type: 'number' },
+      { key: 'minNoticeHours', label: 'Minimum notice (hours)', type: 'number', help: 'How soon a slot can be booked, e.g. 12 = no bookings within the next 12 hours.' },
+      { key: 'maxDaysAhead', label: 'Book up to (days ahead)', type: 'number' },
+      { key: 'note', label: 'Note under the button', type: 'text', wide: true },
       { key: 'topics', label: 'Topics', type: 'tags' },
     ],
   },

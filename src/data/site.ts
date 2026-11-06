@@ -265,5 +265,8 @@ export const footer = {
 export const consultation = {
   calendarEnabled: true,
   slotMinutes: 30,
+  minNoticeHours: 12,
+  maxDaysAhead: 60,
+  note: 'Free 30-minute discovery call · Reply within 24 hours',
   topics: ['Office Automation', 'Google Sheets / Apps Script', 'Dashboard & Reporting', 'Website', 'Training', 'Other'],
 };

@@ -1,84 +1,100 @@
-import { useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { supabase } from '@/lib/supabase';
+import {
+  addDays,
+  dhakaToday,
+  fmt12,
+  googleCalendarUrl,
+  loadAvailability,
+  slotsFor,
+  weekdayOf,
+  type Availability,
+} from '@/lib/booking';
 
 type Props = {
   calendarEnabled: boolean;
   slotMinutes: number;
+  minNoticeHours: number;
+  maxDaysAhead: number;
+  note: string;
   topics: string[];
 };
 
-/**
- * Sample weekly availability (0 = Sunday). Phase 3 replaces this with the
- * schedule you set in the admin panel, minus already-booked slots.
- */
-const SAMPLE_AVAILABILITY: Record<number, [string, string][]> = {
-  0: [['16:00', '20:00']],
-  1: [['16:00', '20:00']],
-  2: [['16:00', '20:00']],
-  3: [['16:00', '20:00']],
-  4: [['16:00', '18:00']],
-  6: [['10:00', '13:00']],
+/** Used only when Supabase isn't reachable, so the drawer still works for review. */
+const SAMPLE: Availability = {
+  rules: [0, 1, 2, 3].map((w) => ({ weekday: w, start_time: '16:00', end_time: '20:00' })).concat([
+    { weekday: 4, start_time: '16:00', end_time: '18:00' },
+    { weekday: 6, start_time: '10:00', end_time: '13:00' },
+  ]),
+  overrides: [],
+  booked: new Set(),
 };
 
 const WEEKDAYS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+const longDate = (iso: string) =>
+  new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' });
 
-function toMinutes(t: string) {
-  const [h, m] = t.split(':').map(Number);
-  return h * 60 + m;
-}
-function fmtTime(mins: number) {
-  const h = Math.floor(mins / 60);
-  const m = mins % 60;
-  const ampm = h >= 12 ? 'PM' : 'AM';
-  const hh = h % 12 || 12;
-  return `${hh}:${m.toString().padStart(2, '0')} ${ampm}`;
-}
-function sameDay(a: Date, b: Date) {
-  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
-}
-function isoDate(d: Date) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
+const num = (v: unknown, fallback: number) => (Number.isFinite(Number(v)) && Number(v) >= 0 ? Number(v) : fallback);
 
-export default function ConsultationForm({ calendarEnabled, slotMinutes, topics }: Props) {
-  const today = useMemo(() => {
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    return d;
-  }, []);
-  const [view, setView] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1));
-  const [date, setDate] = useState<Date | null>(null);
-  const [slot, setSlot] = useState<number | null>(null);
-  const [status, setStatus] = useState<'idle' | 'sending' | 'done' | 'error'>('idle');
+export default function ConsultationForm(props: Props) {
+  const { calendarEnabled, note = '', topics = [] } = props;
+  const slotMinutes = Math.max(5, num(props.slotMinutes, 30));
+  const minNoticeHours = num(props.minNoticeHours, 12);
+  const maxDaysAhead = Math.max(1, num(props.maxDaysAhead, 60));
+  const cfg = { slotMinutes, minNoticeHours, maxDaysAhead };
+  const today = dhakaToday();
+  const lastDay = addDays(today, maxDaysAhead);
+  const [month, setMonth] = useState(today.slice(0, 7)); // YYYY-MM
+  const [avail, setAvail] = useState<Availability | null>(null);
+  const [loadErr, setLoadErr] = useState(false);
+  const [date, setDate] = useState<string | null>(null);
+  const [slot, setSlot] = useState<string | null>(null);
+  const [status, setStatus] = useState<'idle' | 'sending' | 'done'>('idle');
   const [error, setError] = useState('');
+  const [booked, setBooked] = useState<{ date: string | null; time: string | null }>({ date: null, time: null });
 
-  const days = useMemo(() => {
-    const first = new Date(view.getFullYear(), view.getMonth(), 1);
-    const count = new Date(view.getFullYear(), view.getMonth() + 1, 0).getDate();
-    const cells: (Date | null)[] = Array(first.getDay()).fill(null);
-    for (let i = 1; i <= count; i++) cells.push(new Date(view.getFullYear(), view.getMonth(), i));
-    return cells;
-  }, [view]);
-
-  const isAvailable = (d: Date) => d > today && Boolean(SAMPLE_AVAILABILITY[d.getDay()]);
-
-  const slots = useMemo(() => {
-    if (!date) return [];
-    const ranges = SAMPLE_AVAILABILITY[date.getDay()] ?? [];
-    const out: number[] = [];
-    for (const [s, e] of ranges) {
-      for (let t = toMinutes(s); t + slotMinutes <= toMinutes(e); t += slotMinutes) out.push(t);
+  async function refresh() {
+    if (!calendarEnabled) return;
+    try {
+      setAvail(await loadAvailability(today, lastDay));
+      setLoadErr(false);
+    } catch (e) {
+      console.warn('[booking] availability unavailable, using sample hours:', (e as Error).message);
+      setAvail(SAMPLE);
+      setLoadErr(true);
     }
-    return out;
-  }, [date, slotMinutes]);
+  }
+  useEffect(() => {
+    refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const canGoBack = view > new Date(today.getFullYear(), today.getMonth(), 1);
+  const cells = useMemo(() => {
+    const first = `${month}-01`;
+    const [y, m] = month.split('-').map(Number);
+    const count = new Date(Date.UTC(y, m, 0)).getUTCDate();
+    const out: (string | null)[] = Array(weekdayOf(first)).fill(null);
+    for (let i = 0; i < count; i++) out.push(addDays(first, i));
+    return out;
+  }, [month]);
+
+  const daySlots = (iso: string) => (avail ? slotsFor(iso, avail, cfg) : []);
+  const hasFree = (iso: string) => daySlots(iso).some((s) => !s.taken);
+  const slots = date ? daySlots(date) : [];
+
+  const shiftMonth = (n: number) => {
+    const [y, m] = month.split('-').map(Number);
+    const d = new Date(Date.UTC(y, m - 1 + n, 1));
+    setMonth(d.toISOString().slice(0, 7));
+  };
+  const canBack = month > today.slice(0, 7);
+  const canNext = month < lastDay.slice(0, 7);
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = e.currentTarget;
     if (!form.reportValidity()) return;
-    if (calendarEnabled && (date === null || slot === null)) {
+    if (calendarEnabled && (!date || !slot)) {
       setError('Please pick a date and a time slot.');
       return;
     }
@@ -86,23 +102,40 @@ export default function ConsultationForm({ calendarEnabled, slotMinutes, topics 
     setStatus('sending');
     const data = Object.fromEntries(new FormData(form)) as Record<string, string>;
     const payload = {
-      ...data,
-      preferred_date: date ? isoDate(date) : null,
-      preferred_time: slot !== null ? fmtTime(slot) : null,
+      name: data.name.trim(),
+      email: data.email.trim().toLowerCase(),
+      phone: data.phone.trim(),
+      address: data.address?.trim() || null,
+      topic: data.topic || null,
+      message: data.message.trim(),
+      preferred_date: calendarEnabled ? date : null,
+      preferred_time: calendarEnabled ? slot : null,
+      duration_minutes: calendarEnabled ? slotMinutes : null,
     };
     try {
-      if (supabase) {
+      if (supabase && !loadErr) {
         const { error: err } = await supabase.from('consultations').insert(payload);
-        if (err) throw err;
+        if (err) {
+          if (err.code === '23505') {
+            setError('Sorry, someone just booked that slot. Please choose another time.');
+            setSlot(null);
+            setStatus('idle');
+            refresh();
+            return;
+          }
+          throw err;
+        }
       } else {
-        // Backend not connected yet (Phase 3). Simulate success for UI review.
-        await new Promise((r) => setTimeout(r, 700));
-        console.info('[consultation] Supabase not configured. Payload:', payload);
+        await new Promise((r) => setTimeout(r, 600));
+        console.info('[consultation] backend not ready; payload:', payload);
       }
+      setBooked({ date: payload.preferred_date, time: payload.preferred_time });
       setStatus('done');
       form.reset();
+      setDate(null);
+      setSlot(null);
     } catch {
-      setStatus('error');
+      setStatus('idle');
       setError('Something went wrong. Please try again or contact me on WhatsApp.');
     }
   }
@@ -115,23 +148,24 @@ export default function ConsultationForm({ calendarEnabled, slotMinutes, topics 
         </div>
         <h3 className="mt-5 text-lg font-bold">Request received!</h3>
         <p className="mt-2 max-w-xs text-sm text-muted">
-          Thanks for reaching out.{' '}
-          {date && slot !== null && (
+          {booked.date && booked.time ? (
             <>
-              Your preferred slot is <strong className="text-fg">{date.toDateString()}, {fmtTime(slot)}</strong>.{' '}
+              Your requested slot: <strong className="text-fg">{longDate(booked.date)}, {fmt12(booked.time)}</strong> (Bangladesh time).{' '}
             </>
-          )}
-          I'll confirm by email shortly.
+          ) : null}
+          I'll confirm by email or WhatsApp shortly.
         </p>
-        <button
-          type="button"
-          className="btn-ghost mt-6"
-          onClick={() => {
-            setStatus('idle');
-            setDate(null);
-            setSlot(null);
-          }}
-        >
+        {booked.date && booked.time && (
+          <a
+            className="btn-ghost mt-5 text-xs"
+            target="_blank"
+            rel="noopener"
+            href={googleCalendarUrl('Consultation with Muhammad Fazal', booked.date, booked.time, slotMinutes, 'Pending confirmation')}
+          >
+            Add to Google Calendar
+          </a>
+        )}
+        <button type="button" className="btn-ghost mt-3" onClick={() => { setStatus('idle'); refresh(); }}>
           Book another
         </button>
       </div>
@@ -143,20 +177,20 @@ export default function ConsultationForm({ calendarEnabled, slotMinutes, topics 
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <label className="label" htmlFor="c-name">Full name *</label>
-          <input id="c-name" name="name" required className="input" placeholder="Your name" autoComplete="name" />
+          <input id="c-name" name="name" required maxLength={200} className="input" placeholder="Your name" autoComplete="name" />
         </div>
         <div>
-          <label className="label" htmlFor="c-phone">Phone *</label>
-          <input id="c-phone" name="phone" required className="input" placeholder="+880…" autoComplete="tel" inputMode="tel" />
+          <label className="label" htmlFor="c-phone">Phone / WhatsApp *</label>
+          <input id="c-phone" name="phone" required maxLength={40} className="input" placeholder="+880…" autoComplete="tel" inputMode="tel" />
         </div>
       </div>
       <div>
         <label className="label" htmlFor="c-email">Email *</label>
-        <input id="c-email" name="email" type="email" required className="input" placeholder="you@example.com" autoComplete="email" />
+        <input id="c-email" name="email" type="email" required maxLength={320} className="input" placeholder="you@example.com" autoComplete="email" />
       </div>
       <div>
         <label className="label" htmlFor="c-address">Address</label>
-        <input id="c-address" name="address" className="input" placeholder="City, Country" autoComplete="address-level2" />
+        <input id="c-address" name="address" maxLength={300} className="input" placeholder="City, Country" autoComplete="address-level2" />
       </div>
       <div>
         <label className="label" htmlFor="c-topic">Topic *</label>
@@ -173,77 +207,71 @@ export default function ConsultationForm({ calendarEnabled, slotMinutes, topics 
           <div className="mb-3 flex items-center justify-between">
             <span className="label mb-0">Pick a date *</span>
             <div className="flex items-center gap-1">
-              <button
-                type="button"
-                disabled={!canGoBack}
-                onClick={() => setView(new Date(view.getFullYear(), view.getMonth() - 1, 1))}
-                className="grid h-8 w-8 place-items-center rounded-lg text-muted hover:bg-surface hover:text-fg disabled:opacity-30"
-                aria-label="Previous month"
-              >
-                ‹
-              </button>
+              <button type="button" disabled={!canBack} onClick={() => shiftMonth(-1)} className="grid h-8 w-8 place-items-center rounded-lg text-muted hover:bg-surface hover:text-fg disabled:opacity-30" aria-label="Previous month">‹</button>
               <span className="min-w-28 text-center text-sm font-semibold">
-                {view.toLocaleString('en', { month: 'long', year: 'numeric' })}
+                {new Date(`${month}-01T00:00:00Z`).toLocaleString('en', { month: 'long', year: 'numeric', timeZone: 'UTC' })}
               </span>
-              <button
-                type="button"
-                onClick={() => setView(new Date(view.getFullYear(), view.getMonth() + 1, 1))}
-                className="grid h-8 w-8 place-items-center rounded-lg text-muted hover:bg-surface hover:text-fg"
-                aria-label="Next month"
-              >
-                ›
-              </button>
+              <button type="button" disabled={!canNext} onClick={() => shiftMonth(1)} className="grid h-8 w-8 place-items-center rounded-lg text-muted hover:bg-surface hover:text-fg disabled:opacity-30" aria-label="Next month">›</button>
             </div>
           </div>
-          <div className="grid grid-cols-7 gap-1 text-center">
-            {WEEKDAYS.map((w) => (
-              <span key={w} className="py-1 font-mono text-[11px] text-muted">{w}</span>
-            ))}
-            {days.map((d, i) =>
-              d === null ? (
-                <span key={`e${i}`} />
-              ) : (
-                <button
-                  key={d.toISOString()}
-                  type="button"
-                  disabled={!isAvailable(d)}
-                  onClick={() => {
-                    setDate(d);
-                    setSlot(null);
-                  }}
-                  className={[
-                    'aspect-square rounded-lg text-sm transition',
-                    date && sameDay(d, date)
-                      ? 'bg-accent font-bold text-accent-contrast'
-                      : isAvailable(d)
-                        ? 'font-medium text-fg hover:bg-accent-soft hover:text-accent'
-                        : 'text-muted/40',
-                    sameDay(d, today) ? 'ring-1 ring-line' : '',
-                  ].join(' ')}
-                >
-                  {d.getDate()}
-                </button>
-              ),
-            )}
-          </div>
+
+          {!avail ? (
+            <p className="py-10 text-center text-sm text-muted">Loading available times…</p>
+          ) : (
+            <div className="grid grid-cols-7 gap-1 text-center">
+              {WEEKDAYS.map((w) => (
+                <span key={w} className="py-1 font-mono text-[11px] text-muted">{w}</span>
+              ))}
+              {cells.map((iso, i) =>
+                iso === null ? (
+                  <span key={`e${i}`} />
+                ) : (
+                  <button
+                    key={iso}
+                    type="button"
+                    disabled={!hasFree(iso)}
+                    onClick={() => {
+                      setDate(iso);
+                      setSlot(null);
+                      setError('');
+                    }}
+                    aria-label={longDate(iso)}
+                    aria-pressed={date === iso}
+                    className={[
+                      'relative aspect-square rounded-lg text-sm transition',
+                      date === iso ? 'bg-accent font-bold text-accent-contrast' : hasFree(iso) ? 'font-medium text-fg hover:bg-accent-soft hover:text-accent' : 'text-muted/35',
+                      iso === today ? 'ring-1 ring-line' : '',
+                    ].join(' ')}
+                  >
+                    {Number(iso.slice(8))}
+                    {hasFree(iso) && date !== iso && <span className="absolute bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-accent" />}
+                  </button>
+                ),
+              )}
+            </div>
+          )}
 
           {date && (
             <div className="mt-4 border-t border-line pt-4">
-              <span className="label">Available times (Bangladesh time)</span>
+              <span className="label">{longDate(date)} · Bangladesh time</span>
               <div className="grid grid-cols-3 gap-2">
                 {slots.map((s) => (
                   <button
-                    key={s}
+                    key={s.time}
                     type="button"
-                    onClick={() => setSlot(s)}
+                    disabled={s.taken}
+                    onClick={() => setSlot(s.time)}
+                    title={s.taken ? 'Already booked' : undefined}
                     className={[
                       'rounded-lg border px-2 py-2 font-mono text-xs transition',
-                      slot === s
-                        ? 'border-accent bg-accent text-accent-contrast'
-                        : 'border-line bg-surface text-fg hover:border-accent hover:text-accent',
+                      s.taken
+                        ? 'cursor-not-allowed border-line text-muted/40 line-through'
+                        : slot === s.time
+                          ? 'border-accent bg-accent text-accent-contrast'
+                          : 'border-line bg-surface text-fg hover:border-accent hover:text-accent',
                     ].join(' ')}
                   >
-                    {fmtTime(s)}
+                    {fmt12(s.time)}
                   </button>
                 ))}
               </div>
@@ -254,14 +282,7 @@ export default function ConsultationForm({ calendarEnabled, slotMinutes, topics 
 
       <div>
         <label className="label" htmlFor="c-details">Project details *</label>
-        <textarea
-          id="c-details"
-          name="message"
-          required
-          rows={4}
-          className="input resize-y"
-          placeholder="Tell me what you want to build or automate…"
-        />
+        <textarea id="c-details" name="message" required maxLength={10000} rows={4} className="input resize-y" placeholder="Tell me what you want to build or automate…" />
       </div>
 
       {error && <p className="text-sm text-red-500" role="alert">{error}</p>}
@@ -269,7 +290,7 @@ export default function ConsultationForm({ calendarEnabled, slotMinutes, topics 
       <button type="submit" className="btn-primary w-full py-3" disabled={status === 'sending'}>
         {status === 'sending' ? 'Sending…' : 'Request Consultation'}
       </button>
-      <p className="text-center text-xs text-muted">Free 30-minute discovery call · Reply within 24 hours</p>
+      {note && <p className="text-center text-xs text-muted">{note}</p>}
     </form>
   );
 }

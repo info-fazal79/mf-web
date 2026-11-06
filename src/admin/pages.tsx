@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { defaults } from '@/lib/content';
+import { fmt12 } from '@/lib/booking';
 import { SchemaForm, type Field } from './SchemaForm';
 import type { SettingsPage } from './schemas';
 import { Empty, I, MediaLibrary, Modal, PageTitle, Panel, Toggle, useToast } from './ui';
@@ -129,7 +130,7 @@ export function Dashboard({ go }: { go: (r: string) => void }) {
               <li key={String(r.id)} className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm">
                 <span className="font-medium">{String(r.name)}</span>
                 <span className="text-muted">{String(r.topic ?? '')}</span>
-                <span className="font-mono text-xs text-muted">{r.preferred_date ? `${r.preferred_date} · ${r.preferred_time}` : 'No slot'}</span>
+                <span className="font-mono text-xs text-muted">{r.preferred_date ? `${r.preferred_date} · ${fmt12(String(r.preferred_time))}` : 'No slot'}</span>
                 <StatusBadge s={String(r.status)} />
               </li>
             ))}
@@ -148,7 +149,7 @@ export function Dashboard({ go }: { go: (r: string) => void }) {
   );
 }
 
-function StatusBadge({ s }: { s: string }) {
+export function StatusBadge({ s }: { s: string }) {
   const map: Record<string, string> = {
     pending: 'bg-yellow-500/15 text-yellow-600 dark:text-yellow-400',
     confirmed: 'bg-accent-soft text-accent',
@@ -400,90 +401,3 @@ export function Subscribers() {
   );
 }
 
-/* ---------------- Consultations (basic; full module in Phase 3) ---------------- */
-export function Consultations({ go }: { go: (r: string) => void }) {
-  const toast = useToast();
-  const { rows, setRows, loading } = useRows('consultations', 'created_at');
-  const [open, setOpen] = useState<Obj | null>(null);
-  const [filter, setFilter] = useState('all');
-
-  async function update(r: Obj, patch: Obj) {
-    const { error } = await sb().from('consultations').update(patch).eq('id', r.id);
-    if (error) return toast(error.message, false);
-    setRows((x) => x.map((m) => (m.id === r.id ? { ...m, ...patch } : m)));
-    setOpen((o) => (o && o.id === r.id ? { ...o, ...patch } : o));
-    toast('Updated');
-  }
-
-  const shown = rows.filter((r) => filter === 'all' || r.status === filter);
-
-  return (
-    <div>
-      <PageTitle
-        title="Consultations"
-        sub="Booking requests from the Get Consultation drawer."
-        actions={<button type="button" className="btn-ghost" onClick={() => go('s/consultation')}><I n="settings" s={15} /> Booking settings</button>}
-      />
-      <div className="mb-4 flex flex-wrap gap-2">
-        {['all', 'pending', 'confirmed', 'completed', 'cancelled'].map((s) => (
-          <button key={s} type="button" onClick={() => setFilter(s)} className={`rounded-lg px-3 py-1.5 text-xs font-semibold capitalize ${filter === s ? 'bg-accent text-accent-contrast' : 'border border-line bg-surface text-muted'}`}>
-            {s} {s === 'all' ? rows.length : rows.filter((r) => r.status === s).length}
-          </button>
-        ))}
-      </div>
-      <Panel>
-        {loading ? (
-          <p className="py-8 text-center text-sm text-muted">Loading…</p>
-        ) : shown.length === 0 ? (
-          <Empty text="No consultation requests here." icon="calendar" />
-        ) : (
-          <ul className="divide-y divide-line">
-            {shown.map((r) => (
-              <li key={String(r.id)}>
-                <button type="button" onClick={() => setOpen(r)} className="flex w-full flex-wrap items-center gap-3 py-3 text-left text-sm">
-                  <span className="w-40 truncate font-semibold">{String(r.name)}</span>
-                  <span className="flex-1 truncate text-muted">{String(r.topic ?? '')}</span>
-                  <span className="font-mono text-xs text-muted">{r.preferred_date ? `${r.preferred_date} · ${r.preferred_time}` : '—'}</span>
-                  <StatusBadge s={String(r.status)} />
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Panel>
-      <Modal open={open !== null} onClose={() => setOpen(null)} title={`Consultation · ${String(open?.name ?? '')}`}>
-        {open && (
-          <div className="grid gap-4 text-sm">
-            <dl className="grid grid-cols-[110px_1fr] gap-y-2">
-              <dt className="text-muted">Email</dt><dd><a className="text-accent" href={`mailto:${open.email}`}>{String(open.email)}</a></dd>
-              <dt className="text-muted">Phone</dt><dd><a className="text-accent" href={`tel:${open.phone}`}>{String(open.phone)}</a></dd>
-              <dt className="text-muted">Address</dt><dd>{String(open.address || '—')}</dd>
-              <dt className="text-muted">Topic</dt><dd>{String(open.topic || '—')}</dd>
-              <dt className="text-muted">Slot</dt><dd>{open.preferred_date ? `${open.preferred_date} · ${open.preferred_time}` : 'Not selected'}</dd>
-              <dt className="text-muted">Received</dt><dd>{new Date(String(open.created_at)).toLocaleString()}</dd>
-            </dl>
-            <p className="rounded-xl bg-surface-2 p-3 whitespace-pre-wrap">{String(open.message)}</p>
-            <div>
-              <label className="label">Status</label>
-              <select className="input" value={String(open.status)} onChange={(e) => update(open, { status: e.target.value })}>
-                {['pending', 'confirmed', 'completed', 'cancelled'].map((s) => <option key={s}>{s}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="label">Meeting link</label>
-              <input className="input" defaultValue={String(open.meeting_link ?? '')} placeholder="https://meet.google.com/…" onBlur={(e) => e.target.value !== (open.meeting_link ?? '') && update(open, { meeting_link: e.target.value || null })} />
-            </div>
-            <div>
-              <label className="label">Private notes</label>
-              <textarea className="input" rows={3} defaultValue={String(open.admin_notes ?? '')} onBlur={(e) => e.target.value !== (open.admin_notes ?? '') && update(open, { admin_notes: e.target.value || null })} />
-            </div>
-            <div className="flex justify-end gap-2">
-              <a className="btn-ghost" href={`https://wa.me/${String(open.phone).replace(/\D/g, '')}`} target="_blank" rel="noopener">WhatsApp</a>
-              <a className="btn-primary" href={`mailto:${open.email}?subject=${encodeURIComponent('Your consultation request')}`}><I n="mail" s={15} /> Email</a>
-            </div>
-          </div>
-        )}
-      </Modal>
-    </div>
-  );
-}

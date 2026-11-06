@@ -2,7 +2,8 @@ import { useEffect, useState, type FormEvent } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { settingsPages } from './schemas';
-import { Consultations, Dashboard, MediaPage, Messages, SettingsEditor, Subscribers, Testimonials } from './pages';
+import { Dashboard, MediaPage, Messages, SettingsEditor, Subscribers, Testimonials } from './pages';
+import { Consultations } from './consultation';
 import { I, ToastProvider } from './ui';
 
 type NavEntry = { route: string; label: string; icon: string };
