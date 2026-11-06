@@ -6,14 +6,16 @@ import Drawer from '@/components/layout/Drawer.astro';
 import FloatingActions from '@/components/layout/FloatingActions.astro';
 import Icon from '@/components/Icon.astro';
 import ConsultationForm from '@/components/islands/ConsultationForm';
+import CartPanel from '@/components/islands/CartPanel';
 import { getContent } from '@/lib/content';
 
 interface Props {
   title?: string;
   description?: string;
+  noindex?: boolean;
 }
 const { general: site, consultation } = await getContent();
-const { title, description = site.description } = Astro.props;
+const { title, description = site.description, noindex = false } = Astro.props;
 const fullTitle = title ? `${title} | ${site.name}` : `${site.name} | ${site.tagline}`;
 const canonical = new URL(Astro.url.pathname, Astro.site);
 ---
@@ -26,6 +28,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     <title>{fullTitle}</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical} />
+    {noindex && <meta name="robots" content="noindex" />}
     <link rel="icon" href={site.faviconUrl || '/favicon.svg'} />
     <meta name="theme-color" content="#07100b" />
     <meta property="og:type" content="website" />
@@ -68,12 +71,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     </Drawer>
 
     <Drawer id="cart" title="Your Cart" subtitle="E-books you add will appear here.">
-      <div class="flex flex-col items-center py-16 text-center">
-        <span class="grid h-16 w-16 place-items-center rounded-2xl bg-accent-soft text-accent"><Icon name="cart" size={28} /></span>
-        <p class="mt-5 font-semibold">Your cart is empty</p>
-        <p class="mt-1 text-sm text-muted">Browse e-books and add them to your cart.</p>
-        <a href="/ebooks" class="btn-primary mt-6">Browse E-books <Icon name="arrowRight" size={16} /></a>
-      </div>
+      <CartPanel client:idle />
     </Drawer>
 
     <script>

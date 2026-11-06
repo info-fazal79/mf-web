@@ -5,3 +5,4 @@
 -- =====================================================================
 delete from public.posts where 'demo' = any(tags);
 delete from public.projects where 'demo' = any(tags);
+delete from public.ebooks where 'demo' = any(tags);

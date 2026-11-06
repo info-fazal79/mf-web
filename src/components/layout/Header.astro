@@ -63,6 +63,14 @@ const isActive = (href: string) => (href === '/' ? path === '/' : path.startsWit
             >0</span
           >
         </button>
+        <a
+          href="/account"
+          class="grid h-10 w-10 place-items-center rounded-xl text-muted transition hover:bg-surface-2 hover:text-fg"
+          aria-label="My account"
+          title="My account"
+        >
+          <Icon name="user" />
+        </a>
         <button type="button" data-open="consult" class="btn-primary ml-1 hidden whitespace-nowrap sm:inline-flex">
           <Icon name="calendar" size={16} />
           Get Consultation

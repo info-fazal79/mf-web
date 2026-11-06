@@ -7,6 +7,7 @@ import { Consultations } from './consultation';
 import { BlogAuthors, BlogCategories, BlogComments, BlogPosts } from './blog';
 import { ProjectCategories, Projects } from './projects';
 import { Tutorials, YouTubeSettings } from './tutorials';
+import { Customers, EbookCategories, EbookReviewsAdmin, Ebooks } from './ebooks';
 import { I, ToastProvider } from './ui';
 
 type NavEntry = { route: string; label: string; icon: string };
@@ -30,6 +31,15 @@ const navGroups: { title: string; items: NavEntry[] }[] = [
       { route: 's/tools', label: 'Toolkit', icon: 'layers' },
       { route: 's/featured', label: 'Featured projects', icon: 'layers' },
       { route: 'testimonials', label: 'Testimonials', icon: 'quote' },
+    ],
+  },
+  {
+    title: 'E-books',
+    items: [
+      { route: 'ebooks', label: 'E-books', icon: 'file' },
+      { route: 'ebook-reviews', label: 'Reviews', icon: 'quote' },
+      { route: 'ebook-categories', label: 'Categories', icon: 'layers' },
+      { route: 'customers', label: 'Customers', icon: 'users' },
     ],
   },
   {
@@ -71,7 +81,6 @@ const navGroups: { title: string; items: NavEntry[] }[] = [
   {
     title: 'Coming next',
     items: [
-      { route: 'soon/E-books', label: 'E-books · Phase 7', icon: 'file' },
       { route: 'soon/Orders', label: 'Orders · Phase 8', icon: 'dashboard' },
     ],
   },
@@ -175,6 +184,11 @@ export function Shell({ session }: { session: Session }) {
   else if (route.startsWith('blog/')) page = <BlogPosts key={route} go={go} editId={route.slice(5)} />;
   else if (route === 'projects') page = <Projects go={go} />;
   else if (route.startsWith('projects/')) page = <Projects key={route} go={go} editId={route.slice(9)} />;
+  else if (route === 'ebooks') page = <Ebooks go={go} />;
+  else if (route.startsWith('ebooks/')) page = <Ebooks key={route} go={go} editId={route.slice(7)} />;
+  else if (route === 'ebook-reviews') page = <EbookReviewsAdmin />;
+  else if (route === 'ebook-categories') page = <EbookCategories />;
+  else if (route === 'customers') page = <Customers />;
   else if (route === 'tutorials') page = <Tutorials go={go} />;
   else if (route.startsWith('tutorials/')) page = <Tutorials key={route} go={go} editId={route.slice(10)} />;
   else if (route === 'youtube-settings') page = <YouTubeSettings />;
