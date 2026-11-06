@@ -89,8 +89,8 @@ export function Dashboard({ go }: { go: (r: string) => void }) {
   const [counts, setCounts] = useState<Record<string, number | null>>({});
   const [recent, setRecent] = useState<Obj[]>([]);
   useEffect(() => {
-    const tables = ['consultations', 'messages', 'subscribers', 'testimonials', 'media'];
-    Promise.all(tables.map((t) => sb().from(t).select('*', { count: 'exact', head: true }))).then((rs) =>
+    const tables = ['orders', 'consultations', 'messages', 'subscribers', 'media'];
+    Promise.all(tables.map((t) => (t === 'orders' ? sb().from(t).select('*', { count: 'exact', head: true }).eq('status', 'pending') : sb().from(t).select('*', { count: 'exact', head: true })))).then((rs) =>
       setCounts(Object.fromEntries(rs.map((r, i) => [tables[i], r.count]))),
     );
     sb()
@@ -102,10 +102,11 @@ export function Dashboard({ go }: { go: (r: string) => void }) {
   }, []);
 
   const cards = [
+    { k: 'orders', label: 'Orders to verify', icon: 'dashboard', route: 'orders' },
     { k: 'consultations', label: 'Consultations', icon: 'calendar', route: 'consultations' },
     { k: 'messages', label: 'Messages', icon: 'mail', route: 'messages' },
     { k: 'subscribers', label: 'Subscribers', icon: 'users', route: 'subscribers' },
-    { k: 'testimonials', label: 'Testimonials', icon: 'quote', route: 'testimonials' },
+
     { k: 'media', label: 'Media files', icon: 'image', route: 'media' },
   ];
 

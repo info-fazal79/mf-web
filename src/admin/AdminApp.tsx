@@ -8,6 +8,7 @@ import { BlogAuthors, BlogCategories, BlogComments, BlogPosts } from './blog';
 import { ProjectCategories, Projects } from './projects';
 import { Tutorials, YouTubeSettings } from './tutorials';
 import { Customers, EbookCategories, EbookReviewsAdmin, Ebooks } from './ebooks';
+import { Coupons, Orders } from './orders';
 import { I, ToastProvider } from './ui';
 
 type NavEntry = { route: string; label: string; icon: string };
@@ -16,6 +17,7 @@ const navGroups: { title: string; items: NavEntry[] }[] = [
   {
     title: 'Inbox',
     items: [
+      { route: 'orders', label: 'Orders', icon: 'dashboard' },
       { route: 'consultations', label: 'Consultations', icon: 'calendar' },
       { route: 'messages', label: 'Messages', icon: 'mail' },
       { route: 'subscribers', label: 'Subscribers', icon: 'users' },
@@ -39,6 +41,7 @@ const navGroups: { title: string; items: NavEntry[] }[] = [
       { route: 'ebooks', label: 'E-books', icon: 'file' },
       { route: 'ebook-reviews', label: 'Reviews', icon: 'quote' },
       { route: 'ebook-categories', label: 'Categories', icon: 'layers' },
+      { route: 'coupons', label: 'Coupons', icon: 'layers' },
       { route: 'customers', label: 'Customers', icon: 'users' },
     ],
   },
@@ -75,13 +78,8 @@ const navGroups: { title: string; items: NavEntry[] }[] = [
       { route: 's/socials', label: 'Social links', icon: 'link' },
       { route: 's/footer', label: 'Footer', icon: 'layers' },
       { route: 's/floating', label: 'Floating contact', icon: 'mail' },
+      { route: 's/payments', label: 'Payments', icon: 'dashboard' },
       { route: 's/consultation', label: 'Consultation', icon: 'calendar' },
-    ],
-  },
-  {
-    title: 'Coming next',
-    items: [
-      { route: 'soon/Orders', label: 'Orders · Phase 8', icon: 'dashboard' },
     ],
   },
 ];
@@ -184,6 +182,8 @@ export function Shell({ session }: { session: Session }) {
   else if (route.startsWith('blog/')) page = <BlogPosts key={route} go={go} editId={route.slice(5)} />;
   else if (route === 'projects') page = <Projects go={go} />;
   else if (route.startsWith('projects/')) page = <Projects key={route} go={go} editId={route.slice(9)} />;
+  else if (route === 'orders') page = <Orders />;
+  else if (route === 'coupons') page = <Coupons />;
   else if (route === 'ebooks') page = <Ebooks go={go} />;
   else if (route.startsWith('ebooks/')) page = <Ebooks key={route} go={go} editId={route.slice(7)} />;
   else if (route === 'ebook-reviews') page = <EbookReviewsAdmin />;

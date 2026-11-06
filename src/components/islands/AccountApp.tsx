@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase';
 
 type LibBook = { ebook_id: string; source: string; granted_at: string; ebook: { title: string; slug: string; cover_url: string | null; author_name: string; access_mode: string; allow_download: boolean; format: string } | null };
 type Progress = { ebook_id: string; percent: number; updated_at: string };
+type Order = { id: string; order_no: string; total: number; status: string; payment_method: string | null; created_at: string; items: { title: string; slug: string }[]; admin_note: string | null };
 
 export function AuthForm({ onDone, compact = false }: { onDone?: () => void; compact?: boolean }) {
   const [mode, setMode] = useState<'login' | 'signup' | 'magic' | 'forgot'>('login');
@@ -72,6 +73,7 @@ export default function AccountApp() {
   const [recovery, setRecovery] = useState(false);
   const [books, setBooks] = useState<LibBook[] | null>(null);
   const [progress, setProgress] = useState<Record<string, number>>({});
+  const [orders, setOrders] = useState<Order[]>([]);
   const [name, setName] = useState('');
   const [saved, setSaved] = useState('');
 
@@ -93,6 +95,7 @@ export default function AccountApp() {
       .select('ebook_id,source,granted_at,ebook:ebooks(title,slug,cover_url,author_name,access_mode,allow_download,format)')
       .order('granted_at', { ascending: false })
       .then(({ data }) => setBooks((data as unknown as LibBook[]) ?? []));
+    supabase.from('orders').select('id,order_no,total,status,payment_method,created_at,items,admin_note').order('created_at', { ascending: false }).then(({ data }) => setOrders((data as Order[]) ?? []));
     supabase.from('reading_progress').select('ebook_id,percent,updated_at').then(({ data }) => setProgress(Object.fromEntries(((data as Progress[]) ?? []).map((p) => [p.ebook_id, Number(p.percent)]))));
   }, [session]);
 
@@ -191,6 +194,26 @@ export default function AccountApp() {
               );
             })}
           </ul>
+        )}
+
+        {orders.length > 0 && (
+          <div className="mt-12">
+            <h2 className="text-2xl font-bold">My orders</h2>
+            <ul className="mt-4 grid gap-3">
+              {orders.map((o) => (
+                <li key={o.id} className="card flex flex-wrap items-center gap-x-4 gap-y-2 p-4 text-sm">
+                  <span className="font-mono font-semibold">{o.order_no}</span>
+                  <span className="min-w-0 flex-1 truncate text-muted">{o.items.map((i) => i.title).join(', ')}</span>
+                  <span className="font-semibold">৳{Number(o.total)}</span>
+                  <span className={`rounded-md px-2 py-0.5 text-xs font-semibold capitalize ${o.status === 'paid' ? 'bg-accent-soft text-accent' : o.status === 'pending' ? 'bg-yellow-500/15 text-yellow-600 dark:text-yellow-400' : 'bg-red-500/15 text-red-500'}`}>
+                    {o.status === 'pending' ? 'Verifying payment' : o.status}
+                  </span>
+                  <span className="font-mono text-xs text-muted">{new Date(o.created_at).toLocaleDateString()}</span>
+                  {o.status === 'rejected' && o.admin_note && <p className="w-full text-xs text-red-500">{o.admin_note}</p>}
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
       </section>
     </div>

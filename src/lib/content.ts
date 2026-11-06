@@ -28,6 +28,16 @@ export const defaults = {
   },
   consultation: d.consultation,
   floating: { enabled: true, whatsapp: true, call: true, email: true },
+  payments: {
+    bkashEnabled: true,
+    bkashNumber: '',
+    bkashType: 'Personal',
+    nagadEnabled: true,
+    nagadNumber: '',
+    nagadType: 'Personal',
+    note: 'Use "Send Money", then copy the Transaction ID (TrxID) from the confirmation SMS.',
+    verifyHours: 6,
+  },
   sections: {
     services: true,
     tools: true,

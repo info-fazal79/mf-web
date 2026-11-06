@@ -1,15 +1,15 @@
 ---
 import BaseLayout from '@/layouts/BaseLayout.astro';
-import PageHero from '@/components/PageHero.astro';
+import CheckoutApp from '@/components/islands/CheckoutApp';
 import { getContent } from '@/lib/content';
-const site = (await getContent()).general;
+const c = await getContent();
 ---
 
 <BaseLayout title="Checkout" noindex>
-  <PageHero eyebrow="checkout" title="Checkout is <span class='text-gradient'>almost ready</span>" sub="bKash and Nagad payments are being set up. Until then, message me on WhatsApp to buy an e-book and I'll unlock it in your account.">
-    <div class="mt-8 flex flex-wrap justify-center gap-3">
-      <a href={`https://wa.me/${site.whatsapp}?text=${encodeURIComponent('Hi! I would like to buy an e-book.')}`} target="_blank" rel="noopener" class="btn-primary px-6 py-3">Order on WhatsApp</a>
-      <a href="/ebooks" class="btn-ghost px-6 py-3">Back to e-books</a>
+  <section class="pt-32 pb-24 sm:pt-40">
+    <div class="container-x">
+      <h1 class="mb-8 text-3xl font-extrabold tracking-tight sm:text-4xl">Secure <span class="text-gradient">checkout</span></h1>
+      <CheckoutApp client:only="react" defaults={c.payments} whatsapp={c.general.whatsapp} />
     </div>
-  </PageHero>
+  </section>
 </BaseLayout>

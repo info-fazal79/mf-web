@@ -254,6 +254,21 @@ export const settingsPages: SettingsPage[] = [
     ],
   },
   {
+    key: 'payments',
+    title: 'Payment settings',
+    sub: 'bKash and Nagad numbers shown at checkout. Buyers send money, then enter their Transaction ID.',
+    fields: [
+      { key: 'bkashEnabled', label: 'Accept bKash', type: 'toggle' },
+      { key: 'nagadEnabled', label: 'Accept Nagad', type: 'toggle' },
+      { key: 'bkashNumber', label: 'bKash number', type: 'text', placeholder: '01XXXXXXXXX' },
+      { key: 'nagadNumber', label: 'Nagad number', type: 'text', placeholder: '01XXXXXXXXX' },
+      { key: 'bkashType', label: 'bKash account type', type: 'select', options: ['Personal', 'Merchant', 'Agent'], help: 'Personal → buyers use "Send Money". Merchant → "Payment".' },
+      { key: 'nagadType', label: 'Nagad account type', type: 'select', options: ['Personal', 'Merchant', 'Agent'] },
+      { key: 'note', label: 'Extra instruction for buyers', type: 'textarea' },
+      { key: 'verifyHours', label: 'Usual verification time (hours)', type: 'number', help: 'Shown to buyers: "Your order will be verified within X hours".' },
+    ],
+  },
+  {
     key: 'consultation',
     title: 'Consultation settings',
     sub: 'Booking drawer options. Set your open hours under Consultations → Availability.',
