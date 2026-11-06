@@ -127,6 +127,7 @@ export const settingsPages: SettingsPage[] = [
       { key: 'discover', label: 'Discover everything', type: 'toggle' },
       { key: 'experience', label: 'Experience', type: 'toggle' },
       { key: 'testimonials', label: 'Testimonials', type: 'toggle' },
+      { key: 'blog', label: 'Latest blog posts', type: 'toggle' },
       { key: 'cta', label: 'Call to action', type: 'toggle' },
     ],
   },

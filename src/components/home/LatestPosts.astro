@@ -1,0 +1,21 @@
+---
+import Icon from '@/components/Icon.astro';
+import SectionHeader from '@/components/SectionHeader.astro';
+import PostCard from '@/components/blog/PostCard.astro';
+import { getBlog } from '@/lib/blog';
+const posts = (await getBlog()).posts.slice(0, 3);
+---
+
+{
+  posts.length > 0 && (
+    <section class="section">
+      <div class="container-x">
+        <div class="flex flex-wrap items-end justify-between gap-6">
+          <SectionHeader eyebrow="blog" title="Latest articles" sub="Fresh tips on automation, data and AI-assisted productivity." />
+          <a href="/blog" class="btn-ghost reveal">All articles <Icon name="arrowRight" size={16} /></a>
+        </div>
+        <div class="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">{posts.map((p) => <PostCard post={p} />)}</div>
+      </div>
+    </section>
+  )
+}

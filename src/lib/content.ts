@@ -35,6 +35,7 @@ export const defaults = {
     discover: true,
     experience: true,
     testimonials: true,
+    blog: true,
     cta: true,
   },
 };

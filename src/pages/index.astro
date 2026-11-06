@@ -8,6 +8,7 @@ import Discover from '@/components/home/Discover.astro';
 import ExperienceTimeline from '@/components/home/ExperienceTimeline.astro';
 import Testimonials from '@/components/home/Testimonials.astro';
 import CTA from '@/components/home/CTA.astro';
+import LatestPosts from '@/components/home/LatestPosts.astro';
 import SectionHeader from '@/components/SectionHeader.astro';
 import Icon from '@/components/Icon.astro';
 import { getContent } from '@/lib/content';
@@ -43,5 +44,6 @@ const s = (await getContent()).sections;
   }
 
   {s.testimonials && <Testimonials />}
+  {s.blog && <LatestPosts />}
   {s.cta && <CTA />}
 </BaseLayout>

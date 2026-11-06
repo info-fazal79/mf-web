@@ -1,0 +1,221 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import Icon from '@/components/Icon.astro';
+import PostCard from '@/components/blog/PostCard.astro';
+import Comments from '@/components/islands/Comments';
+import { excerptOf, formatDate, getBlog, type Post } from '@/lib/blog';
+import { renderMarkdown } from '@/lib/markdown';
+import { getContent } from '@/lib/content';
+
+export async function getStaticPaths() {
+  const { posts } = await getBlog();
+  return posts.map((post) => ({ params: { slug: post.slug }, props: { post } }));
+}
+
+const { post } = Astro.props as { post: Post };
+const { posts } = await getBlog();
+const site = (await getContent()).general;
+const { html, toc, minutes } = await renderMarkdown(post.content);
+
+const related = posts
+  .filter((p) => p.id !== post.id)
+  .map((p) => ({ p, score: (p.category?.slug === post.category?.slug ? 2 : 0) + p.tags.filter((t) => post.tags.includes(t)).length }))
+  .sort((a, b) => b.score - a.score || b.p.published_at.localeCompare(a.p.published_at))
+  .slice(0, 3)
+  .map((x) => x.p);
+
+const idx = posts.findIndex((p) => p.id === post.id);
+const newer = idx > 0 ? posts[idx - 1] : null;
+const older = idx >= 0 && idx < posts.length - 1 ? posts[idx + 1] : null;
+
+const url = new URL(`/blog/${post.slug}`, Astro.site).href;
+const description = post.seo_description || excerptOf(post, 155);
+const enc = encodeURIComponent;
+const shares = [
+  { name: 'Facebook', icon: 'facebook', href: `https://www.facebook.com/sharer/sharer.php?u=${enc(url)}` },
+  { name: 'LinkedIn', icon: 'linkedin', href: `https://www.linkedin.com/sharing/share-offsite/?url=${enc(url)}` },
+  { name: 'WhatsApp', icon: 'whatsapp', href: `https://wa.me/?text=${enc(`${post.title} ${url}`)}` },
+];
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'BlogPosting',
+  headline: post.title,
+  description,
+  image: post.cover_url || undefined,
+  datePublished: post.published_at,
+  dateModified: post.updated_at,
+  author: { '@type': 'Person', name: post.author?.name ?? site.name },
+  mainEntityOfPage: url,
+};
+---
+
+<BaseLayout title={post.seo_title || post.title} description={description}>
+  <div data-progress class="fixed inset-x-0 top-0 z-50 h-0.5 origin-left scale-x-0 bg-accent"></div>
+  <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+
+  <article class="pt-32 pb-16 sm:pt-40" data-slug={post.slug}>
+    <header class="container-x max-w-4xl text-center">
+      <nav class="flex items-center justify-center gap-2 text-xs text-muted" aria-label="Breadcrumb">
+        <a href="/blog" class="hover:text-accent">Blog</a>
+        {post.category && (<><span>/</span><a href={`/blog?category=${post.category.slug}`} class="font-mono text-accent">{post.category.name}</a></>)}
+      </nav>
+      <h1 class="mt-5 text-3xl leading-tight font-extrabold tracking-tight sm:text-5xl">{post.title}</h1>
+      {post.excerpt && <p class="mx-auto mt-5 max-w-2xl text-lg text-muted">{post.excerpt}</p>}
+      <div class="mt-7 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm text-muted">
+        {post.author && (
+          <span class="inline-flex items-center gap-2">
+            {post.author.avatar_url ? <img src={post.author.avatar_url} alt="" class="h-7 w-7 rounded-full object-cover" /> : <span class="grid h-7 w-7 place-items-center rounded-full bg-accent-soft text-xs font-bold text-accent">{post.author.name[0]}</span>}
+            <span class="font-medium text-fg">{post.author.name}</span>
+          </span>
+        )}
+        <span class="inline-flex items-center gap-1.5"><Icon name="calendar" size={14} /> {formatDate(post.published_at)}</span>
+        <span class="inline-flex items-center gap-1.5"><Icon name="clock" size={14} /> {minutes} min read</span>
+      </div>
+    </header>
+
+    {
+      post.cover_url && (
+        <div class="container-x mt-10 max-w-5xl">
+          <img src={post.cover_url} alt="" class="aspect-[16/8] w-full rounded-3xl border border-line object-cover" fetchpriority="high" />
+        </div>
+      )
+    }
+
+    <div class="container-x mt-12 grid max-w-6xl gap-12 lg:grid-cols-[1fr_240px]">
+      <div class="min-w-0">
+        <div class="prose mx-auto max-w-3xl" set:html={html} />
+
+        <div class="mx-auto mt-12 max-w-3xl">
+          {post.tags.length > 0 && (
+            <ul class="flex flex-wrap gap-2">
+              {post.tags.map((t) => (
+                <li><a href={`/blog?tag=${enc(t.toLowerCase())}`} class="rounded-md border border-line bg-surface px-2.5 py-1 font-mono text-xs text-muted hover:border-accent hover:text-accent">#{t}</a></li>
+              ))}
+            </ul>
+          )}
+
+          <div class="mt-8 flex flex-wrap items-center gap-2 border-y border-line py-5">
+            <span class="mr-2 text-sm font-semibold">Share</span>
+            {shares.map((s) => (
+              <a href={s.href} target="_blank" rel="noopener" aria-label={`Share on ${s.name}`} class="grid h-9 w-9 place-items-center rounded-lg border border-line text-muted transition hover:border-accent hover:text-accent">
+                <Icon name={s.icon} size={16} />
+              </a>
+            ))}
+            <button type="button" data-copy-link={url} class="btn-ghost ml-auto px-3 py-1.5 text-xs">Copy link</button>
+          </div>
+
+          {post.author && (
+            <div class="card mt-8 flex gap-4 p-6">
+              {post.author.avatar_url ? <img src={post.author.avatar_url} alt="" class="h-14 w-14 shrink-0 rounded-2xl object-cover" /> : <span class="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-accent font-bold text-accent-contrast">{post.author.name.split(' ').map((w) => w[0]).join('').slice(0, 2)}</span>}
+              <div>
+                <p class="text-xs text-muted">Written by</p>
+                <p class="font-bold">{post.author.name}</p>
+                {post.author.title && <p class="text-sm text-accent">{post.author.title}</p>}
+                {post.author.bio && <p class="mt-2 text-sm text-muted">{post.author.bio}</p>}
+              </div>
+            </div>
+          )}
+
+          {(newer || older) && (
+            <nav class="mt-8 grid gap-4 sm:grid-cols-2" aria-label="More posts">
+              {older ? <a href={`/blog/${older.slug}`} class="card card-hover p-5"><span class="text-xs text-muted">← Previous</span><span class="mt-1 block font-semibold">{older.title}</span></a> : <span />}
+              {newer && <a href={`/blog/${newer.slug}`} class="card card-hover p-5 text-right"><span class="text-xs text-muted">Next →</span><span class="mt-1 block font-semibold">{newer.title}</span></a>}
+            </nav>
+          )}
+
+          {post.allow_comments && (
+            <section id="comments" class="mt-14">
+              <Comments client:visible postId={post.id} />
+            </section>
+          )}
+        </div>
+      </div>
+
+      {
+        toc.length > 1 && (
+          <aside class="hidden lg:block">
+            <div class="sticky top-28">
+              <p class="font-mono text-xs font-semibold tracking-widest text-accent uppercase">On this page</p>
+              <ul class="mt-4 grid gap-2 border-l border-line text-sm" data-toc>
+                {toc.map((t) => (
+                  <li><a href={`#${t.id}`} data-toc-link={t.id} class:list={['-ml-px block border-l-2 border-transparent py-0.5 text-muted transition hover:text-fg', t.depth === 3 ? 'pl-7' : 'pl-4']}>{t.text}</a></li>
+                ))}
+              </ul>
+            </div>
+          </aside>
+        )
+      }
+    </div>
+  </article>
+
+  {
+    related.length > 0 && (
+      <section class="section border-t border-line bg-bg-soft">
+        <div class="container-x">
+          <h2 class="section-title">Keep reading</h2>
+          <div class="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">{related.map((p) => <PostCard post={p} />)}</div>
+        </div>
+      </section>
+    )
+  }
+</BaseLayout>
+
+<script>
+  import { supabase } from '@/lib/supabase';
+
+  // Reading progress bar
+  const bar = document.querySelector<HTMLElement>('[data-progress]');
+  const article = document.querySelector('article');
+  const onScroll = () => {
+    if (!bar || !article) return;
+    const r = article.getBoundingClientRect();
+    const p = Math.min(1, Math.max(0, -r.top / (r.height - innerHeight)));
+    bar.style.transform = `scaleX(${p})`;
+  };
+  addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+
+  // Highlight current heading in the table of contents
+  const links = [...document.querySelectorAll<HTMLElement>('[data-toc-link]')];
+  if (links.length) {
+    const io = new IntersectionObserver(
+      (es) => es.forEach((e) => {
+        if (!e.isIntersecting) return;
+        links.forEach((l) => {
+          const on = l.dataset.tocLink === e.target.id;
+          l.classList.toggle('text-accent', on);
+          l.classList.toggle('border-accent', on);
+        });
+      }),
+      { rootMargin: '-90px 0px -70% 0px' },
+    );
+    links.forEach((l) => { const h = document.getElementById(l.dataset.tocLink!); if (h) io.observe(h); });
+  }
+
+  // Copy buttons for code blocks and the share link
+  document.addEventListener('click', (e) => {
+    const t = e.target as HTMLElement;
+    const code = t.closest<HTMLElement>('[data-copy]');
+    if (code) {
+      navigator.clipboard.writeText(code.parentElement?.querySelector('pre')?.innerText ?? '');
+      code.textContent = 'Copied!';
+      setTimeout(() => (code.textContent = 'Copy'), 1500);
+    }
+    const link = t.closest<HTMLElement>('[data-copy-link]');
+    if (link) {
+      navigator.clipboard.writeText(link.dataset.copyLink!);
+      link.textContent = 'Copied!';
+      setTimeout(() => (link.textContent = 'Copy link'), 1500);
+    }
+  });
+
+  // Count one view per browser session
+  const slug = document.querySelector<HTMLElement>('[data-slug]')?.dataset.slug ?? '';
+  try {
+    const key = `viewed:${slug}`;
+    if (supabase && !sessionStorage.getItem(key)) {
+      sessionStorage.setItem(key, '1');
+      supabase.rpc('increment_post_views', { post_slug: slug }).then(() => {});
+    }
+  } catch {}
+</script>
