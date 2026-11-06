@@ -45,7 +45,9 @@ async function load() {
     sb.from('project_categories').select('*').order('sort_order'),
   ]);
   if (p.error) console.warn('[projects] unavailable:', p.error.message);
-  return { projects: (p.data as unknown as Project[]) ?? [], categories: (c.data as ProjectCategory[]) ?? [] };
+  // The internal 'demo' tag marks sample content for easy removal; never show it.
+  const projects = ((p.data as unknown as Project[]) ?? []).map((x) => ({ ...x, tags: x.tags.filter((t) => t !== 'demo') }));
+  return { projects, categories: (c.data as ProjectCategory[]) ?? [] };
 }
 
 export function getProjects() {

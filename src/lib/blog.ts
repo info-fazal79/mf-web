@@ -38,7 +38,9 @@ async function load() {
     sb.from('blog_categories').select('*').order('sort_order'),
   ]);
   if (p.error) console.warn('[blog] posts unavailable:', p.error.message);
-  return { posts: (p.data as unknown as Post[]) ?? [], categories: (c.data as Category[]) ?? [] };
+  // The internal 'demo' tag marks sample content for easy removal; never show it.
+  const posts = ((p.data as unknown as Post[]) ?? []).map((x) => ({ ...x, tags: x.tags.filter((t) => t !== 'demo') }));
+  return { posts, categories: (c.data as Category[]) ?? [] };
 }
 
 export function getBlog() {
