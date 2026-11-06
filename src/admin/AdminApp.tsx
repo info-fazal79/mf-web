@@ -1,4 +1,5 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { createPortal } from 'react-dom';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { settingsPages } from './schemas';
@@ -159,6 +160,98 @@ function Login({ recovery }: { recovery: boolean }) {
   );
 }
 
+/* ---------------- Sidebar: collapsible groups + hover flyout ---------------- */
+const isActive = (route: string, r: string) => route === r || route.startsWith(`${r}/`);
+
+function SideNav({ route }: { route: string }) {
+  const activeGroup = navGroups.find((g) => g.items.some((it) => isActive(route, it.route)))?.title ?? '';
+  const [open, setOpen] = useState<string[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('admin:navOpen') ?? '[]');
+    } catch {
+      return [];
+    }
+  });
+  const [fly, setFly] = useState<{ title: string; top: number; left: number } | null>(null);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const canHover = typeof window !== 'undefined' && matchMedia('(hover: hover) and (min-width: 1024px)').matches;
+
+  // Always show the group that holds the current page
+  useEffect(() => {
+    if (activeGroup && !open.includes(activeGroup)) setOpen((o) => [...o, activeGroup]);
+  }, [activeGroup]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    try { localStorage.setItem('admin:navOpen', JSON.stringify(open)); } catch {}
+  }, [open]);
+  useEffect(() => setFly(null), [route]);
+
+  const toggle = (t: string) => {
+    setFly(null);
+    setOpen((o) => (o.includes(t) ? o.filter((x) => x !== t) : [...o, t]));
+  };
+  const showFly = (t: string, el: HTMLElement) => {
+    if (!canHover || open.includes(t)) return;
+    clearTimeout(closeTimer.current);
+    const r = el.getBoundingClientRect();
+    setFly({ title: t, top: Math.min(r.top, window.innerHeight - 60 - (navGroups.find((g) => g.title === t)?.items.length ?? 1) * 38), left: r.right + 6 });
+  };
+  const hideFly = () => {
+    clearTimeout(closeTimer.current);
+    closeTimer.current = setTimeout(() => setFly(null), 160);
+  };
+
+  const link = (it: NavEntry) => {
+    const active = isActive(route, it.route);
+    return (
+      <a href={`#/${it.route}`} className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition ${active ? 'bg-accent-soft font-semibold text-accent' : 'text-muted hover:bg-surface-2 hover:text-fg'}`}>
+        <I n={it.icon} s={16} />
+        {it.label}
+      </a>
+    );
+  };
+  const flyGroup = navGroups.find((g) => g.title === fly?.title);
+
+  return (
+    <nav className="grid gap-1 p-3" aria-label="Admin">
+      {navGroups.map((g) => {
+        if (!g.title) return <ul key="top" className="mb-2 grid gap-0.5">{g.items.map((it) => <li key={it.route}>{link(it)}</li>)}</ul>;
+        const isOpen = open.includes(g.title);
+        const hasActive = g.title === activeGroup;
+        return (
+          <div key={g.title} onMouseEnter={(e) => showFly(g.title, e.currentTarget)} onMouseLeave={hideFly}>
+            <button
+              type="button"
+              onClick={() => toggle(g.title)}
+              aria-expanded={isOpen}
+              className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 font-mono text-[11px] font-semibold tracking-widest uppercase transition hover:bg-surface-2 ${hasActive ? 'text-accent' : 'text-muted hover:text-fg'}`}
+            >
+              <span className="flex-1 text-left">{g.title}</span>
+              {!isOpen && <span className="rounded bg-surface-2 px-1.5 text-[10px] tracking-normal">{g.items.length}</span>}
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`transition-transform ${isOpen ? 'rotate-90' : ''}`} aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
+            </button>
+            {isOpen && <ul className="mt-0.5 mb-2 grid gap-0.5 border-l border-line pl-2 ml-3">{g.items.map((it) => <li key={it.route}>{link(it)}</li>)}</ul>}
+          </div>
+        );
+      })}
+
+      {fly && flyGroup && createPortal(
+        // Portal: the sidebar's transform would otherwise clip a fixed panel
+        <div
+          className="card fixed z-50 w-56 p-2 shadow-2xl"
+          style={{ top: Math.max(8, fly.top), left: fly.left }}
+          onMouseEnter={() => clearTimeout(closeTimer.current)}
+          onMouseLeave={hideFly}
+          role="menu"
+        >
+          <p className="px-3 pt-1 pb-1.5 font-mono text-[10px] font-semibold tracking-widest text-muted uppercase">{flyGroup.title}</p>
+          <ul className="grid gap-0.5">{flyGroup.items.map((it) => <li key={it.route}>{link(it)}</li>)}</ul>
+        </div>,
+        document.body,
+      )}
+    </nav>
+  );
+}
+
 /* ---------------- Shell ---------------- */
 export function Shell({ session }: { session: Session }) {
   const [route, go] = useHashRoute();
@@ -225,27 +318,7 @@ export function Shell({ session }: { session: Session }) {
             <p className="font-mono text-[10px] text-muted">control panel</p>
           </div>
         </div>
-        <nav className="grid gap-5 p-3">
-          {navGroups.map((g) => (
-            <div key={g.title}>
-              {g.title && <p className="px-3 pb-1.5 font-mono text-[10px] font-semibold tracking-widest text-muted uppercase">{g.title}</p>}
-              <ul className="grid gap-0.5">
-                {g.items.map((it) => {
-                  const active = route === it.route || route.startsWith(`${it.route}/`);
-                  const soon = it.route.startsWith('soon/');
-                  return (
-                    <li key={it.route}>
-                      <a href={`#/${it.route}`} className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition ${active ? 'bg-accent-soft font-semibold text-accent' : soon ? 'text-muted/60 hover:bg-surface-2' : 'text-muted hover:bg-surface-2 hover:text-fg'}`}>
-                        <I n={it.icon} s={16} />
-                        {it.label}
-                      </a>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          ))}
-        </nav>
+        <SideNav route={route} />
       </aside>
       {menu && <div className="fixed inset-0 z-30 bg-black/50 lg:hidden" onClick={() => setMenu(false)} />}
 
