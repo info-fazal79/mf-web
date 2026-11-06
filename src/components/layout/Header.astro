@@ -1,0 +1,119 @@
+---
+import Logo from '@/components/Logo.astro';
+import Icon from '@/components/Icon.astro';
+import { nav } from '@/data/site';
+
+const path = Astro.url.pathname.replace(/\/$/, '') || '/';
+const isActive = (href: string) => (href === '/' ? path === '/' : path.startsWith(href));
+---
+
+<header id="site-header" class="fixed inset-x-0 top-0 z-40 transition-all duration-300">
+  <div class="container-x">
+    <div
+      id="header-bar"
+      class="mt-3 flex h-16 items-center justify-between gap-4 rounded-2xl border border-transparent px-3 transition-all duration-300 sm:px-4"
+    >
+      <Logo />
+
+      <nav class="hidden lg:block" aria-label="Main">
+        <ul class="flex items-center gap-0.5 xl:gap-1">
+          {
+            nav.map((item) => (
+              <li>
+                <a
+                  href={item.href}
+                  class:list={[
+                    'relative rounded-lg px-2.5 py-2 text-sm font-medium whitespace-nowrap transition-colors xl:px-3',
+                    isActive(item.href) ? 'text-accent' : 'text-muted hover:text-fg',
+                  ]}
+                  aria-current={isActive(item.href) ? 'page' : undefined}
+                >
+                  {item.label}
+                  {isActive(item.href) && (
+                    <span class="absolute inset-x-3 -bottom-0.5 h-0.5 rounded-full bg-accent" />
+                  )}
+                </a>
+              </li>
+            ))
+          }
+        </ul>
+      </nav>
+
+      <div class="flex items-center gap-1.5">
+        <button
+          type="button"
+          data-theme-toggle
+          class="grid h-10 w-10 place-items-center rounded-xl text-muted transition hover:bg-surface-2 hover:text-fg"
+          aria-label="Toggle dark mode"
+        >
+          <Icon name="sun" class="hidden dark:block" />
+          <Icon name="moon" class="block dark:hidden" />
+        </button>
+        <button
+          type="button"
+          data-open="cart"
+          class="relative grid h-10 w-10 place-items-center rounded-xl text-muted transition hover:bg-surface-2 hover:text-fg"
+          aria-label="Open cart"
+        >
+          <Icon name="cart" />
+          <span
+            data-cart-count
+            class="absolute top-1 right-1 hidden h-4 min-w-4 place-items-center rounded-full bg-accent px-1 text-[10px] font-bold text-accent-contrast"
+            >0</span
+          >
+        </button>
+        <button type="button" data-open="consult" class="btn-primary ml-1 hidden whitespace-nowrap sm:inline-flex">
+          <Icon name="calendar" size={16} />
+          Get Consultation
+        </button>
+        <button
+          type="button"
+          data-mobile-toggle
+          class="grid h-10 w-10 place-items-center rounded-xl text-fg transition hover:bg-surface-2 lg:hidden"
+          aria-label="Open menu"
+          aria-expanded="false"
+          aria-controls="mobile-menu"
+        >
+          <Icon name="menu" />
+        </button>
+      </div>
+    </div>
+
+    <div
+      id="mobile-menu"
+      class="card mt-2 hidden origin-top p-3 lg:hidden"
+    >
+      <ul class="grid gap-1">
+        {
+          nav.map((item) => (
+            <li>
+              <a
+                href={item.href}
+                class:list={[
+                  'block rounded-xl px-4 py-3 text-sm font-medium',
+                  isActive(item.href) ? 'bg-accent-soft text-accent' : 'text-fg hover:bg-surface-2',
+                ]}
+              >
+                {item.label}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+      <button type="button" data-open="consult" class="btn-primary mt-3 w-full sm:hidden">
+        <Icon name="calendar" size={16} />
+        Get Consultation
+      </button>
+    </div>
+  </div>
+</header>
+
+<style>
+  #site-header.is-scrolled #header-bar {
+    border-color: var(--border);
+    background: color-mix(in srgb, var(--surface) 78%, transparent);
+    backdrop-filter: blur(14px) saturate(1.4);
+    -webkit-backdrop-filter: blur(14px) saturate(1.4);
+    box-shadow: var(--shadow);
+  }
+</style>

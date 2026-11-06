@@ -1,0 +1,11 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import PageHero from '@/components/PageHero.astro';
+import Icon from '@/components/Icon.astro';
+---
+
+<BaseLayout title="Page not found">
+  <PageHero eyebrow="error 404" title="<span class='text-gradient'>404</span>: page not found" sub="The page you're looking for doesn't exist or has moved.">
+    <a href="/" class="btn-primary mt-8"><Icon name="arrowRight" size={16} class="rotate-180" /> Back to home</a>
+  </PageHero>
+</BaseLayout>

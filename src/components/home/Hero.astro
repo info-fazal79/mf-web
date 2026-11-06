@@ -1,0 +1,111 @@
+---
+import Icon from '@/components/Icon.astro';
+import { hero, site, stats } from '@/data/site';
+---
+
+<section class="relative overflow-hidden pt-32 pb-20 sm:pt-40 sm:pb-28">
+  <div class="bg-grid pointer-events-none absolute inset-0" aria-hidden="true"></div>
+  <div
+    class="pointer-events-none absolute top-24 left-1/2 h-[480px] w-[720px] -translate-x-1/2 rounded-full opacity-60 blur-3xl"
+    style="background: radial-gradient(closest-side, var(--glow), transparent)"
+    aria-hidden="true"
+  >
+  </div>
+
+  <div class="container-x relative grid items-center gap-14 lg:grid-cols-[1.15fr_0.85fr]">
+    <div>
+      {
+        hero.available && (
+          <span class="eyebrow">
+            <span class="relative flex h-2 w-2">
+              <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent opacity-60" />
+              <span class="relative inline-flex h-2 w-2 rounded-full bg-accent" />
+            </span>
+            Available for new projects
+          </span>
+        )
+      }
+
+      <h1 class="mt-6 text-4xl leading-[1.1] font-extrabold tracking-tight sm:text-5xl lg:text-6xl">
+        <span class="block text-xl font-medium text-muted sm:text-2xl">{hero.greeting}</span>
+        <span class="text-gradient">{hero.name}</span>
+      </h1>
+
+      <p class="mt-5 flex min-h-8 flex-wrap items-center gap-x-2 font-mono text-lg text-fg sm:text-xl">
+        <span class="text-accent">&gt;</span>
+        <span data-typing={JSON.stringify(hero.roles)} class="caret">{hero.roles[0]}</span>
+      </p>
+      <ul class="sr-only">{hero.roles.map((r) => <li>{r}</li>)}</ul>
+
+      <p class="mt-6 max-w-xl text-base leading-relaxed text-muted sm:text-lg">{hero.intro}</p>
+
+      <div class="mt-8 flex flex-wrap gap-3">
+        {
+          site.cvUrl ? (
+            <a href={site.cvUrl} class="btn-primary px-6 py-3" download>
+              <Icon name="download" size={17} /> Download CV
+            </a>
+          ) : (
+            <span class="btn-primary cursor-not-allowed px-6 py-3 opacity-70" title="Upload your public CV from the admin panel">
+              <Icon name="download" size={17} /> Download CV
+            </span>
+          )
+        }
+        <button type="button" data-open="consult" class="btn-ghost px-6 py-3">
+          <Icon name="calendar" size={17} /> Book a Call
+        </button>
+      </div>
+
+      <dl class="mt-12 grid max-w-lg grid-cols-3 gap-4 border-t border-line pt-8">
+        {
+          stats.map((s) => (
+            <div>
+              <dt class="sr-only">{s.label}</dt>
+              <dd class="text-3xl font-extrabold tracking-tight sm:text-4xl">
+                <span data-count={s.value}>{s.value}</span>
+                <span class="text-accent">{s.suffix}</span>
+              </dd>
+              <dd class="mt-1 text-xs leading-snug text-muted sm:text-sm">{s.label}</dd>
+            </div>
+          ))
+        }
+      </dl>
+    </div>
+
+    <div class="relative mx-auto w-full max-w-sm lg:max-w-md">
+      <div class="absolute -inset-4 rounded-[2.5rem] border border-dashed border-line" aria-hidden="true"></div>
+      <div class="card relative aspect-[4/5] overflow-hidden rounded-[2rem] p-0">
+        {
+          hero.photo ? (
+            <img src={hero.photo} alt={hero.name} class="h-full w-full object-cover" width="480" height="600" fetchpriority="high" />
+          ) : (
+            <div class="relative grid h-full place-items-center bg-surface-2">
+              <div class="bg-grid absolute inset-0" />
+              <div class="relative text-center">
+                <span class="mx-auto grid h-28 w-28 place-items-center rounded-3xl bg-accent font-mono text-4xl font-bold text-accent-contrast shadow-[0_20px_50px_-12px_var(--glow)]">
+                  MF
+                </span>
+                <p class="mt-5 font-mono text-xs text-muted">// your photo goes here</p>
+              </div>
+            </div>
+          )
+        }
+      </div>
+
+      <div class="card float absolute top-10 -left-6 hidden items-center gap-3 px-4 py-3 sm:flex">
+        <span class="grid h-9 w-9 place-items-center rounded-xl bg-accent-soft text-accent"><Icon name="sheet" size={18} /></span>
+        <div class="text-left">
+          <p class="text-xs font-bold">Apps Script</p>
+          <p class="font-mono text-[11px] text-muted">automation.run()</p>
+        </div>
+      </div>
+      <div class="card float absolute -right-5 bottom-12 hidden items-center gap-3 px-4 py-3 sm:flex" style="animation-delay:-3s">
+        <span class="grid h-9 w-9 place-items-center rounded-xl bg-accent-soft text-accent"><Icon name="award" size={18} /></span>
+        <div class="text-left">
+          <p class="text-xs font-bold">Fiverr Level 1</p>
+          <p class="text-[11px] text-muted">★★★★★ rated</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

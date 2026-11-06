@@ -1,0 +1,157 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import PageHero from '@/components/PageHero.astro';
+import SectionHeader from '@/components/SectionHeader.astro';
+import ExperienceTimeline from '@/components/home/ExperienceTimeline.astro';
+import CTA from '@/components/home/CTA.astro';
+import Icon from '@/components/Icon.astro';
+import { achievements, certifications, education, hero, site, skills, stats } from '@/data/site';
+---
+
+<BaseLayout title="About" description={`About ${site.name}: experience, skills, education and certifications.`}>
+  <PageHero
+    eyebrow="about me"
+    title={`About <span class="text-gradient">${site.name}</span>`}
+    sub="Instructor, automation specialist and developer. I help people and teams work smarter with the tools they already use."
+  />
+
+  <section class="pb-20">
+    <div class="container-x grid items-start gap-10 lg:grid-cols-[0.8fr_1.2fr]">
+      <div class="card reveal relative aspect-square overflow-hidden rounded-[2rem]">
+        {
+          hero.photo ? (
+            <img src={hero.photo} alt={site.name} class="h-full w-full object-cover" loading="lazy" />
+          ) : (
+            <div class="relative grid h-full place-items-center bg-surface-2">
+              <div class="bg-grid absolute inset-0" />
+              <span class="relative grid h-24 w-24 place-items-center rounded-3xl bg-accent font-mono text-3xl font-bold text-accent-contrast">MF</span>
+            </div>
+          )
+        }
+      </div>
+      <div class="reveal">
+        <h2 class="text-2xl font-bold sm:text-3xl">Hello! I'm Fazal 👋</h2>
+        <div class="mt-5 grid gap-4 leading-relaxed text-muted">
+          <p>
+            I'm a results-driven technical instructor and automation specialist with experience across office
+            administration, data management and web development. Today I lead MS Office & Digital Tools training at
+            As-Sunnah Skill Development Institute, where I've mentored more than a thousand students and
+            professionals.
+          </p>
+          <p>
+            Alongside teaching, I build custom Google Sheets and Apps Script systems (leave management, student
+            databases, admin dashboards, sales and stock trackers) that replace slow manual workflows. As a Level 1
+            Fiverr seller I've delivered modern, responsive WordPress websites to international clients with
+            consistent 5-star ratings.
+          </p>
+          <p>
+            I love bringing generative AI tools like Claude, ChatGPT, Google AI Studio and NotebookLM into everyday
+            work, teaching prompt engineering and AI-assisted productivity so people get more done with less effort.
+          </p>
+        </div>
+        <dl class="mt-8 grid grid-cols-3 gap-4">
+          {
+            stats.map((s) => (
+              <div class="card p-4 text-center">
+                <dd class="text-2xl font-extrabold">
+                  <span data-count={s.value}>{s.value}</span>
+                  <span class="text-accent">{s.suffix}</span>
+                </dd>
+                <dt class="mt-1 text-xs text-muted">{s.label}</dt>
+              </div>
+            ))
+          }
+        </dl>
+        <div class="mt-8 flex flex-wrap gap-3">
+          <button type="button" data-open="consult" class="btn-primary"><Icon name="calendar" size={16} /> Work with me</button>
+          <a href="/contact" class="btn-ghost">Contact <Icon name="arrowRight" size={16} /></a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section border-t border-line bg-bg-soft">
+    <div class="container-x grid gap-12 lg:grid-cols-[0.8fr_1.2fr]">
+      <div class="lg:sticky lg:top-28 lg:self-start">
+        <SectionHeader eyebrow="experience" title="Professional journey" sub="Roles that shaped how I teach, automate and build." />
+      </div>
+      <ExperienceTimeline />
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container-x">
+      <SectionHeader eyebrow="skills" title="Core skills" center />
+      <div class="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+        {
+          skills.map((g, i) => (
+            <div class="card card-hover reveal p-6" style={`transition-delay:${i * 60}ms`}>
+              <h3 class="font-bold">{g.group}</h3>
+              <ul class="mt-4 flex flex-wrap gap-2">
+                {g.items.map((s) => (
+                  <li class="rounded-lg border border-line bg-surface-2 px-2.5 py-1 text-xs font-medium">{s}</li>
+                ))}
+              </ul>
+            </div>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  <section class="section border-t border-line bg-bg-soft">
+    <div class="container-x grid gap-12 lg:grid-cols-2">
+      <div>
+        <SectionHeader eyebrow="education" title="Education" />
+        <ul class="mt-8 grid gap-4">
+          {
+            education.map((e) => (
+              <li class="card reveal flex items-start justify-between gap-4 p-5">
+                <div>
+                  <p class="font-semibold">{e.title}</p>
+                  <p class="mt-1 text-sm text-muted">{e.org}</p>
+                </div>
+                <span class="shrink-0 font-mono text-xs text-accent">{e.period}</span>
+              </li>
+            ))
+          }
+        </ul>
+      </div>
+      <div>
+        <SectionHeader eyebrow="certifications" title="Training & certifications" />
+        <ul class="mt-8 grid gap-4">
+          {
+            certifications.map((c) => (
+              <li class="card reveal flex items-start gap-4 p-5">
+                <span class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent"><Icon name="award" size={18} /></span>
+                <div>
+                  <p class="font-semibold">{c.title}</p>
+                  <p class="mt-1 text-sm text-muted">{c.org} · {c.period}</p>
+                </div>
+              </li>
+            ))
+          }
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container-x">
+      <SectionHeader eyebrow="highlights" title="Achievements" center />
+      <div class="mt-12 grid gap-5 md:grid-cols-3">
+        {
+          achievements.map((a, i) => (
+            <div class="card card-hover reveal p-6 text-center" style={`transition-delay:${i * 70}ms`}>
+              <span class="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-accent-soft text-accent"><Icon name="star" size={22} /></span>
+              <h3 class="mt-4 font-bold">{a.title}</h3>
+              <p class="mt-1.5 text-sm text-muted">{a.text}</p>
+            </div>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  <CTA />
+</BaseLayout>

@@ -1,0 +1,34 @@
+---
+import { experience } from '@/data/site';
+interface Props {
+  compact?: boolean;
+}
+const { compact = false } = Astro.props;
+---
+
+<ol class="relative grid gap-6 border-l border-line pl-8">
+  {
+    experience.map((e, i) => (
+      <li class="reveal relative" style={`transition-delay:${i * 80}ms`}>
+        <span class="absolute top-6 -left-[41px] grid h-5 w-5 place-items-center rounded-full border-2 border-accent bg-bg">
+          <span class="h-2 w-2 rounded-full bg-accent" />
+        </span>
+        <div class="card card-hover p-6">
+          <div class="flex flex-wrap items-baseline justify-between gap-2">
+            <h3 class="text-lg font-bold">{e.role}</h3>
+            <span class="rounded-md bg-accent-soft px-2 py-0.5 font-mono text-xs text-accent">{e.period}</span>
+          </div>
+          <p class="mt-1 text-sm font-medium text-muted">{e.org}</p>
+          <ul class="mt-4 grid gap-2 text-sm leading-relaxed text-muted">
+            {(compact ? e.points.slice(0, 2) : e.points).map((p) => (
+              <li class="flex gap-2.5">
+                <span class="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
+                {p}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </li>
+    ))
+  }
+</ol>

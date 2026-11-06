@@ -1,0 +1,29 @@
+---
+import Icon from '@/components/Icon.astro';
+import SectionHeader from '@/components/SectionHeader.astro';
+import { services } from '@/data/site';
+---
+
+<section class="section">
+  <div class="container-x">
+    <SectionHeader
+      eyebrow="what I do"
+      title="Practical systems that <span class='text-gradient'>save real hours</span>"
+      sub="From spreadsheets that run themselves to websites that convert, every build focuses on clean, measurable results."
+    />
+    <div class="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+      {
+        services.map((s, i) => (
+          <article class="card card-hover reveal group relative overflow-hidden p-6" style={`transition-delay:${i * 70}ms`}>
+            <span class="absolute top-5 right-5 font-mono text-xs text-muted/60">0{i + 1}</span>
+            <span class="grid h-12 w-12 place-items-center rounded-xl bg-accent-soft text-accent transition group-hover:bg-accent group-hover:text-accent-contrast">
+              <Icon name={s.icon} size={22} />
+            </span>
+            <h3 class="mt-5 text-lg font-bold">{s.title}</h3>
+            <p class="mt-2 text-sm leading-relaxed text-muted">{s.text}</p>
+          </article>
+        ))
+      }
+    </div>
+  </div>
+</section>
