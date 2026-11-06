@@ -1,6 +1,9 @@
 ---
 import Icon from '@/components/Icon.astro';
-import { hero, site, stats } from '@/data/site';
+import { getContent } from '@/lib/content';
+const c = await getContent();
+const { hero, general: site } = c;
+const stats = c.stats.items;
 ---
 
 <section class="relative overflow-hidden pt-32 pb-20 sm:pt-40 sm:pb-28">

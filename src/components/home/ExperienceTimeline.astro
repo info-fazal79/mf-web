@@ -1,5 +1,6 @@
 ---
-import { experience } from '@/data/site';
+import { getContent } from '@/lib/content';
+const experience = (await getContent()).about.experience;
 interface Props {
   compact?: boolean;
 }

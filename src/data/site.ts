@@ -20,6 +20,7 @@ export type Testimonial = {
   role: string;
   quote: string;
   rating: number;
+  avatar?: string;
   sample?: boolean;
 };
 export type FeaturedProject = {
@@ -242,6 +243,18 @@ export const testimonials: Testimonial[] = [
     sample: true,
   },
 ];
+
+export const aboutIntro = {
+  heading: "Hello! I'm Fazal 👋",
+  subtitle:
+    'Instructor, automation specialist and developer. I help people and teams work smarter with the tools they already use.',
+  photo: '',
+  paragraphs: [
+    "I'm a results-driven technical instructor and automation specialist with experience across office administration, data management and web development. Today I lead MS Office & Digital Tools training at As-Sunnah Skill Development Institute, where I've mentored more than a thousand students and professionals.",
+    "Alongside teaching, I build custom Google Sheets and Apps Script systems (leave management, student databases, admin dashboards, sales and stock trackers) that replace slow manual workflows. As a Level 1 Fiverr seller I've delivered modern, responsive WordPress websites to international clients with consistent 5-star ratings.",
+    'I love bringing generative AI tools like Claude, ChatGPT, Google AI Studio and NotebookLM into everyday work, teaching prompt engineering and AI-assisted productivity so people get more done with less effort.',
+  ],
+};
 
 export const footer = {
   about:

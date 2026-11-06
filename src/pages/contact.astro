@@ -2,7 +2,10 @@
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import PageHero from '@/components/PageHero.astro';
 import Icon from '@/components/Icon.astro';
-import { site, socials } from '@/data/site';
+import { getContent } from '@/lib/content';
+const c = await getContent();
+const site = c.general;
+const socials = c.socials.items;
 
 const channels = [
   { label: 'Email', value: site.email, href: `mailto:${site.email}`, icon: 'mail' },

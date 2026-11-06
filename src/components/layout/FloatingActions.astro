@@ -1,6 +1,9 @@
 ---
 import Icon from '@/components/Icon.astro';
-import { site } from '@/data/site';
+import { getContent } from '@/lib/content';
+const c = await getContent();
+const site = c.general;
+const f = c.floating;
 ---
 
 <div class="fixed right-4 bottom-4 z-30 flex flex-col items-end gap-3 sm:right-6 sm:bottom-6">
@@ -13,23 +16,30 @@ import { site } from '@/data/site';
     <Icon name="arrowUp" />
   </button>
 
+  {f.enabled && (
   <div class="relative" data-fab>
     <div
       data-fab-menu
       class="pointer-events-none absolute right-0 bottom-16 flex translate-y-2 flex-col items-end gap-2 opacity-0 transition-all duration-200"
     >
+      {f.whatsapp && (
       <a href={`https://wa.me/${site.whatsapp}`} target="_blank" rel="noopener" class="fab-item">
         <span class="fab-label">WhatsApp</span>
         <span class="fab-icon bg-[#25d366] text-white"><Icon name="whatsapp" size={18} /></span>
       </a>
+      )}
+      {f.call && (
       <a href={`tel:${site.phone.replace(/[^+\d]/g, '')}`} class="fab-item">
         <span class="fab-label">Call</span>
         <span class="fab-icon bg-surface text-accent"><Icon name="phone" size={18} /></span>
       </a>
+      )}
+      {f.email && (
       <a href={`mailto:${site.email}`} class="fab-item">
         <span class="fab-label">Email</span>
         <span class="fab-icon bg-surface text-accent"><Icon name="mail" size={18} /></span>
       </a>
+      )}
     </div>
     <button
       type="button"
@@ -43,6 +53,7 @@ import { site } from '@/data/site';
       <Icon name="close" class="fab-close hidden" size={22} />
     </button>
   </div>
+  )}
 </div>
 
 <style>

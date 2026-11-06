@@ -1,0 +1,271 @@
+import { useEffect, useState, type FormEvent } from 'react';
+import type { Session } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabase';
+import { settingsPages } from './schemas';
+import { Consultations, Dashboard, MediaPage, Messages, SettingsEditor, Subscribers, Testimonials } from './pages';
+import { I, ToastProvider } from './ui';
+
+type NavEntry = { route: string; label: string; icon: string };
+const navGroups: { title: string; items: NavEntry[] }[] = [
+  { title: '', items: [{ route: 'dashboard', label: 'Dashboard', icon: 'dashboard' }] },
+  {
+    title: 'Inbox',
+    items: [
+      { route: 'consultations', label: 'Consultations', icon: 'calendar' },
+      { route: 'messages', label: 'Messages', icon: 'mail' },
+      { route: 'subscribers', label: 'Subscribers', icon: 'users' },
+    ],
+  },
+  {
+    title: 'Home page',
+    items: [
+      { route: 's/hero', label: 'Hero', icon: 'home' },
+      { route: 's/stats', label: 'Stats', icon: 'dashboard' },
+      { route: 's/sections', label: 'Sections', icon: 'eye' },
+      { route: 's/services', label: 'Services', icon: 'layers' },
+      { route: 's/tools', label: 'Toolkit', icon: 'layers' },
+      { route: 's/featured', label: 'Featured projects', icon: 'layers' },
+      { route: 'testimonials', label: 'Testimonials', icon: 'quote' },
+    ],
+  },
+  { title: 'Pages', items: [{ route: 's/about', label: 'About', icon: 'user' }] },
+  { title: 'Library', items: [{ route: 'media', label: 'Media', icon: 'image' }] },
+  {
+    title: 'Settings',
+    items: [
+      { route: 's/general', label: 'General', icon: 'settings' },
+      { route: 's/nav', label: 'Navigation', icon: 'menu' },
+      { route: 's/socials', label: 'Social links', icon: 'link' },
+      { route: 's/footer', label: 'Footer', icon: 'layers' },
+      { route: 's/floating', label: 'Floating contact', icon: 'mail' },
+      { route: 's/consultation', label: 'Consultation', icon: 'calendar' },
+    ],
+  },
+  {
+    title: 'Coming next',
+    items: [
+      { route: 'soon/Blog', label: 'Blog · Phase 4', icon: 'file' },
+      { route: 'soon/Projects', label: 'Projects · Phase 5', icon: 'layers' },
+      { route: 'soon/Tutorials', label: 'Tutorials · Phase 6', icon: 'eye' },
+      { route: 'soon/E-books', label: 'E-books · Phase 7', icon: 'file' },
+      { route: 'soon/Orders', label: 'Orders · Phase 8', icon: 'dashboard' },
+    ],
+  },
+];
+
+function useHashRoute() {
+  const read = () => location.hash.replace(/^#\/?/, '') || 'dashboard';
+  const [route, setRoute] = useState(read);
+  useEffect(() => {
+    const on = () => setRoute(read());
+    window.addEventListener('hashchange', on);
+    return () => window.removeEventListener('hashchange', on);
+  }, []);
+  return [route, (r: string) => (location.hash = `/${r}`)] as const;
+}
+
+/* ---------------- Login ---------------- */
+function Login({ recovery }: { recovery: boolean }) {
+  const [mode, setMode] = useState<'login' | 'forgot' | 'reset'>(recovery ? 'reset' : 'login');
+  const [msg, setMsg] = useState<{ t: string; ok: boolean } | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function submit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const f = Object.fromEntries(new FormData(e.currentTarget)) as Record<string, string>;
+    setBusy(true);
+    setMsg(null);
+    const sb = supabase!;
+    if (mode === 'login') {
+      const { error } = await sb.auth.signInWithPassword({ email: f.email, password: f.password });
+      if (error) setMsg({ t: error.message, ok: false });
+    } else if (mode === 'forgot') {
+      const { error } = await sb.auth.resetPasswordForEmail(f.email, { redirectTo: `${location.origin}/admin` });
+      setMsg(error ? { t: error.message, ok: false } : { t: 'Check your email for a reset link.', ok: true });
+    } else {
+      const { error } = await sb.auth.updateUser({ password: f.password });
+      setMsg(error ? { t: error.message, ok: false } : { t: 'Password updated. You are signed in.', ok: true });
+      if (!error) setTimeout(() => location.replace('/admin'), 800);
+    }
+    setBusy(false);
+  }
+
+  return (
+    <div className="relative grid min-h-screen place-items-center p-4">
+      <div className="bg-grid pointer-events-none absolute inset-0" />
+      <form onSubmit={submit} className="card relative w-full max-w-sm p-7">
+        <span className="grid h-11 w-11 place-items-center rounded-xl bg-accent font-mono text-sm font-bold text-accent-contrast">MF</span>
+        <h1 className="mt-5 text-xl font-bold">{mode === 'login' ? 'Admin sign in' : mode === 'forgot' ? 'Reset password' : 'Set a new password'}</h1>
+        <p className="mt-1 text-sm text-muted">{mode === 'reset' ? 'Choose a strong password.' : 'MF Website control panel'}</p>
+        <div className="mt-6 grid gap-4">
+          {mode !== 'reset' && (
+            <div>
+              <label className="label" htmlFor="a-email">Email</label>
+              <input id="a-email" name="email" type="email" required autoComplete="username" className="input" />
+            </div>
+          )}
+          {mode !== 'forgot' && (
+            <div>
+              <label className="label" htmlFor="a-pass">{mode === 'reset' ? 'New password' : 'Password'}</label>
+              <input id="a-pass" name="password" type="password" required minLength={mode === 'reset' ? 8 : undefined} autoComplete={mode === 'reset' ? 'new-password' : 'current-password'} className="input" />
+            </div>
+          )}
+          {msg && <p className={`text-sm ${msg.ok ? 'text-accent' : 'text-red-500'}`} role="alert">{msg.t}</p>}
+          <button type="submit" className="btn-primary py-3" disabled={busy}>
+            {busy ? 'Please wait…' : mode === 'login' ? 'Sign in' : mode === 'forgot' ? 'Send reset link' : 'Update password'}
+          </button>
+          {mode !== 'reset' && (
+            <button type="button" className="text-xs text-muted hover:text-accent" onClick={() => { setMode(mode === 'login' ? 'forgot' : 'login'); setMsg(null); }}>
+              {mode === 'login' ? 'Forgot password?' : '← Back to sign in'}
+            </button>
+          )}
+        </div>
+      </form>
+    </div>
+  );
+}
+
+/* ---------------- Shell ---------------- */
+export function Shell({ session }: { session: Session }) {
+  const [route, go] = useHashRoute();
+  const [menu, setMenu] = useState(false);
+  const [theme, setTheme] = useState(() => document.documentElement.dataset.theme ?? 'dark');
+
+  useEffect(() => setMenu(false), [route]);
+
+  function toggleTheme() {
+    const t = theme === 'dark' ? 'light' : 'dark';
+    document.documentElement.dataset.theme = t;
+    try { localStorage.setItem('theme', t); } catch {}
+    setTheme(t);
+  }
+
+  let page;
+  if (route === 'dashboard') page = <Dashboard go={go} />;
+  else if (route === 'testimonials') page = <Testimonials />;
+  else if (route === 'media') page = <MediaPage />;
+  else if (route === 'messages') page = <Messages />;
+  else if (route === 'subscribers') page = <Subscribers />;
+  else if (route === 'consultations') page = <Consultations go={go} />;
+  else if (route.startsWith('s/')) {
+    const p = settingsPages.find((x) => x.key === route.slice(2));
+    page = p ? <SettingsEditor key={p.key} page={p} /> : null;
+  } else if (route.startsWith('soon/')) {
+    page = (
+      <div className="card grid place-items-center gap-3 p-16 text-center">
+        <span className="grid h-14 w-14 place-items-center rounded-2xl bg-accent-soft text-accent"><I n="layers" s={24} /></span>
+        <h1 className="text-xl font-bold">{decodeURIComponent(route.slice(5))}</h1>
+        <p className="max-w-sm text-sm text-muted">This module is planned for a later phase. See PLAN.md for the full feature list.</p>
+      </div>
+    );
+  }
+  page ??= <p className="text-muted">Page not found.</p>;
+
+  return (
+    <div className="min-h-screen lg:grid lg:grid-cols-[260px_1fr]">
+      <aside className={`fixed inset-y-0 left-0 z-40 w-[260px] overflow-y-auto border-r border-line bg-surface transition-[translate] lg:static lg:translate-x-0 ${menu ? 'translate-x-0' : '-translate-x-full'}`}>
+        <div className="flex items-center gap-2.5 border-b border-line px-5 py-4">
+          <span className="grid h-9 w-9 place-items-center rounded-xl bg-accent font-mono text-xs font-bold text-accent-contrast">MF</span>
+          <div className="leading-tight">
+            <p className="text-sm font-bold">MF Admin</p>
+            <p className="font-mono text-[10px] text-muted">control panel</p>
+          </div>
+        </div>
+        <nav className="grid gap-5 p-3">
+          {navGroups.map((g) => (
+            <div key={g.title}>
+              {g.title && <p className="px-3 pb-1.5 font-mono text-[10px] font-semibold tracking-widest text-muted uppercase">{g.title}</p>}
+              <ul className="grid gap-0.5">
+                {g.items.map((it) => {
+                  const active = route === it.route;
+                  const soon = it.route.startsWith('soon/');
+                  return (
+                    <li key={it.route}>
+                      <a href={`#/${it.route}`} className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition ${active ? 'bg-accent-soft font-semibold text-accent' : soon ? 'text-muted/60 hover:bg-surface-2' : 'text-muted hover:bg-surface-2 hover:text-fg'}`}>
+                        <I n={it.icon} s={16} />
+                        {it.label}
+                      </a>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
+        </nav>
+      </aside>
+      {menu && <div className="fixed inset-0 z-30 bg-black/50 lg:hidden" onClick={() => setMenu(false)} />}
+
+      <div className="min-w-0">
+        <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-line bg-bg/80 px-4 py-3 backdrop-blur sm:px-6">
+          <button type="button" className="grid h-9 w-9 place-items-center rounded-lg hover:bg-surface-2 lg:hidden" onClick={() => setMenu(true)} aria-label="Open menu"><I n="menu" /></button>
+          <div className="flex-1" />
+          <a href="/" target="_blank" className="hidden items-center gap-1.5 text-sm text-muted hover:text-fg sm:flex"><I n="external" s={15} /> View site</a>
+          <button type="button" onClick={toggleTheme} className="grid h-9 w-9 place-items-center rounded-lg text-muted hover:bg-surface-2" aria-label="Toggle theme"><I n="eye" s={16} /></button>
+          <span className="hidden text-sm text-muted md:inline">{session.user.email}</span>
+          <button type="button" onClick={() => supabase!.auth.signOut()} className="btn-ghost px-3 py-1.5 text-xs"><I n="logout" s={14} /> Sign out</button>
+        </header>
+        <main className="mx-auto max-w-6xl p-4 sm:p-6 lg:p-8">{page}</main>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- Root ---------------- */
+export default function AdminApp() {
+  const [session, setSession] = useState<Session | null | undefined>(undefined);
+  const [role, setRole] = useState<string | null | undefined>(undefined);
+  const [recovery, setRecovery] = useState(false);
+
+  useEffect(() => {
+    if (!supabase) return;
+    supabase.auth.getSession().then(({ data }) => setSession(data.session));
+    const { data } = supabase.auth.onAuthStateChange((event, s) => {
+      if (event === 'PASSWORD_RECOVERY') setRecovery(true);
+      setSession(s);
+    });
+    return () => data.subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (!session || !supabase) {
+      setRole(session === null ? null : undefined);
+      return;
+    }
+    setRole(undefined);
+    supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', session.user.id)
+      .maybeSingle()
+      .then(({ data, error }) => setRole(error ? `error:${error.message}` : (data?.role ?? 'none')));
+  }, [session]);
+
+  if (!supabase) {
+    return <Center>Supabase keys are missing. Add them to <code>.env.local</code> and restart the dev server.</Center>;
+  }
+  if (session === undefined) return <Center>Loading…</Center>;
+  if (!session || recovery) return <ToastProvider><Login recovery={recovery} /></ToastProvider>;
+  if (role === undefined) return <Center>Checking access…</Center>;
+  if (role !== 'admin' && role !== 'editor') {
+    return (
+      <Center>
+        <p className="font-semibold">This account is not an admin.</p>
+        <p className="mt-2 max-w-md text-sm text-muted">
+          {String(role).startsWith('error:')
+            ? `Database error: ${String(role).slice(6)}. Has migration 0001_core.sql been run in the Supabase SQL Editor?`
+            : `Signed in as ${session.user.email}. Run the "make admin" SQL from the setup guide for this email, then reload.`}
+        </p>
+        <button type="button" className="btn-ghost mt-5" onClick={() => supabase!.auth.signOut()}>Sign out</button>
+      </Center>
+    );
+  }
+  return (
+    <ToastProvider>
+      <Shell session={session} />
+    </ToastProvider>
+  );
+}
+
+function Center({ children }: { children: React.ReactNode }) {
+  return <div className="grid min-h-screen place-items-center p-6 text-center"><div>{children}</div></div>;
+}

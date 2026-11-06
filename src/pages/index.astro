@@ -10,29 +10,38 @@ import Testimonials from '@/components/home/Testimonials.astro';
 import CTA from '@/components/home/CTA.astro';
 import SectionHeader from '@/components/SectionHeader.astro';
 import Icon from '@/components/Icon.astro';
+import { getContent } from '@/lib/content';
+
+const s = (await getContent()).sections;
 ---
 
 <BaseLayout>
   <Hero />
-  <Services />
-  <Tools />
-  <FeaturedProjects />
-  <Discover />
+  {s.services && <Services />}
+  {s.tools && <Tools />}
+  {s.featured && <FeaturedProjects />}
+  {s.discover && <Discover />}
 
-  <section class="section border-t border-line">
-    <div class="container-x grid gap-12 lg:grid-cols-[0.8fr_1.2fr]">
-      <div class="lg:sticky lg:top-28 lg:self-start">
-        <SectionHeader
-          eyebrow="experience"
-          title="Where I've been <span class='text-gradient'>building</span>"
-          sub="Training, automating and developing for institutes and international clients."
-        />
-        <a href="/about" class="btn-ghost reveal mt-8">Full story <Icon name="arrowRight" size={16} /></a>
-      </div>
-      <ExperienceTimeline compact />
-    </div>
-  </section>
+  {
+    s.experience && (
+      <section class="section border-t border-line">
+        <div class="container-x grid gap-12 lg:grid-cols-[0.8fr_1.2fr]">
+          <div class="lg:sticky lg:top-28 lg:self-start">
+            <SectionHeader
+              eyebrow="experience"
+              title="Where I've been <span class='text-gradient'>building</span>"
+              sub="Training, automating and developing for institutes and international clients."
+            />
+            <a href="/about" class="btn-ghost reveal mt-8">
+              Full story <Icon name="arrowRight" size={16} />
+            </a>
+          </div>
+          <ExperienceTimeline compact />
+        </div>
+      </section>
+    )
+  }
 
-  <Testimonials />
-  <CTA />
+  {s.testimonials && <Testimonials />}
+  {s.cta && <CTA />}
 </BaseLayout>

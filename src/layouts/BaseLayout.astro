@@ -6,12 +6,13 @@ import Drawer from '@/components/layout/Drawer.astro';
 import FloatingActions from '@/components/layout/FloatingActions.astro';
 import Icon from '@/components/Icon.astro';
 import ConsultationForm from '@/components/islands/ConsultationForm';
-import { consultation, site } from '@/data/site';
+import { getContent } from '@/lib/content';
 
 interface Props {
   title?: string;
   description?: string;
 }
+const { general: site, consultation } = await getContent();
 const { title, description = site.description } = Astro.props;
 const fullTitle = title ? `${title} | ${site.name}` : `${site.name} | ${site.tagline}`;
 const canonical = new URL(Astro.url.pathname, Astro.site);
@@ -25,7 +26,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     <title>{fullTitle}</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical} />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" href={site.faviconUrl || '/favicon.svg'} />
     <meta name="theme-color" content="#07100b" />
     <meta property="og:type" content="website" />
     <meta property="og:title" content={fullTitle} />

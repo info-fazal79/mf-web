@@ -1,7 +1,11 @@
 ---
 import Logo from '@/components/Logo.astro';
 import Icon from '@/components/Icon.astro';
-import { footer, nav, site, socials } from '@/data/site';
+import { getContent } from '@/lib/content';
+const c = await getContent();
+const { footer, general: site } = c;
+const nav = c.nav.items;
+const socials = c.socials.items;
 const year = new Date().getFullYear();
 ---
 

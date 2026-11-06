@@ -1,6 +1,7 @@
 ---
 import SectionHeader from '@/components/SectionHeader.astro';
-import { tools } from '@/data/site';
+import { getContent } from '@/lib/content';
+const tools = (await getContent()).tools.items;
 const row = [...tools, ...tools];
 ---
 

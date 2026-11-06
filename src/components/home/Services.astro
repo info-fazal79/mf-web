@@ -1,7 +1,8 @@
 ---
 import Icon from '@/components/Icon.astro';
 import SectionHeader from '@/components/SectionHeader.astro';
-import { services } from '@/data/site';
+import { getContent } from '@/lib/content';
+const services = (await getContent()).services.items;
 ---
 
 <section class="section">

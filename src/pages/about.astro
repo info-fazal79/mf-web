@@ -5,22 +5,25 @@ import SectionHeader from '@/components/SectionHeader.astro';
 import ExperienceTimeline from '@/components/home/ExperienceTimeline.astro';
 import CTA from '@/components/home/CTA.astro';
 import Icon from '@/components/Icon.astro';
-import { achievements, certifications, education, hero, site, skills, stats } from '@/data/site';
+import { getContent } from '@/lib/content';
+
+const c = await getContent();
+const site = c.general;
+const about = c.about;
+const { achievements, certifications, education, skills } = about;
+const stats = c.stats.items;
+const photo = about.photo || c.hero.photo;
 ---
 
 <BaseLayout title="About" description={`About ${site.name}: experience, skills, education and certifications.`}>
-  <PageHero
-    eyebrow="about me"
-    title={`About <span class="text-gradient">${site.name}</span>`}
-    sub="Instructor, automation specialist and developer. I help people and teams work smarter with the tools they already use."
-  />
+  <PageHero eyebrow="about me" title={`About <span class="text-gradient">${site.name}</span>`} sub={about.subtitle} />
 
   <section class="pb-20">
     <div class="container-x grid items-start gap-10 lg:grid-cols-[0.8fr_1.2fr]">
       <div class="card reveal relative aspect-square overflow-hidden rounded-[2rem]">
         {
-          hero.photo ? (
-            <img src={hero.photo} alt={site.name} class="h-full w-full object-cover" loading="lazy" />
+          photo ? (
+            <img src={photo} alt={site.name} class="h-full w-full object-cover" loading="lazy" />
           ) : (
             <div class="relative grid h-full place-items-center bg-surface-2">
               <div class="bg-grid absolute inset-0" />
@@ -30,24 +33,9 @@ import { achievements, certifications, education, hero, site, skills, stats } fr
         }
       </div>
       <div class="reveal">
-        <h2 class="text-2xl font-bold sm:text-3xl">Hello! I'm Fazal 👋</h2>
+        <h2 class="text-2xl font-bold sm:text-3xl">{about.heading}</h2>
         <div class="mt-5 grid gap-4 leading-relaxed text-muted">
-          <p>
-            I'm a results-driven technical instructor and automation specialist with experience across office
-            administration, data management and web development. Today I lead MS Office & Digital Tools training at
-            As-Sunnah Skill Development Institute, where I've mentored more than a thousand students and
-            professionals.
-          </p>
-          <p>
-            Alongside teaching, I build custom Google Sheets and Apps Script systems (leave management, student
-            databases, admin dashboards, sales and stock trackers) that replace slow manual workflows. As a Level 1
-            Fiverr seller I've delivered modern, responsive WordPress websites to international clients with
-            consistent 5-star ratings.
-          </p>
-          <p>
-            I love bringing generative AI tools like Claude, ChatGPT, Google AI Studio and NotebookLM into everyday
-            work, teaching prompt engineering and AI-assisted productivity so people get more done with less effort.
-          </p>
+          {about.paragraphs.map((p) => <p>{p}</p>)}
         </div>
         <dl class="mt-8 grid grid-cols-3 gap-4">
           {

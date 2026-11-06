@@ -1,7 +1,8 @@
 ---
 import Icon from '@/components/Icon.astro';
 import SectionHeader from '@/components/SectionHeader.astro';
-import { testimonials } from '@/data/site';
+import { getContent } from '@/lib/content';
+const { testimonials } = await getContent();
 
 // Sample entries only show in local dev, so a live site never shows placeholder reviews.
 const items = testimonials.filter((t) => !t.sample || import.meta.env.DEV);
@@ -28,7 +29,11 @@ const items = testimonials.filter((t) => !t.sample || import.meta.env.DEV);
               </div>
               <blockquote class="mt-4 leading-relaxed">“{t.quote}”</blockquote>
               <figcaption class="mt-6 flex items-center gap-3">
-                <span class="grid h-10 w-10 place-items-center rounded-full bg-accent-soft font-bold text-accent">{t.name[0]}</span>
+                {t.avatar ? (
+                  <img src={t.avatar} alt="" class="h-10 w-10 rounded-full object-cover" loading="lazy" width="40" height="40" />
+                ) : (
+                  <span class="grid h-10 w-10 place-items-center rounded-full bg-accent-soft font-bold text-accent">{t.name[0]}</span>
+                )}
                 <span>
                   <span class="block text-sm font-semibold">{t.name}</span>
                   <span class="block text-xs text-muted">{t.role}</span>

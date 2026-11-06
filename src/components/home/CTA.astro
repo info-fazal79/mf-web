@@ -1,6 +1,7 @@
 ---
 import Icon from '@/components/Icon.astro';
-import { site } from '@/data/site';
+import { getContent } from '@/lib/content';
+const site = (await getContent()).general;
 ---
 
 <section class="section">

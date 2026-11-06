@@ -1,7 +1,8 @@
 ---
 import Logo from '@/components/Logo.astro';
 import Icon from '@/components/Icon.astro';
-import { nav } from '@/data/site';
+import { getContent } from '@/lib/content';
+const nav = (await getContent()).nav.items;
 
 const path = Astro.url.pathname.replace(/\/$/, '') || '/';
 const isActive = (href: string) => (href === '/' ? path === '/' : path.startsWith(href));
