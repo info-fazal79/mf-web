@@ -6,6 +6,7 @@ import { Dashboard, MediaPage, Messages, SettingsEditor, Subscribers, Testimonia
 import { Consultations } from './consultation';
 import { BlogAuthors, BlogCategories, BlogComments, BlogPosts } from './blog';
 import { ProjectCategories, Projects } from './projects';
+import { Tutorials, YouTubeSettings } from './tutorials';
 import { I, ToastProvider } from './ui';
 
 type NavEntry = { route: string; label: string; icon: string };
@@ -47,6 +48,13 @@ const navGroups: { title: string; items: NavEntry[] }[] = [
       { route: 'project-categories', label: 'Categories', icon: 'layers' },
     ],
   },
+  {
+    title: 'Learning',
+    items: [
+      { route: 'tutorials', label: 'Tutorials', icon: 'eye' },
+      { route: 'youtube-settings', label: 'YouTube API', icon: 'settings' },
+    ],
+  },
   { title: 'Pages', items: [{ route: 's/about', label: 'About', icon: 'user' }] },
   { title: 'Library', items: [{ route: 'media', label: 'Media', icon: 'image' }] },
   {
@@ -63,7 +71,6 @@ const navGroups: { title: string; items: NavEntry[] }[] = [
   {
     title: 'Coming next',
     items: [
-      { route: 'soon/Tutorials', label: 'Tutorials · Phase 6', icon: 'eye' },
       { route: 'soon/E-books', label: 'E-books · Phase 7', icon: 'file' },
       { route: 'soon/Orders', label: 'Orders · Phase 8', icon: 'dashboard' },
     ],
@@ -168,6 +175,9 @@ export function Shell({ session }: { session: Session }) {
   else if (route.startsWith('blog/')) page = <BlogPosts key={route} go={go} editId={route.slice(5)} />;
   else if (route === 'projects') page = <Projects go={go} />;
   else if (route.startsWith('projects/')) page = <Projects key={route} go={go} editId={route.slice(9)} />;
+  else if (route === 'tutorials') page = <Tutorials go={go} />;
+  else if (route.startsWith('tutorials/')) page = <Tutorials key={route} go={go} editId={route.slice(10)} />;
+  else if (route === 'youtube-settings') page = <YouTubeSettings />;
   else if (route === 'project-categories') page = <ProjectCategories />;
   else if (route === 'blog-comments') page = <BlogComments />;
   else if (route === 'blog-categories') page = <BlogCategories />;
