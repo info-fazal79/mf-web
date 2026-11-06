@@ -1,2 +1,8 @@
 User-agent: *
 Disallow: /admin
+Disallow: /account
+Disallow: /checkout
+Disallow: /read
+Disallow: /unsubscribe
+
+Sitemap: https://muhammadfazal.com/sitemap.xml

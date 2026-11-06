@@ -1,0 +1,24 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import PageHero from '@/components/PageHero.astro';
+---
+
+<BaseLayout title="Unsubscribe" noindex>
+  <PageHero eyebrow="newsletter" title="Unsubscribe" sub="">
+    <p data-msg class="mx-auto mt-6 max-w-md text-muted">Processing…</p>
+    <a href="/" class="btn-ghost mt-8">Back to home</a>
+  </PageHero>
+</BaseLayout>
+
+<script>
+  import { supabase } from '@/lib/supabase';
+  const msg = document.querySelector<HTMLElement>('[data-msg]')!;
+  const t = new URLSearchParams(location.search).get('t') ?? '';
+  if (!/^[0-9a-f-]{36}$/.test(t) || !supabase) {
+    msg.textContent = 'This unsubscribe link is not valid.';
+  } else {
+    supabase.rpc('unsubscribe', { p_token: t }).then(({ data, error }) => {
+      msg.textContent = error || !data ? 'This unsubscribe link is not valid or was already used.' : `Done. ${data} won't receive newsletters any more. You can subscribe again from the footer anytime.`;
+    });
+  }
+</script>

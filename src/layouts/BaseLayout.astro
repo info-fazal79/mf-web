@@ -13,9 +13,12 @@ interface Props {
   title?: string;
   description?: string;
   noindex?: boolean;
+  image?: string | null;
+  type?: 'website' | 'article' | 'book';
 }
 const { general: site, consultation } = await getContent();
-const { title, description = site.description, noindex = false } = Astro.props;
+const { title, description = site.description, noindex = false, image, type = 'website' } = Astro.props;
+const ogImage = new URL(image || '/og-default.png', Astro.site).href;
 const fullTitle = title ? `${title} | ${site.name}` : `${site.name} | ${site.tagline}`;
 const canonical = new URL(Astro.url.pathname, Astro.site);
 ---
@@ -31,7 +34,12 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     {noindex && <meta name="robots" content="noindex" />}
     <link rel="icon" href={site.faviconUrl || '/favicon.svg'} />
     <meta name="theme-color" content="#07100b" />
-    <meta property="og:type" content="website" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta property="og:type" content={type === 'book' ? 'book' : type} />
+    <meta property="og:site_name" content={site.name} />
+    <meta property="og:image" content={ogImage} />
+    <meta name="twitter:image" content={ogImage} />
     <meta property="og:title" content={fullTitle} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonical} />
@@ -77,6 +85,9 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     <script>
       import { initUI } from '@/scripts/ui';
       initUI();
+      if ('serviceWorker' in navigator && import.meta.env.PROD) {
+        addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+      }
     </script>
   </body>
 </html>

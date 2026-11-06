@@ -29,7 +29,7 @@ const caseStudy = [
 const isPlayStore = (u: string | null) => !!u && u.includes('play.google.com');
 ---
 
-<BaseLayout title={p.seo_title || p.title} description={p.seo_description || p.summary || `${p.title}: project by Muhammad Fazal.`}>
+<BaseLayout title={p.seo_title || p.title} description={p.seo_description || p.summary || `${p.title}: project by Muhammad Fazal.`} image={p.cover_url}>
   <section class="relative overflow-hidden pt-32 pb-12 sm:pt-40" data-slug={p.slug}>
     <div class="bg-grid pointer-events-none absolute inset-0" aria-hidden="true"></div>
     <div class="container-x relative max-w-5xl">

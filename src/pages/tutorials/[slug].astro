@@ -23,7 +23,7 @@ const jsonLd = {
 };
 ---
 
-<BaseLayout title={p.title} description={p.description ?? `${p.title}: free video course by Muhammad Fazal.`}>
+<BaseLayout title={p.title} description={p.description ?? `${p.title}: free video course by Muhammad Fazal.`} image={p.cover_url || (p.lessons[0] ? `https://i.ytimg.com/vi/${p.lessons[0].youtube_id}/maxresdefault.jpg` : null)}>
   <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
   <section class="pt-28 pb-6 sm:pt-32">
     <div class="container-x">

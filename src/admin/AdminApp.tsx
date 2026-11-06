@@ -9,6 +9,7 @@ import { ProjectCategories, Projects } from './projects';
 import { Tutorials, YouTubeSettings } from './tutorials';
 import { Customers, EbookCategories, EbookReviewsAdmin, Ebooks } from './ebooks';
 import { Coupons, Orders } from './orders';
+import { EmailSettings, Newsletter } from './email';
 import { I, ToastProvider } from './ui';
 
 type NavEntry = { route: string; label: string; icon: string };
@@ -21,6 +22,7 @@ const navGroups: { title: string; items: NavEntry[] }[] = [
       { route: 'consultations', label: 'Consultations', icon: 'calendar' },
       { route: 'messages', label: 'Messages', icon: 'mail' },
       { route: 'subscribers', label: 'Subscribers', icon: 'users' },
+      { route: 'newsletter', label: 'Newsletter', icon: 'send' },
     ],
   },
   {
@@ -79,6 +81,7 @@ const navGroups: { title: string; items: NavEntry[] }[] = [
       { route: 's/footer', label: 'Footer', icon: 'layers' },
       { route: 's/floating', label: 'Floating contact', icon: 'mail' },
       { route: 's/payments', label: 'Payments', icon: 'dashboard' },
+      { route: 'email-settings', label: 'Email', icon: 'mail' },
       { route: 's/consultation', label: 'Consultation', icon: 'calendar' },
     ],
   },
@@ -182,6 +185,8 @@ export function Shell({ session }: { session: Session }) {
   else if (route.startsWith('blog/')) page = <BlogPosts key={route} go={go} editId={route.slice(5)} />;
   else if (route === 'projects') page = <Projects go={go} />;
   else if (route.startsWith('projects/')) page = <Projects key={route} go={go} editId={route.slice(9)} />;
+  else if (route === 'newsletter') page = <Newsletter />;
+  else if (route === 'email-settings') page = <EmailSettings />;
   else if (route === 'orders') page = <Orders />;
   else if (route === 'coupons') page = <Coupons />;
   else if (route === 'ebooks') page = <Ebooks go={go} />;

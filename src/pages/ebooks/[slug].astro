@@ -37,7 +37,7 @@ const jsonLd = {
 };
 ---
 
-<BaseLayout title={b.seo_title || b.title} description={b.seo_description || b.subtitle || `${b.title} by ${b.author_name}`}>
+<BaseLayout title={b.seo_title || b.title} description={b.seo_description || b.subtitle || `${b.title} by ${b.author_name}`} image={b.cover_url} type="book">
   <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
   <section class="relative overflow-hidden pt-32 pb-16 sm:pt-40">
     <div class="bg-grid pointer-events-none absolute inset-0" aria-hidden="true"></div>
