@@ -54,4 +54,17 @@ export const mergeContent = (c: unknown): NusukContent => {
   return out;
 };
 
-export const CODE_RE = /^[A-Za-z0-9_-]{3,40}$/;
+/** Bangladeshi winners list, stored in nusuk_settings.content.winners and edited from Nusuk Manager → Winners. */
+export type Prize = 'umrah' | 'zamzam' | 'other';
+export type Winner = { name: string; prize: Prize; prize_text?: string; date?: string; link?: string };
+export const prizeLabel: Record<Prize, string> = { umrah: 'উমরাহ', zamzam: 'জমজমের পানি', other: 'পুরস্কার' };
+
+export const parseWinners = (c: unknown): Winner[] => {
+  const list = c && typeof c === 'object' ? (c as Record<string, unknown>).winners : null;
+  if (!Array.isArray(list)) return [];
+  return list
+    .filter((w): w is Winner => !!w && typeof w === 'object' && typeof (w as Winner).name === 'string' && (w as Winner).name.trim() !== '')
+    .map((w) => ({ ...w, prize: (['umrah', 'zamzam', 'other'] as const).includes(w.prize) ? w.prize : 'other' }));
+};
+
+export const CODE_RE =/^[A-Za-z0-9_-]{3,40}$/;

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
-import { CODE_RE, contentFields, defaultContent, mergeContent, type NusukContent } from '../_lib/content';
+import { CODE_RE, contentFields, defaultContent, mergeContent, parseWinners, prizeLabel, type NusukContent, type Prize, type Winner } from '../_lib/content';
 
 /* =====================================================================
    Nusuk Manager: a standalone admin for /nusuk.
@@ -27,7 +27,7 @@ type Stats = {
 };
 type Settings = {
   enabled: boolean; submissions_enabled: boolean; default_max_uses: number;
-  logo_url: string | null; notice: string | null; content: Partial<NusukContent>;
+  logo_url: string | null; notice: string | null; content: Partial<NusukContent> & { winners?: Winner[] };
 };
 
 const sb = supabase;
@@ -445,11 +445,12 @@ function SettingsPage({ toast, settings, reload }: { toast: ToastFn; settings: S
     // Store only fields that differ from the defaults, so later default-text edits still flow through.
     const diff: Partial<NusukContent> = {};
     for (const k of Object.keys(content) as (keyof NusukContent)[]) if (content[k] !== defaultContent[k]) diff[k] = content[k];
+    const winners = settings.content?.winners; // edited on the Winners page; keep as is
     const { error } = await sb!.from('nusuk_settings').update({
       enabled: next.enabled, submissions_enabled: next.submissions_enabled,
       default_max_uses: Math.max(1, next.default_max_uses || 1),
       logo_url: next.logo_url?.trim() || null, notice: next.notice?.trim() || null,
-      content: diff, updated_at: new Date().toISOString(),
+      content: winners ? { ...diff, winners } : diff, updated_at: new Date().toISOString(),
     }).eq('id', 1);
     if (error) return toast(errText(error), false);
     toast('Settings saved');
@@ -516,13 +517,65 @@ function SettingsPage({ toast, settings, reload }: { toast: ToastFn; settings: S
   );
 }
 
+/* ---------------- Winners ---------------- */
+const blankWinner = (): Winner => ({ name: '', prize: 'umrah', date: new Date().toISOString().slice(0, 10), link: '' });
+function WinnersPage({ toast, settings, reload }: { toast: ToastFn; settings: Settings; reload: () => void }) {
+  const [list, setList] = useState<Winner[]>(() => parseWinners(settings.content));
+  const [busy, setBusy] = useState(false);
+  useEffect(() => setList(parseWinners(settings.content)), [settings]);
+  const set = (i: number, patch: Partial<Winner>) => setList((l) => l.map((w, j) => (j === i ? { ...w, ...patch } : w)));
+
+  async function save() {
+    const clean = list
+      .map((w) => ({ name: w.name.trim(), prize: w.prize, prize_text: w.prize === 'other' ? w.prize_text?.trim() || undefined : undefined, date: w.date || undefined, link: w.link?.trim() || undefined }))
+      .filter((w) => w.name);
+    if (clean.some((w) => w.link && !/^https:\/\//.test(w.link))) return toast('Links must start with https://', false);
+    setBusy(true);
+    // Read the latest content first so page-text edits made elsewhere are not lost.
+    const { data, error: e1 } = await sb!.from('nusuk_settings').select('content').eq('id', 1).single();
+    if (e1) { setBusy(false); return toast(errText(e1), false); }
+    const content = { ...((data?.content as object) ?? {}), winners: clean };
+    const { error } = await sb!.from('nusuk_settings').update({ content, updated_at: new Date().toISOString() }).eq('id', 1);
+    setBusy(false);
+    if (error) return toast(errText(error), false);
+    toast(`Saved ${clean.length} winner(s)`);
+    reload();
+  }
+
+  return (
+    <Card title={`Bangladeshi winners (${list.filter((w) => w.name.trim()).length})`} actions={<><Btn kind="ghost" onClick={() => setList([blankWinner(), ...list])}>+ Add winner</Btn><Btn onClick={save} disabled={busy}>{busy ? 'Saving…' : 'Save'}</Btn></>}>
+      <p className="mb-4 text-sm text-emerald-900/75">Shown on /nusuk as "বাংলাদেশি বিজয়ীরা", newest date first. Copy names exactly as Nusuk announced them, and add the Facebook post link as proof if you can. Leave the list empty to hide the section.</p>
+      <div className="grid gap-3">
+        {list.map((w, i) => (
+          <div key={i} className="grid gap-2 rounded-xl border border-[#e7e1cf] bg-cream p-3 sm:grid-cols-[1.4fr_0.9fr_0.8fr_auto] sm:items-end">
+            <label className="grid gap-1 text-xs font-semibold">Name<input className="nk-input" value={w.name} maxLength={120} onChange={(e) => set(i, { name: e.target.value })} placeholder="Winner's name" /></label>
+            <label className="grid gap-1 text-xs font-semibold">Prize
+              <select className="nk-input" value={w.prize} onChange={(e) => set(i, { prize: e.target.value as Prize })}>
+                <option value="umrah">{prizeLabel.umrah} (Umrah)</option>
+                <option value="zamzam">{prizeLabel.zamzam} (Zamzam)</option>
+                <option value="other">Other…</option>
+              </select>
+            </label>
+            <label className="grid gap-1 text-xs font-semibold">Date<input type="date" className="nk-input" value={w.date ?? ''} onChange={(e) => set(i, { date: e.target.value })} /></label>
+            <Btn kind="ghost" className="text-red-700" onClick={() => setList(list.filter((_, j) => j !== i))} aria-label={`Remove ${w.name || 'winner'}`}>Remove</Btn>
+            {w.prize === 'other' && <label className="grid gap-1 text-xs font-semibold sm:col-span-2">Prize text<input className="nk-input" value={w.prize_text ?? ''} maxLength={60} onChange={(e) => set(i, { prize_text: e.target.value })} placeholder="e.g. গিফট বক্স" /></label>}
+            <label className={`grid gap-1 text-xs font-semibold ${w.prize === 'other' ? 'sm:col-span-2' : 'sm:col-span-4'}`}>Facebook post link (optional)<input className="nk-input" value={w.link ?? ''} onChange={(e) => set(i, { link: e.target.value })} placeholder="https://www.facebook.com/MyNusuk/posts/…" /></label>
+          </div>
+        ))}
+        {!list.length && <p className="rounded-xl bg-emerald-50 p-6 text-center text-sm text-emerald-900/70">No winners yet. Click "+ Add winner".</p>}
+      </div>
+    </Card>
+  );
+}
+
 /* ---------------- Shell ---------------- */
-type Route = 'dashboard' | 'codes' | 'review' | 'upload' | 'settings';
+type Route = 'dashboard' | 'codes' | 'review' | 'upload' | 'winners' | 'settings';
 const nav: { r: Route; label: string; icon: string }[] = [
   { r: 'dashboard', label: 'Dashboard', icon: 'M3 13h8V3H3zm10 8h8V11h-8zM3 21h8v-6H3zm10-18v6h8V3z' },
   { r: 'codes', label: 'Codes', icon: 'M4 6h16M4 12h16M4 18h10' },
   { r: 'review', label: 'Review', icon: 'M9 12l2 2 4-4M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z' },
   { r: 'upload', label: 'Upload', icon: 'M12 16V4m0 0l-4 4m4-4l4 4M4 20h16' },
+  { r: 'winners', label: 'Winners', icon: 'M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4' },
   { r: 'settings', label: 'Settings', icon: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z' },
 ];
 
@@ -615,6 +668,7 @@ export default function NusukAdmin() {
         {route === 'codes' && <CodesPage key="codes" toast={toast} />}
         {route === 'review' && <CodesPage key="review" toast={toast} reviewMode />}
         {route === 'upload' && <Upload toast={toast} defaultMax={settings?.default_max_uses ?? 1} />}
+        {route === 'winners' && settings && <WinnersPage toast={toast} settings={settings} reload={loadSettings} />}
         {route === 'settings' && settings && <SettingsPage toast={toast} settings={settings} reload={loadSettings} />}
       </main>
 
