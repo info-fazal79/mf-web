@@ -45,6 +45,12 @@ body { background: var(--color-cream); color: #10241b; }
 .nk-tab[aria-selected="true"] { background: var(--color-emerald-700); color: #fff; border-color: var(--color-emerald-700); }
 .nk-pre { white-space: pre-line; }
 
+/* Feedback type picker (radio pills) */
+.nk-fb-kind { cursor: pointer; }
+.nk-fb-kind span { display: block; border: 1px solid #d9d2bd; border-radius: 0.75rem; padding: 0.55rem 0.25rem; text-align: center; font-size: 0.9rem; font-weight: 600; }
+.nk-fb-kind input:checked + span { background: var(--color-emerald-700); border-color: var(--color-emerald-700); color: #fff; }
+.nk-fb-kind input:focus-visible + span { outline: 3px solid rgba(14, 148, 104, 0.35); outline-offset: 2px; }
+
 /* Winners slider: swipeable, no visible scrollbar */
 .nk-track { scrollbar-width: none; scroll-behavior: smooth; }
 .nk-track::-webkit-scrollbar { display: none; }

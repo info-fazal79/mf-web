@@ -154,11 +154,59 @@ const desc = c.subtitle;
         <p id="nk-sub-closed" class="mt-4 hidden rounded-xl bg-gold-100 px-3.5 py-2.5 text-sm">এই মুহূর্তে নতুন কোড জমা নেওয়া বন্ধ আছে।</p>
       </section>
 
+      <!-- ===== Feedback ===== -->
+      <section class="nk-card mt-8 flex flex-col items-center gap-3 p-5 text-center sm:flex-row sm:text-left" aria-labelledby="nk-fb-h">
+        <div class="flex-1">
+          <h2 id="nk-fb-h" class="font-bold text-emerald-900">অভিযোগ, মতামত বা পরামর্শ আছে?</h2>
+          <p class="mt-0.5 text-sm text-emerald-900/70">এই ওয়েবসাইট নিয়ে কিছু জানাতে চাইলে আমাদের লিখুন।</p>
+        </div>
+        <button id="nk-fb-open" type="button" class="nk-btn nk-ghost w-full shrink-0 px-4 py-2.5 text-sm sm:w-auto">
+          <svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+          মতামত / অভিযোগ জানান
+        </button>
+      </section>
+
       <footer class="mt-10 text-center text-xs leading-relaxed text-emerald-900/70">
         <p class="nk-pre" data-k="disclaimer">{c.disclaimer}</p>
         <p class="mt-3">© {new Date().getFullYear()} <a href="/" class="font-semibold text-emerald-800 hover:underline">Muhammad Fazal</a>. সর্বস্বত্ব সংরক্ষিত।</p>
       </footer>
     </main>
+
+    <dialog id="nk-fb" class="m-auto w-[calc(100%-2rem)] max-w-md rounded-[1.25rem] p-0 shadow-2xl backdrop:bg-emerald-950/60" aria-labelledby="nk-fb-title">
+      <form id="nk-fb-form" class="grid gap-3 p-5" novalidate>
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <h2 id="nk-fb-title" class="text-lg font-bold text-emerald-900">মতামত / অভিযোগ জানান</h2>
+            <p class="text-sm text-emerald-900/70">শুধু অ্যাডমিন আপনার বার্তা দেখতে পাবেন।</p>
+          </div>
+          <button type="button" id="nk-fb-close" class="grid h-9 w-9 shrink-0 place-items-center rounded-full text-xl text-emerald-900/60 hover:bg-emerald-50" aria-label="বন্ধ করুন">×</button>
+        </div>
+        <fieldset class="grid grid-cols-3 gap-2">
+          <legend class="mb-1 text-sm font-semibold">বিষয় *</legend>
+          <label class="nk-fb-kind"><input type="radio" name="kind" value="complaint" class="peer sr-only" /><span>অভিযোগ</span></label>
+          <label class="nk-fb-kind"><input type="radio" name="kind" value="suggestion" class="peer sr-only" checked /><span>পরামর্শ</span></label>
+          <label class="nk-fb-kind"><input type="radio" name="kind" value="opinion" class="peer sr-only" /><span>মতামত</span></label>
+        </fieldset>
+        <div>
+          <label for="nk-fb-name" class="mb-1 block text-sm font-semibold">আপনার নাম *</label>
+          <input id="nk-fb-name" name="name" required maxlength="120" autocomplete="name" class="nk-input" />
+        </div>
+        <div>
+          <label for="nk-fb-phone" class="mb-1 block text-sm font-semibold">ফোন নম্বর <span class="font-normal text-emerald-900/60">(ঐচ্ছিক)</span></label>
+          <input id="nk-fb-phone" name="phone" type="tel" inputmode="tel" maxlength="20" autocomplete="tel" class="nk-input" placeholder="01XXXXXXXXX" />
+        </div>
+        <div>
+          <label for="nk-fb-address" class="mb-1 block text-sm font-semibold">ঠিকানা <span class="font-normal text-emerald-900/60">(ঐচ্ছিক)</span></label>
+          <input id="nk-fb-address" name="address" maxlength="300" autocomplete="address-level2" class="nk-input" placeholder="জেলা / উপজেলা" />
+        </div>
+        <div>
+          <label for="nk-fb-msg" class="mb-1 block text-sm font-semibold">আপনার বার্তা *</label>
+          <textarea id="nk-fb-msg" name="message" required maxlength="3000" rows="4" class="nk-input"></textarea>
+        </div>
+        <p id="nk-fb-msgbox" class="hidden rounded-xl px-3.5 py-2.5 text-sm" role="alert"></p>
+        <button type="submit" class="nk-btn nk-green py-3.5 text-base">পাঠান</button>
+      </form>
+    </dialog>
 
     <div id="nk-toast" class="pointer-events-none fixed inset-x-0 bottom-6 z-50 flex justify-center px-4 opacity-0 transition-opacity duration-200" aria-hidden="true">
       <span class="rounded-full bg-emerald-950 px-5 py-2.5 text-sm font-semibold text-gold-100 shadow-xl">✓ কোড কপি হয়েছে</span>
@@ -494,6 +542,49 @@ const desc = c.subtitle;
         } catch (err) {
           console.error(err);
           say('জমা দেওয়া যায়নি। ইন্টারনেট সংযোগ দেখে আবার চেষ্টা করুন।', false);
+        }
+        btn.disabled = false;
+      });
+
+      // ---- Feedback dialog ----
+      const fbDialog = $<HTMLDialogElement>('nk-fb');
+      const fbForm = $<HTMLFormElement>('nk-fb-form');
+      const fbMsg = $('nk-fb-msgbox');
+      const fbSay = (t: string, ok: boolean) => {
+        fbMsg.textContent = t;
+        fbMsg.className = `rounded-xl px-3.5 py-2.5 text-sm ${ok ? 'bg-emerald-100 text-emerald-900' : 'bg-red-50 text-red-800'}`;
+      };
+      $('nk-fb-open').addEventListener('click', () => {
+        fbMsg.className = 'hidden';
+        fbDialog.showModal();
+        $<HTMLInputElement>('nk-fb-name').focus();
+      });
+      $('nk-fb-close').addEventListener('click', () => fbDialog.close());
+      fbDialog.addEventListener('click', (e) => { if (e.target === fbDialog) fbDialog.close(); }); // tap outside closes
+      fbForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const fd = new FormData(fbForm);
+        const name = String(fd.get('name') ?? '').trim();
+        const message = String(fd.get('message') ?? '').trim();
+        const phone = String(fd.get('phone') ?? '').trim();
+        if (!name) return fbSay('আপনার নাম লিখুন।', false);
+        if (!message) return fbSay('আপনার বার্তা লিখুন।', false);
+        if (phone && !/^[0-9+\s-]{6,20}$/.test(phone)) return fbSay('ফোন নম্বরটি সঠিক নয়।', false);
+        const btn = fbForm.querySelector<HTMLButtonElement>('button[type="submit"]')!;
+        btn.disabled = true;
+        try {
+          const r = await rpc<{ ok: boolean; reason?: string }>('nusuk_feedback_submit', {
+            p_kind: String(fd.get('kind') ?? 'opinion'), p_name: name, p_message: message,
+            p_phone: phone || null, p_address: String(fd.get('address') ?? '').trim() || null,
+          });
+          if (r.ok) {
+            fbForm.reset();
+            fbSay('ধন্যবাদ! আপনার বার্তা পৌঁছেছে।', true);
+            setTimeout(() => fbDialog.close(), 1800);
+          } else fbSay(r.reason === 'busy' ? 'এই মুহূর্তে বার্তা নেওয়া যাচ্ছে না, পরে চেষ্টা করুন।' : 'নাম আর বার্তা দুটোই লিখুন।', false);
+        } catch (err) {
+          console.error(err);
+          fbSay('পাঠানো যায়নি। ইন্টারনেট সংযোগ দেখে আবার চেষ্টা করুন।', false);
         }
         btn.disabled = false;
       });

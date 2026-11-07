@@ -578,6 +578,102 @@ function SettingsPage({ toast, settings, reload }: { toast: ToastFn; settings: S
   );
 }
 
+/* ---------------- Feedback inbox ---------------- */
+type Feedback = {
+  id: number; kind: 'complaint' | 'suggestion' | 'opinion'; name: string; phone: string | null; address: string | null;
+  message: string; status: 'new' | 'read' | 'resolved'; created_at: string;
+};
+const kindLabel: Record<Feedback['kind'], [string, string]> = {
+  complaint: ['Complaint · অভিযোগ', 'bg-red-100 text-red-700'],
+  suggestion: ['Suggestion · পরামর্শ', 'bg-emerald-100 text-emerald-900'],
+  opinion: ['Opinion · মতামত', 'bg-gold-100 text-gold-600'],
+};
+function FeedbackPage({ toast, onChange }: { toast: ToastFn; onChange: () => void }) {
+  const [rows, setRows] = useState<Feedback[]>([]);
+  const [filter, setFilter] = useState<'open' | 'new' | 'resolved' | 'all'>('open');
+  const [loading, setLoading] = useState(false);
+  const [missing, setMissing] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    let q = sb!.from('nusuk_feedback').select('*').order('created_at', { ascending: false }).limit(200);
+    if (filter === 'open') q = q.in('status', ['new', 'read']);
+    else if (filter !== 'all') q = q.eq('status', filter);
+    const { data, error } = await q;
+    setLoading(false);
+    if (error) {
+      if (/nusuk_feedback/.test(error.message)) setMissing(true);
+      else toast(errText(error), false);
+      return;
+    }
+    setMissing(false);
+    setRows((data ?? []) as Feedback[]);
+  }, [filter, toast]);
+  useEffect(() => { load(); }, [load]);
+
+  async function setStatus(id: number, status: Feedback['status']) {
+    const { error } = await sb!.from('nusuk_feedback').update({ status }).eq('id', id);
+    if (error) return toast(errText(error), false);
+    setRows((r) => (filter === 'all' || (filter === 'open' && status !== 'resolved') ? r.map((x) => (x.id === id ? { ...x, status } : x)) : r.filter((x) => x.id !== id)));
+    onChange();
+  }
+  async function remove(id: number) {
+    if (!confirm('Delete this message? This cannot be undone.')) return;
+    const { error } = await sb!.from('nusuk_feedback').delete().eq('id', id);
+    if (error) return toast(errText(error), false);
+    setRows((r) => r.filter((x) => x.id !== id));
+    toast('Deleted');
+    onChange();
+  }
+
+  if (missing) {
+    return <Card title="Feedback"><p className="text-sm">Run <code className="font-mono">src/pages/nusuk/_sql/update_02_feedback.sql</code> in Supabase → SQL Editor, then reload this page.</p></Card>;
+  }
+  return (
+    <Card
+      title={`Feedback (${fmt(rows.length)})`}
+      actions={
+        <>
+          <select value={filter} onChange={(e) => setFilter(e.target.value as typeof filter)} className="nk-input w-40 py-1.5!" aria-label="Filter feedback">
+            <option value="open">Open (new + read)</option>
+            <option value="new">New only</option>
+            <option value="resolved">Resolved</option>
+            <option value="all">All</option>
+          </select>
+          <Btn kind="ghost" onClick={load}>{loading ? 'Loading…' : 'Refresh'}</Btn>
+        </>
+      }
+    >
+      <div className="grid gap-3">
+        {rows.map((f) => (
+          <article key={f.id} className={`rounded-xl border p-4 ${f.status === 'new' ? 'border-gold-500/60 bg-gold-100/30' : 'border-[#e7e1cf] bg-white'}`}>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${kindLabel[f.kind][1]}`}>{kindLabel[f.kind][0]}</span>
+              {f.status === 'new' && <span className="rounded-full bg-gold-500 px-2 py-0.5 text-xs font-bold text-emerald-950">NEW</span>}
+              {f.status === 'resolved' && <span className="rounded-full bg-gray-200 px-2 py-0.5 text-xs font-bold text-gray-700">Resolved</span>}
+              <span className="ml-auto text-xs text-emerald-900/60">{when(f.created_at)}</span>
+            </div>
+            <div className="mt-2 font-semibold">{f.name}</div>
+            <div className="flex flex-wrap gap-x-4 text-sm text-emerald-900/75">
+              {f.phone && <a href={`tel:${f.phone.replace(/\s/g, '')}`} className="hover:underline">📞 {f.phone}</a>}
+              {f.address && <span>📍 {f.address}</span>}
+            </div>
+            <p className="mt-2 whitespace-pre-line break-words text-sm leading-relaxed">{f.message}</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {f.status === 'new' && <Btn kind="ghost" className="px-2.5! py-1!" onClick={() => setStatus(f.id, 'read')}>Mark read</Btn>}
+              {f.status !== 'resolved'
+                ? <Btn className="px-2.5! py-1!" onClick={() => setStatus(f.id, 'resolved')}>Mark resolved</Btn>
+                : <Btn kind="ghost" className="px-2.5! py-1!" onClick={() => setStatus(f.id, 'read')}>Reopen</Btn>}
+              <Btn kind="ghost" className="px-2.5! py-1! text-red-700" onClick={() => remove(f.id)}>Delete</Btn>
+            </div>
+          </article>
+        ))}
+        {!rows.length && <p className="rounded-xl bg-emerald-50 p-6 text-center text-sm text-emerald-900/70">{loading ? 'Loading…' : 'No messages here.'}</p>}
+      </div>
+    </Card>
+  );
+}
+
 /* ---------------- Winners ---------------- */
 const blankWinner = (): Winner => ({ name: '', prize: 'umrah', date: new Date().toISOString().slice(0, 10), link: '' });
 function WinnersPage({ toast, settings, reload }: { toast: ToastFn; settings: Settings; reload: () => void }) {
@@ -630,12 +726,13 @@ function WinnersPage({ toast, settings, reload }: { toast: ToastFn; settings: Se
 }
 
 /* ---------------- Shell ---------------- */
-type Route = 'dashboard' | 'codes' | 'review' | 'upload' | 'winners' | 'settings';
+type Route = 'dashboard' | 'codes' | 'review' | 'upload' | 'winners' | 'feedback' | 'settings';
 const nav: { r: Route; label: string; icon: string }[] = [
   { r: 'dashboard', label: 'Dashboard', icon: 'M3 13h8V3H3zm10 8h8V11h-8zM3 21h8v-6H3zm10-18v6h8V3z' },
   { r: 'codes', label: 'Codes', icon: 'M4 6h16M4 12h16M4 18h10' },
   { r: 'review', label: 'Review', icon: 'M9 12l2 2 4-4M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z' },
   { r: 'upload', label: 'Paste codes', icon: 'M12 16V4m0 0l-4 4m4-4l4 4M4 20h16' },
+  { r: 'feedback', label: 'Feedback', icon: 'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z' },
   { r: 'winners', label: 'Winners', icon: 'M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4' },
   { r: 'settings', label: 'Settings', icon: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z' },
 ];
@@ -677,6 +774,14 @@ export default function NusukAdmin() {
   }, []);
   useEffect(() => { if (isAdmin) loadSettings(); }, [isAdmin, loadSettings]);
 
+  // Unread feedback count for the sidebar badge
+  const [unread, setUnread] = useState(0);
+  const loadUnread = useCallback(async () => {
+    const { count, error } = await sb!.from('nusuk_feedback').select('id', { count: 'exact', head: true }).eq('status', 'new');
+    setUnread(error ? 0 : count ?? 0);
+  }, []);
+  useEffect(() => { if (isAdmin) loadUnread(); }, [isAdmin, loadUnread, route]);
+
   if (!sb) return <Centered>Supabase is not configured. Add PUBLIC_SUPABASE_URL and PUBLIC_SUPABASE_ANON_KEY to .env.local.</Centered>;
   if (session === undefined) return <Centered>Loading…</Centered>;
   if (!session || isAdmin === false) return <Login denied={isAdmin === false} />;
@@ -707,6 +812,7 @@ export default function NusukAdmin() {
               className={`flex shrink-0 items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-semibold ${route === n.r ? 'bg-gold-500 text-emerald-950' : 'text-emerald-50 hover:bg-white/10'}`}>
               <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d={n.icon} /></svg>
               {n.label}
+              {n.r === 'feedback' && unread > 0 && <span className="ml-auto rounded-full bg-red-600 px-1.5 text-[11px] font-bold leading-5 text-white">{unread}</span>}
             </a>
           ))}
         </nav>
@@ -729,6 +835,7 @@ export default function NusukAdmin() {
         {route === 'codes' && <CodesPage key="codes" toast={toast} />}
         {route === 'review' && <CodesPage key="review" toast={toast} reviewMode />}
         {route === 'upload' && <Upload toast={toast} defaultMax={settings?.default_max_uses ?? 1} />}
+        {route === 'feedback' && <FeedbackPage toast={toast} onChange={loadUnread} />}
         {route === 'winners' && settings && <WinnersPage toast={toast} settings={settings} reload={loadSettings} />}
         {route === 'settings' && settings && <SettingsPage toast={toast} settings={settings} reload={loadSettings} />}
       </main>
