@@ -333,103 +333,164 @@ function EditDialog({ code, onClose, onSaved, toast }: { code: Code; onClose: ()
   );
 }
 
-/* ---------------- Bulk upload ---------------- */
+/* ---------------- Paste & upload (NG- codes only) ---------------- */
+// A Nusuk referral code: "NG-" (capital N, G, hyphen) followed by letters/digits, e.g. NG-y3JkB7lU.
+// The lookbehind stops matches inside a longer word; the lookahead requires the code to end there
+// and skips codes Facebook cut short with "..." / "…" (from "See more"), since they may be incomplete.
+const NG_RE = /(?<![A-Za-z0-9_-])NG-[A-Za-z0-9]{6,20}(?![A-Za-z0-9_-]|\.\.\.|…)/g;
+
+function extractCodes(text: string) {
+  const all = text.match(NG_RE) ?? [];
+  const seen = new Map<string, string>(); // lower-case key -> first spelling seen
+  for (const c of all) if (!seen.has(c.toLowerCase())) seen.set(c.toLowerCase(), c);
+  return { found: all.length, unique: [...seen.values()], repeats: all.length - seen.size };
+}
+
+type UploadResult = { unique: number; added: string[]; skipped: string[]; repeats: number };
+
 function Upload({ toast, defaultMax }: { toast: ToastFn; defaultMax: number }) {
   const [text, setText] = useState('');
   const [max, setMax] = useState(defaultMax);
   const [status, setStatus] = useState<'active' | 'inactive'>('active');
-  const [progress, setProgress] = useState<{ done: number; total: number; added: number } | null>(null);
-  const [result, setResult] = useState<{ added: number; skipped: string[] } | null>(null);
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
+  const [result, setResult] = useState<UploadResult | null>(null);
   useEffect(() => setMax(defaultMax), [defaultMax]);
 
-  const parsed = useMemo(() => {
-    const tokens = text.split(/[\s,;|"']+/).map((t) => t.trim()).filter(Boolean);
-    const seen = new Set<string>();
-    const valid: string[] = [];
-    let invalid = 0, dupes = 0;
-    for (const t of tokens) {
-      if (!CODE_RE.test(t)) { invalid++; continue; }
-      const key = t.toLowerCase(); // ABC123 and abc123 count as the same code
-      if (seen.has(key)) { dupes++; continue; }
-      seen.add(key);
-      valid.push(t);
-    }
-    return { valid, invalid, dupes };
-  }, [text]);
+  const ex = useMemo(() => extractCodes(text), [text]);
+  const busy = progress !== null && progress.done < progress.total;
 
   async function readFile(file: File) {
     const t = await file.text();
     setText((cur) => (cur ? `${cur}\n${t}` : t));
   }
-  async function upload() {
-    const list = parsed.valid;
+  async function copyList() {
+    try { await navigator.clipboard.writeText(ex.unique.join('\n')); toast(`Copied ${ex.unique.length} code(s)`); } catch { toast('Copy failed', false); }
+  }
+
+  async function submit() {
+    const list = ex.unique;
     if (!list.length) return;
     const CHUNK = 1000;
-    let added = 0;
-    const skipped: string[] = [];
+    const added: string[] = [];
     setResult(null);
-    setProgress({ done: 0, total: list.length, added: 0 });
+    setProgress({ done: 0, total: list.length });
     for (let i = 0; i < list.length; i += CHUNK) {
       const chunk = list.slice(i, i + CHUNK);
       // The database inserts only codes it doesn't have yet (case-insensitive) and returns those.
       const { data, error } = await sb!.rpc('nusuk_admin_add_codes', { p_codes: chunk, p_max_uses: Math.max(1, max), p_status: status });
       if (error) {
-        const missing = /nusuk_admin_add_codes/.test(error.message);
-        toast(missing ? 'Run update_01_no_duplicates.sql in Supabase first' : errText(error), false);
+        toast(/nusuk_admin_add_codes/.test(error.message) ? 'Run update_01_no_duplicates.sql in Supabase first' : errText(error), false);
         setProgress(null);
         return;
       }
-      const got = new Set(((data as { added: string[] })?.added ?? []).map((c) => c.toLowerCase()));
-      added += got.size;
-      for (const c of chunk) if (!got.has(c.toLowerCase())) skipped.push(c);
-      setProgress({ done: Math.min(list.length, i + CHUNK), total: list.length, added });
+      added.push(...((data as { added: string[] })?.added ?? []));
+      setProgress({ done: Math.min(list.length, i + CHUNK), total: list.length });
     }
-    setResult({ added, skipped });
-    toast(`Added ${fmt(added)} new code(s). ${fmt(skipped.length)} duplicate(s) skipped.`);
+    const got = new Set(added.map((c) => c.toLowerCase()));
+    const skipped = list.filter((c) => !got.has(c.toLowerCase()));
+    setResult({ unique: list.length, added, skipped, repeats: ex.repeats });
+    toast(`${fmt(added.length)} new code(s) saved · ${fmt(skipped.length)} already in database`);
     setText('');
   }
-  const busy = progress !== null && progress.done < progress.total;
 
   return (
-    <Card title="Bulk upload codes">
-      <p className="mb-3 text-sm text-emerald-900/75">Paste codes, one per line or separated by commas or spaces, or pick a .csv / .txt file. Each valid token (3–40 letters, digits, - or _) becomes a code. Only new codes are added: anything already in the database (ignoring upper/lower case) or repeated in your list is skipped. Remove a CSV header word like "code" first, or it may be added as a code.</p>
-      <textarea value={text} onChange={(e) => setText(e.target.value)} rows={10} className="nk-input font-mono text-sm" placeholder={'ABC123\nXYZ789\nQWE456'} aria-label="Codes to upload" />
-      <div className="mt-3 flex flex-wrap items-end gap-3">
-        <label className="nk-btn nk-ghost cursor-pointer px-3.5 py-2 text-sm">
-          Choose file…
-          <input type="file" accept=".csv,.txt,text/csv,text/plain" className="sr-only" onChange={(e) => { const f = e.target.files?.[0]; if (f) readFile(f); e.target.value = ''; }} />
-        </label>
-        <label className="grid gap-1 text-sm font-semibold">Max uses per code<input type="number" min={1} value={max} onChange={(e) => setMax(+e.target.value)} className="nk-input w-32" /></label>
-        <label className="grid gap-1 text-sm font-semibold">Status
-          <select value={status} onChange={(e) => setStatus(e.target.value as 'active' | 'inactive')} className="nk-input w-36"><option value="active">active</option><option value="inactive">inactive</option></select>
-        </label>
-        {text && <Btn kind="ghost" onClick={() => setText('')}>Clear</Btn>}
-      </div>
-      <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl bg-emerald-50 p-3 text-sm">
-        <span><b>{fmt(parsed.valid.length)}</b> valid</span>
-        {parsed.dupes > 0 && <span className="text-gold-600">{fmt(parsed.dupes)} duplicate in list</span>}
-        {parsed.invalid > 0 && <span className="text-red-600">{fmt(parsed.invalid)} invalid (ignored)</span>}
-        <Btn kind="gold" className="ml-auto" disabled={!parsed.valid.length || busy} onClick={upload}>{busy ? 'Uploading…' : `Upload ${fmt(parsed.valid.length)} codes`}</Btn>
-      </div>
-      {progress && (
-        <div className="mt-3">
-          <div className="h-2 overflow-hidden rounded-full bg-emerald-100"><div className="h-full bg-emerald-600 transition-all" style={{ width: `${(progress.done / progress.total) * 100}%` }} /></div>
-          <p className="mt-1 text-xs text-emerald-900/70">{fmt(progress.done)} / {fmt(progress.total)} processed · {fmt(progress.added)} added</p>
+    <div className="grid gap-4">
+      <Card title="Paste comments → get NG- codes">
+        <p className="mb-4 text-sm text-emerald-900/75">
+          Copy all the comments from a Nusuk Facebook post (or any text) and paste on the left. Only codes that start with <b className="font-mono">NG-</b> are picked up, everything else is ignored.
+          Repeated codes are counted once. On Submit, codes already in your database are skipped and you'll see how many.
+        </p>
+        <div className="grid gap-4 lg:grid-cols-2">
+          {/* Left: raw paste */}
+          <div className="flex min-w-0 flex-col">
+            <div className="mb-1.5 flex items-center justify-between gap-2">
+              <span className="text-sm font-semibold">1. Paste text here</span>
+              <span className="flex gap-2">
+                <label className="cursor-pointer text-xs font-semibold text-emerald-700 hover:underline">
+                  Open file…
+                  <input type="file" accept=".csv,.txt,text/csv,text/plain" className="sr-only" onChange={(e) => { const f = e.target.files?.[0]; if (f) readFile(f); e.target.value = ''; }} />
+                </label>
+                {text && <button type="button" className="text-xs font-semibold text-red-700 hover:underline" onClick={() => { setText(''); setResult(null); }}>Clear</button>}
+              </span>
+            </div>
+            <textarea
+              value={text}
+              onChange={(e) => { setText(e.target.value); setResult(null); }}
+              rows={16}
+              className="nk-input min-h-[18rem] flex-1 text-sm"
+              placeholder={'لمياء صديق · 1d\nNG-HMdxQq03\nReply\nView 134 replies\nMarwan Hazo · 1d\nNG-M50W5sQP\n…'}
+              aria-label="Pasted comments"
+            />
+          </div>
+
+          {/* Right: extracted codes */}
+          <div className="flex min-w-0 flex-col">
+            <div className="mb-1.5 flex items-center justify-between gap-2">
+              <span className="text-sm font-semibold">2. Unique NG- codes found <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs text-emerald-900">{fmt(ex.unique.length)}</span></span>
+              {ex.unique.length > 0 && <button type="button" className="text-xs font-semibold text-emerald-700 hover:underline" onClick={copyList}>Copy list</button>}
+            </div>
+            <div className="min-h-[18rem] flex-1 overflow-auto rounded-xl border border-[#d9d2bd] bg-cream p-2" aria-live="polite">
+              {ex.unique.length ? (
+                <ol className="grid gap-0.5 font-mono text-sm">
+                  {ex.unique.map((c, i) => (
+                    <li key={c} className="flex gap-3 rounded px-2 py-0.5 odd:bg-white/70">
+                      <span className="w-8 shrink-0 text-right text-xs leading-5 text-emerald-900/45">{i + 1}</span>
+                      <span className="break-all">{c}</span>
+                    </li>
+                  ))}
+                </ol>
+              ) : (
+                <p className="grid h-full place-items-center p-6 text-center text-sm text-emerald-900/55">{text ? 'No NG- codes in this text.' : 'Codes will appear here as soon as you paste.'}</p>
+              )}
+            </div>
+          </div>
         </div>
-      )}
+
+        {/* Summary + submit */}
+        <div className="mt-4 flex flex-wrap items-end gap-3 rounded-xl bg-emerald-50 p-3 text-sm">
+          <span><b>{fmt(ex.found)}</b> NG- codes in text</span>
+          <span className="text-emerald-900/40">→</span>
+          <span><b className="text-emerald-800">{fmt(ex.unique.length)}</b> unique</span>
+          {ex.repeats > 0 && <span className="rounded-full bg-gold-100 px-2 py-0.5 text-gold-600">⚠ {fmt(ex.repeats)} repeated in the paste (counted once)</span>}
+          <span className="ml-auto flex flex-wrap items-end gap-3">
+            <label className="grid gap-1 text-xs font-semibold">Max uses<input type="number" min={1} value={max} onChange={(e) => setMax(+e.target.value)} className="nk-input w-24 py-1.5!" /></label>
+            <label className="grid gap-1 text-xs font-semibold">Status
+              <select value={status} onChange={(e) => setStatus(e.target.value as 'active' | 'inactive')} className="nk-input w-28 py-1.5!"><option value="active">active</option><option value="inactive">inactive</option></select>
+            </label>
+            <Btn kind="gold" className="py-2.5!" disabled={!ex.unique.length || busy} onClick={submit}>{busy ? 'Submitting…' : `Submit ${fmt(ex.unique.length)} codes`}</Btn>
+          </span>
+        </div>
+        {progress && busy && (
+          <div className="mt-3">
+            <div className="h-2 overflow-hidden rounded-full bg-emerald-100"><div className="h-full bg-emerald-600 transition-all" style={{ width: `${(progress.done / progress.total) * 100}%` }} /></div>
+            <p className="mt-1 text-xs text-emerald-900/70">{fmt(progress.done)} / {fmt(progress.total)} processed</p>
+          </div>
+        )}
+      </Card>
+
       {result && (
-        <div className="mt-4 rounded-xl border border-[#e7e1cf] p-3.5 text-sm">
-          <p><b className="text-emerald-800">{fmt(result.added)} new code(s) added.</b>{' '}
-            {result.skipped.length > 0 ? <span className="text-gold-600">{fmt(result.skipped.length)} already in the database, skipped.</span> : 'No duplicates found.'}</p>
+        <Card title="Result">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="rounded-xl bg-emerald-50 p-3"><div className="text-xs text-emerald-900/70">Unique codes submitted</div><div className="text-2xl font-bold">{fmt(result.unique)}</div></div>
+            <div className="rounded-xl bg-emerald-100 p-3"><div className="text-xs text-emerald-900">✓ New, saved</div><div className="text-2xl font-bold text-emerald-800">{fmt(result.added.length)}</div></div>
+            <div className="rounded-xl bg-gold-100 p-3"><div className="text-xs text-gold-600">⚠ Already in database</div><div className="text-2xl font-bold text-gold-600">{fmt(result.skipped.length)}</div></div>
+            <div className="rounded-xl bg-gold-100/60 p-3"><div className="text-xs text-gold-600">⚠ Repeated in paste</div><div className="text-2xl font-bold text-gold-600">{fmt(result.repeats)}</div></div>
+          </div>
           {result.skipped.length > 0 && (
-            <details className="mt-2">
-              <summary className="cursor-pointer text-emerald-900/75">Show skipped codes</summary>
+            <details className="mt-3 text-sm">
+              <summary className="cursor-pointer text-emerald-900/75">Show {fmt(result.skipped.length)} duplicate code(s) that were skipped</summary>
               <p className="mt-2 max-h-40 overflow-auto break-all font-mono text-xs">{result.skipped.join(', ')}</p>
             </details>
           )}
-        </div>
+          {result.added.length > 0 && (
+            <details className="mt-2 text-sm">
+              <summary className="cursor-pointer text-emerald-900/75">Show {fmt(result.added.length)} new code(s)</summary>
+              <p className="mt-2 max-h-40 overflow-auto break-all font-mono text-xs">{result.added.join(', ')}</p>
+            </details>
+          )}
+        </Card>
       )}
-    </Card>
+    </div>
   );
 }
 
@@ -574,7 +635,7 @@ const nav: { r: Route; label: string; icon: string }[] = [
   { r: 'dashboard', label: 'Dashboard', icon: 'M3 13h8V3H3zm10 8h8V11h-8zM3 21h8v-6H3zm10-18v6h8V3z' },
   { r: 'codes', label: 'Codes', icon: 'M4 6h16M4 12h16M4 18h10' },
   { r: 'review', label: 'Review', icon: 'M9 12l2 2 4-4M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z' },
-  { r: 'upload', label: 'Upload', icon: 'M12 16V4m0 0l-4 4m4-4l4 4M4 20h16' },
+  { r: 'upload', label: 'Paste codes', icon: 'M12 16V4m0 0l-4 4m4-4l4 4M4 20h16' },
   { r: 'winners', label: 'Winners', icon: 'M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4' },
   { r: 'settings', label: 'Settings', icon: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z' },
 ];
