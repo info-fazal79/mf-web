@@ -58,6 +58,8 @@ export const mergeContent = (c: unknown): NusukContent => {
 export type Prize = 'umrah' | 'zamzam' | 'other';
 export type Winner = { name: string; prize: Prize; prize_text?: string; date?: string; link?: string };
 export const prizeLabel: Record<Prize, string> = { umrah: 'উমরাহ', zamzam: 'জমজমের পানি', other: 'পুরস্কার' };
+/** Badge text on the public page, matching how Nusuk describes each prize. */
+export const prizeLong: Record<Prize, string> = { umrah: '🕋 দুইজনের উমরাহ সফর', zamzam: '💧 ২০ কার্টন জমজমের পানি', other: '🎁 পুরস্কার' };
 
 export const parseWinners = (c: unknown): Winner[] => {
   const list = c && typeof c === 'object' ? (c as Record<string, unknown>).winners : null;
