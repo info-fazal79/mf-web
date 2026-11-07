@@ -105,8 +105,20 @@ const desc = c.subtitle;
               <p class="text-sm text-emerald-100/85" id="nk-win-sum"></p>
             </div>
           </div>
-          <ul id="nk-win-list" class="mt-4 grid gap-2"></ul>
-          <button id="nk-win-more" type="button" class="mt-3 hidden w-full rounded-xl border border-gold-400/50 py-2 text-sm font-semibold text-gold-100 hover:bg-white/10">সবাইকে দেখুন</button>
+          <!-- Umrah winners: all shown, stacked by date -->
+          <div id="nk-win-umrah" class="mt-5 hidden">
+            <h3 class="mb-2 text-sm font-bold text-gold-400">🕋 দুইজনের উমরাহ সফর</h3>
+            <ul id="nk-win-umrah-list" class="grid gap-2"></ul>
+          </div>
+          <!-- Zamzam (and other prizes): auto-sliding, one card at a time -->
+          <div id="nk-win-slide" class="mt-5 hidden">
+            <div class="mb-2 flex items-center justify-between gap-2">
+              <h3 class="text-sm font-bold text-gold-400">💧 ২০ কার্টন জমজমের পানি</h3>
+              <span id="nk-win-slide-count" class="text-xs text-emerald-100/75" aria-live="polite"></span>
+            </div>
+            <div id="nk-win-track" class="nk-track flex snap-x snap-mandatory overflow-x-auto" aria-roledescription="carousel" aria-label="জমজমের পানি বিজয়ীরা"></div>
+            <div id="nk-win-dots" class="mt-2.5 flex justify-center gap-1.5"></div>
+          </div>
           <p class="mt-4 text-center text-sm font-semibold text-gold-100">আপনিও হতে পারেন পরবর্তী বিজয়ী। এখনই কোড কপি করে অংশ নিন!</p>
         </div>
       </section>
@@ -154,7 +166,7 @@ const desc = c.subtitle;
 
     <script>
       import { rpc, rpcReady, type Boot, type Claim, type CodeRef, type Submit } from './_lib/rpc';
-      import { CODE_RE, parseWinners, prizeLabel, prizeLong, type Winner } from './_lib/content';
+      import { CODE_RE, parseWinners, prizeLabel, type Winner } from './_lib/content';
 
       // Bangladesh flag (green field, red disc set toward the hoist). Inline SVG so it renders on every OS.
       const BD_FLAG = '<svg viewBox="0 0 20 12" aria-hidden="true" class="h-full w-full"><rect width="20" height="12" fill="#006a4e"/><circle cx="9" cy="6" r="3.8" fill="#f42a41"/></svg>';
@@ -229,56 +241,117 @@ const desc = c.subtitle;
       }
 
       // ---- Winners ----
+      // Umrah winners: all shown, stacked newest first. Zamzam/other: one card at a time, auto-sliding.
       let winnersShown = '';
+      let slideTimer: ReturnType<typeof setInterval> | undefined;
+      const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const bnDate = (d?: string) => (d ? new Date(`${d}T00:00:00`).toLocaleDateString('bn-BD', { day: 'numeric', month: 'long', year: 'numeric' }) : '');
+
+      function winnerCard(w: Winner, extraClass = '') {
+        const card = document.createElement('div');
+        card.className = `flex items-start gap-3 rounded-xl bg-white/10 px-3.5 py-3 ${extraClass}`;
+        const body = document.createElement('div');
+        body.className = 'min-w-0 flex-1';
+        const n = document.createElement('div');
+        n.className = 'break-words font-semibold leading-snug';
+        n.dir = 'auto'; // some names are in Arabic
+        n.textContent = w.name;
+        const meta = document.createElement('div');
+        meta.className = 'mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-emerald-100/75';
+        if (w.prize === 'other') {
+          const p = document.createElement('span');
+          p.className = 'rounded-full bg-emerald-100 px-2 py-0.5 font-bold text-emerald-900';
+          p.textContent = `🎁 ${w.prize_text || prizeLabel.other}`;
+          meta.append(p);
+        }
+        if (w.date) meta.append(Object.assign(document.createElement('span'), { textContent: bnDate(w.date) }));
+        if (w.link && /^https:\/\//.test(w.link)) {
+          const a = Object.assign(document.createElement('a'), { href: w.link, target: '_blank', rel: 'noopener nofollow', textContent: 'ঘোষণা দেখুন ↗' });
+          a.className = 'font-semibold text-gold-400 hover:underline';
+          meta.append(a);
+        }
+        body.append(n, meta);
+        card.append(flag('mt-1 h-[15px] w-[25px]'), body);
+        return card;
+      }
+
       function renderWinners(list: Winner[]) {
         const key = JSON.stringify(list);
         if (key === winnersShown) return;
         winnersShown = key;
-        const box = $('nk-winners');
-        box.classList.toggle('hidden', list.length === 0);
+        $('nk-winners').classList.toggle('hidden', list.length === 0);
         if (!list.length) return;
-        const sorted = [...list].sort((a, b) => (b.date ?? '').localeCompare(a.date ?? ''));
-        const umrah = list.filter((w) => w.prize === 'umrah').length;
-        const zamzam = list.filter((w) => w.prize === 'zamzam').length;
-        const parts = [umrah && `${bn(umrah)} জন উমরাহ`, zamzam && `${bn(zamzam)} জন জমজমের পানি`].filter(Boolean);
+
+        const newest = (a: Winner, b: Winner) => (b.date ?? '').localeCompare(a.date ?? '');
+        const umrah = list.filter((w) => w.prize === 'umrah').sort(newest);
+        const slide = list.filter((w) => w.prize !== 'umrah').sort(newest);
+        const zamzam = slide.filter((w) => w.prize === 'zamzam').length;
+        const parts = [umrah.length && `${bn(umrah.length)} জন উমরাহ`, zamzam && `${bn(zamzam)} জন জমজমের পানি`].filter(Boolean);
         $('nk-win-sum').textContent = `মোট ${bn(list.length)} জন বিজয়ী${parts.length ? ` · ${parts.join(', ')}` : ''}`;
-        const SHOW = 6;
-        const ul = $('nk-win-list');
-        ul.replaceChildren(
-          ...sorted.map((w, i) => {
-            const li = document.createElement('li');
-            li.className = `flex items-start gap-3 rounded-xl bg-white/10 px-3.5 py-3${i >= SHOW ? ' hidden' : ''}`;
-            const name = document.createElement('div');
-            name.className = 'min-w-0 flex-1';
-            const n = document.createElement('div');
-            n.className = 'break-words font-semibold leading-snug';
-            n.dir = 'auto'; // some names are in Arabic
-            n.textContent = w.name;
-            const meta = document.createElement('div');
-            meta.className = 'mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1';
-            if (w.date) {
-              const d = document.createElement('span');
-              d.className = 'text-xs text-emerald-100/75';
-              d.textContent = new Date(`${w.date}T00:00:00`).toLocaleDateString('bn-BD', { day: 'numeric', month: 'long', year: 'numeric' });
-              meta.append(d);
-            }
-            name.append(n, meta);
-            const tag = document.createElement(w.link ? 'a' : 'span');
-            tag.className = `rounded-full px-2.5 py-0.5 text-xs font-bold ${w.prize === 'umrah' ? 'bg-gold-500 text-emerald-950' : 'bg-emerald-100 text-emerald-900'}`;
-            tag.textContent = w.prize === 'other' ? `🎁 ${w.prize_text || prizeLabel.other}` : prizeLong[w.prize];
-            if (w.link && /^https:\/\//.test(w.link) && tag instanceof HTMLAnchorElement) {
-              tag.href = w.link; tag.target = '_blank'; tag.rel = 'noopener nofollow';
-              tag.title = 'নুসুকের ঘোষণা দেখুন';
-              tag.textContent += ' ↗';
-            }
-            meta.prepend(tag);
-            li.append(flag('mt-1 h-[15px] w-[25px]'), name);
-            return li;
+
+        // Umrah: stacked list
+        $('nk-win-umrah').classList.toggle('hidden', umrah.length === 0);
+        $('nk-win-umrah-list').replaceChildren(...umrah.map((w) => { const li = document.createElement('li'); li.append(winnerCard(w)); return li; }));
+
+        // Zamzam: slider
+        const box = $('nk-win-slide');
+        const track = $('nk-win-track');
+        const dots = $('nk-win-dots');
+        clearInterval(slideTimer);
+        box.classList.toggle('hidden', slide.length === 0);
+        if (!slide.length) return;
+        track.replaceChildren(
+          ...slide.map((w, i) => {
+            const c = winnerCard(w, 'w-full shrink-0 snap-center');
+            c.setAttribute('role', 'group');
+            c.setAttribute('aria-roledescription', 'slide');
+            c.setAttribute('aria-label', `${bn(i + 1)} / ${bn(slide.length)}`);
+            return c;
           }),
         );
-        const more = $('nk-win-more');
-        more.classList.toggle('hidden', sorted.length <= SHOW);
-        more.onclick = () => { ul.querySelectorAll('li.hidden').forEach((li) => li.classList.remove('hidden')); more.classList.add('hidden'); };
+        let idx = 0;
+        const setActive = (i: number) => {
+          idx = i;
+          $('nk-win-slide-count').textContent = `${bn(i + 1)} / ${bn(slide.length)}`;
+          [...dots.children].forEach((d, j) => {
+            (d as HTMLElement).className = `h-1.5 rounded-full transition-all ${j === i ? 'w-5 bg-gold-400' : 'w-1.5 bg-white/35'}`;
+            d.setAttribute('aria-current', String(j === i));
+          });
+        };
+        const go = (i: number) => {
+          const n = (i + slide.length) % slide.length;
+          track.scrollTo({ left: n * track.clientWidth });
+          setActive(n);
+        };
+        dots.replaceChildren(
+          ...slide.map((_, i) => {
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.setAttribute('aria-label', `বিজয়ী ${bn(i + 1)}`);
+            b.addEventListener('click', () => { go(i); restart(); });
+            return b;
+          }),
+        );
+        setActive(0);
+        track.scrollLeft = 0;
+        // Keep dots in sync when the visitor swipes
+        let scrollT: ReturnType<typeof setTimeout> | undefined;
+        track.onscroll = () => {
+          clearTimeout(scrollT);
+          scrollT = setTimeout(() => setActive(Math.round(track.scrollLeft / Math.max(1, track.clientWidth))), 80);
+        };
+        // Auto-advance every 3.5s; pause while the visitor touches or hovers it
+        let paused = false;
+        const restart = () => {
+          clearInterval(slideTimer);
+          if (reduceMotion || slide.length < 2) return;
+          slideTimer = setInterval(() => { if (!paused && document.visibilityState === 'visible') go(idx + 1); }, 3500);
+        };
+        track.onpointerenter = () => (paused = true);
+        track.onpointerleave = () => (paused = false);
+        track.ontouchstart = () => (paused = true);
+        track.ontouchend = () => { paused = false; restart(); };
+        restart();
       }
 
       function applyContent(b: Boot) {

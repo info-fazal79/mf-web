@@ -307,7 +307,7 @@ function EditDialog({ code, onClose, onSaved, toast }: { code: Code; onClose: ()
   async function save(e: FormEvent) {
     e.preventDefault();
     const v = f.code.replace(/\s/g, '');
-    if (!CODE_RE.test(v)) return toast('Code must be 3–40 letters, digits, - or _', false);
+    if (!CODE_RE.test(v)) return toast('Code must be NG- followed by exactly 8 letters/digits, e.g. NG-y3JkB7lU', false);
     const { error } = await sb!.from('nusuk_codes').update({ code: v, status: f.status, max_uses: Math.max(1, f.max_uses), uses: Math.max(0, f.uses), note: f.note.trim() || null }).eq('id', code.id);
     if (error) return toast(error.code === '23505' ? 'That code already exists' : errText(error), false);
     onSaved();
@@ -334,10 +334,10 @@ function EditDialog({ code, onClose, onSaved, toast }: { code: Code; onClose: ()
 }
 
 /* ---------------- Paste & upload (NG- codes only) ---------------- */
-// A Nusuk referral code: "NG-" (capital N, G, hyphen) followed by letters/digits, e.g. NG-y3JkB7lU.
-// The lookbehind stops matches inside a longer word; the lookahead requires the code to end there
-// and skips codes Facebook cut short with "..." / "…" (from "See more"), since they may be incomplete.
-const NG_RE = /(?<![A-Za-z0-9_-])NG-[A-Za-z0-9]{6,20}(?![A-Za-z0-9_-]|\.\.\.|…)/g;
+// A Nusuk referral code is always "NG-" + exactly 8 letters/digits, e.g. NG-y3JkB7lU.
+// The lookbehind stops matches inside a longer word; the lookahead rejects a 9th character
+// and codes Facebook cut short with "..." / "…" (from "See more").
+const NG_RE = /(?<![A-Za-z0-9_-])NG-[A-Za-z0-9]{8}(?![A-Za-z0-9_-]|\.\.\.|…)/g;
 
 function extractCodes(text: string) {
   const all = text.match(NG_RE) ?? [];
@@ -397,7 +397,7 @@ function Upload({ toast, defaultMax }: { toast: ToastFn; defaultMax: number }) {
     <div className="grid gap-4">
       <Card title="Paste comments → get NG- codes">
         <p className="mb-4 text-sm text-emerald-900/75">
-          Copy all the comments from a Nusuk Facebook post (or any text) and paste on the left. Only codes that start with <b className="font-mono">NG-</b> are picked up, everything else is ignored.
+          Copy all the comments from a Nusuk Facebook post (or any text) and paste on the left. Only real Nusuk codes are picked up: <b className="font-mono">NG-</b> followed by exactly 8 letters/digits (e.g. <span className="font-mono">NG-y3JkB7lU</span>). Everything else is ignored.
           Repeated codes are counted once. On Submit, codes already in your database are skipped and you'll see how many.
         </p>
         <div className="grid gap-4 lg:grid-cols-2">

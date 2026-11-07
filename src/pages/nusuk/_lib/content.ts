@@ -77,4 +77,5 @@ export const parseWinners = (c: unknown): Winner[] => {
   return [...byKey.values()];
 };
 
-export const CODE_RE =/^[A-Za-z0-9_-]{3,40}$/;
+/** A Nusuk referral code: always "NG-" followed by exactly 8 letters/digits, e.g. NG-y3JkB7lU. */
+export const CODE_RE = /^NG-[A-Za-z0-9]{8}$/;

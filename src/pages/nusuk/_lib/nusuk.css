@@ -45,6 +45,11 @@ body { background: var(--color-cream); color: #10241b; }
 .nk-tab[aria-selected="true"] { background: var(--color-emerald-700); color: #fff; border-color: var(--color-emerald-700); }
 .nk-pre { white-space: pre-line; }
 
+/* Winners slider: swipeable, no visible scrollbar */
+.nk-track { scrollbar-width: none; scroll-behavior: smooth; }
+.nk-track::-webkit-scrollbar { display: none; }
+@media (prefers-reduced-motion: reduce) { .nk-track { scroll-behavior: auto; } }
+
 @keyframes nk-pop { 0% { transform: scale(0.96); opacity: 0.4; } 100% { transform: scale(1); opacity: 1; } }
 .nk-pop { animation: nk-pop 0.25s ease-out; }
 @media (prefers-reduced-motion: reduce) { .nk-pop { animation: none; } }
