@@ -64,9 +64,17 @@ export const prizeLong: Record<Prize, string> = { umrah: '🕋 দুইজন�
 export const parseWinners = (c: unknown): Winner[] => {
   const list = c && typeof c === 'object' ? (c as Record<string, unknown>).winners : null;
   if (!Array.isArray(list)) return [];
-  return list
-    .filter((w): w is Winner => !!w && typeof w === 'object' && typeof (w as Winner).name === 'string' && (w as Winner).name.trim() !== '')
-    .map((w) => ({ ...w, prize: (['umrah', 'zamzam', 'other'] as const).includes(w.prize) ? w.prize : 'other' }));
+  // Same person + prize + date counts once; keep the entry that has a proof link.
+  const byKey = new Map<string, Winner>();
+  for (const raw of list) {
+    if (!raw || typeof raw !== 'object' || typeof (raw as Winner).name !== 'string' || !(raw as Winner).name.trim()) continue;
+    const w = raw as Winner;
+    const v: Winner = { ...w, prize: (['umrah', 'zamzam', 'other'] as const).includes(w.prize) ? w.prize : 'other' };
+    const key = `${v.name.trim().toLowerCase()}|${v.prize}|${v.date ?? ''}`;
+    const prev = byKey.get(key);
+    if (!prev || (!prev.link && v.link)) byKey.set(key, v);
+  }
+  return [...byKey.values()];
 };
 
 export const CODE_RE =/^[A-Za-z0-9_-]{3,40}$/;
