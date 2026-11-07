@@ -1,0 +1,50 @@
+/* Nusuk module styles. Tailwind only scans this folder, so the page ships just the classes it uses. */
+@import "tailwindcss" source(none);
+@source "..";
+
+@theme {
+  --color-emerald-950: #032b20;
+  --color-emerald-900: #053d2d;
+  --color-emerald-800: #075e45;
+  --color-emerald-700: #0a7a59;
+  --color-emerald-600: #0e9468;
+  --color-emerald-100: #dcf3e8;
+  --color-emerald-50: #f0faf5;
+  --color-gold-600: #a8841f;
+  --color-gold-500: #c9a227;
+  --color-gold-400: #dcbc52;
+  --color-gold-100: #f8efd1;
+  --color-cream: #fbf8f1;
+  --font-sans: "Hind Siliguri", "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+}
+
+html { -webkit-tap-highlight-color: transparent; }
+body { background: var(--color-cream); color: #10241b; }
+
+/* Subtle geometric pattern for the hero */
+.nk-pattern {
+  background-color: var(--color-emerald-900);
+  background-image:
+    radial-gradient(circle at 20% 0%, rgba(201, 162, 39, 0.22), transparent 45%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'%3E%3Cpath fill='none' stroke='%23c9a227' stroke-opacity='0.13' d='M24 2l6.5 15.5L46 24l-15.5 6.5L24 46l-6.5-15.5L2 24l15.5-6.5z'/%3E%3C/svg%3E");
+}
+
+.nk-card { background: #fff; border: 1px solid #e7e1cf; border-radius: 1.25rem; box-shadow: 0 1px 2px rgba(3, 43, 32, 0.05), 0 12px 32px -18px rgba(3, 43, 32, 0.35); }
+.nk-input { width: 100%; border: 1px solid #d9d2bd; background: #fff; border-radius: 0.75rem; padding: 0.7rem 0.9rem; font-size: 1rem; outline: none; }
+.nk-input:focus { border-color: var(--color-emerald-600); box-shadow: 0 0 0 3px rgba(14, 148, 104, 0.18); }
+.nk-btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; border-radius: 0.85rem; font-weight: 700; transition: transform 0.08s, background-color 0.15s, opacity 0.15s; cursor: pointer; }
+.nk-btn:active { transform: scale(0.98); }
+.nk-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.nk-gold { background: linear-gradient(180deg, var(--color-gold-400), var(--color-gold-500)); color: var(--color-emerald-950); }
+.nk-gold:hover { background: linear-gradient(180deg, #e4c766, var(--color-gold-400)); }
+.nk-green { background: var(--color-emerald-700); color: #fff; }
+.nk-green:hover { background: var(--color-emerald-800); }
+.nk-ghost { background: transparent; border: 1px solid #d9d2bd; color: #10241b; }
+.nk-ghost:hover { background: #f4efe2; }
+.nk-tab[aria-selected="true"] { background: var(--color-emerald-700); color: #fff; border-color: var(--color-emerald-700); }
+.nk-pre { white-space: pre-line; }
+
+@keyframes nk-pop { 0% { transform: scale(0.96); opacity: 0.4; } 100% { transform: scale(1); opacity: 1; } }
+.nk-pop { animation: nk-pop 0.25s ease-out; }
+@media (prefers-reduced-motion: reduce) { .nk-pop { animation: none; } }
