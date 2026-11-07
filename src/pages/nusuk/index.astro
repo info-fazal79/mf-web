@@ -89,6 +89,22 @@ const desc = c.subtitle;
         </details>
       </section>
 
+      <!-- ===== Today's winner (Nusuk Manager → Today's winner) ===== -->
+      <section id="nk-today" class="mt-8 hidden" aria-labelledby="nk-today-h">
+        <div class="relative overflow-hidden rounded-[1.25rem] border-2 border-gold-500/70 bg-gradient-to-b from-gold-100 via-white to-white p-5 text-center shadow-lg shadow-gold-500/15">
+          <div class="pointer-events-none absolute inset-x-0 top-0 h-16 opacity-60" aria-hidden="true" style="background: radial-gradient(circle at 15% 30%, #dcbc52 2px, transparent 3px), radial-gradient(circle at 80% 20%, #0e9468 2px, transparent 3px), radial-gradient(circle at 60% 60%, #f42a41 1.5px, transparent 2.5px), radial-gradient(circle at 30% 70%, #0a7a59 1.5px, transparent 2.5px), radial-gradient(circle at 92% 65%, #c9a227 2px, transparent 3px);"></div>
+          <h2 id="nk-today-h" class="relative inline-flex items-center gap-1.5 rounded-full bg-emerald-900 px-4 py-1.5 text-sm font-bold text-gold-100">🎉 <span id="nk-today-label">আজকের বিজয়ী</span></h2>
+          <img id="nk-today-flag" alt="" width="84" height="56" class="relative mx-auto mt-4 h-14 w-[84px] rounded-md object-cover shadow-md ring-1 ring-black/10" />
+          <p id="nk-today-name" dir="auto" class="relative mt-3 break-words text-xl font-bold leading-snug text-emerald-950"></p>
+          <p id="nk-today-country" class="text-sm font-semibold text-emerald-800"></p>
+          <p class="mt-3 flex flex-wrap items-center justify-center gap-2">
+            <span id="nk-today-prize" class="rounded-full bg-gold-500 px-3 py-1 text-sm font-bold text-emerald-950"></span>
+            <span id="nk-today-date" class="text-xs text-emerald-900/65"></span>
+          </p>
+          <a id="nk-today-link" target="_blank" rel="noopener nofollow" class="mt-4 hidden items-center gap-1.5 rounded-full border border-emerald-700/30 px-4 py-2 text-sm font-semibold text-emerald-800 hover:bg-emerald-50">নুসুকের ঘোষণা দেখুন ↗</a>
+        </div>
+      </section>
+
       <!-- ===== Bangladeshi winners (filled from Nusuk Manager → Winners) ===== -->
       <section id="nk-winners" class="mt-8 hidden" aria-labelledby="nk-win-h">
         <div class="nk-pattern overflow-hidden rounded-[1.25rem] p-5 text-white">
@@ -214,7 +230,7 @@ const desc = c.subtitle;
 
     <script>
       import { rpc, rpcReady, type Boot, type Claim, type CodeRef, type Submit } from './_lib/rpc';
-      import { CODE_RE, parseWinners, prizeLabel, type Winner } from './_lib/content';
+      import { CODE_RE, countryName, flagUrl, parseToday, parseWinners, prizeLabel, type Winner } from './_lib/content';
 
       // Bangladesh flag (green field, red disc set toward the hoist). Inline SVG so it renders on every OS.
       const BD_FLAG = '<svg viewBox="0 0 20 12" aria-hidden="true" class="h-full w-full"><rect width="20" height="12" fill="#006a4e"/><circle cx="9" cy="6" r="3.8" fill="#f42a41"/></svg>';
@@ -402,7 +418,33 @@ const desc = c.subtitle;
         restart();
       }
 
+      // ---- Today's winner ----
+      function renderToday(content: unknown) {
+        const t = parseToday(content);
+        $('nk-today').classList.toggle('hidden', !t);
+        if (!t) return;
+        const d = new Date();
+        const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        $('nk-today-label').textContent = t.date === today ? 'আজকের বিজয়ী' : 'সর্বশেষ বিজয়ী';
+        const img = $<HTMLImageElement>('nk-today-flag');
+        if (img.dataset.c !== t.country) {
+          img.dataset.c = t.country;
+          img.src = flagUrl(t.country, 160);
+          img.alt = `${countryName(t.country, 'en')} flag`;
+        }
+        $('nk-today-name').textContent = t.name;
+        $('nk-today-country').textContent = countryName(t.country, 'bn');
+        $('nk-today-prize').textContent = t.prize === 'umrah' ? '🕋 দুইজনের উমরাহ সফর' : t.prize === 'zamzam' ? '💧 ২০ কার্টন জমজমের পানি' : `🎁 ${t.prize_text || prizeLabel.other}`;
+        $('nk-today-date').textContent = t.date ? new Date(`${t.date}T00:00:00`).toLocaleDateString('bn-BD', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+        const a = $<HTMLAnchorElement>('nk-today-link');
+        const ok = !!t.link && /^https:\/\//.test(t.link);
+        if (ok) a.href = t.link!;
+        a.classList.toggle('hidden', !ok);
+        a.classList.toggle('inline-flex', ok);
+      }
+
       function applyContent(b: Boot) {
+        renderToday(b.content);
         renderWinners(parseWinners(b.content));
         if (b.content) {
           document.querySelectorAll<HTMLElement>('[data-k]').forEach((el) => {

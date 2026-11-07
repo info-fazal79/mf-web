@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
-import { CODE_RE, contentFields, defaultContent, mergeContent, parseWinners, prizeLabel, type NusukContent, type Prize, type Winner } from '../_lib/content';
+import { CODE_RE, COUNTRY_CODES, PINNED_COUNT, contentFields, countryName, defaultContent, flagUrl, mergeContent, parseToday, parseWinners, prizeLabel, type NusukContent, type Prize, type TodayWinner, type Winner } from '../_lib/content';
 
 /* =====================================================================
    Nusuk Manager: a standalone admin for /nusuk.
@@ -506,12 +506,14 @@ function SettingsPage({ toast, settings, reload }: { toast: ToastFn; settings: S
     // Store only fields that differ from the defaults, so later default-text edits still flow through.
     const diff: Partial<NusukContent> = {};
     for (const k of Object.keys(content) as (keyof NusukContent)[]) if (content[k] !== defaultContent[k]) diff[k] = content[k];
-    const winners = settings.content?.winners; // edited on the Winners page; keep as is
+    // Keep everything that isn't page text (winners list, today's winner…) exactly as it is in the database now.
+    const { data: cur } = await sb!.from('nusuk_settings').select('content').eq('id', 1).single();
+    const keep = Object.fromEntries(Object.entries((cur?.content as Record<string, unknown>) ?? {}).filter(([k]) => !(k in defaultContent)));
     const { error } = await sb!.from('nusuk_settings').update({
       enabled: next.enabled, submissions_enabled: next.submissions_enabled,
       default_max_uses: Math.max(1, next.default_max_uses || 1),
       logo_url: next.logo_url?.trim() || null, notice: next.notice?.trim() || null,
-      content: winners ? { ...diff, winners } : diff, updated_at: new Date().toISOString(),
+      content: { ...keep, ...diff }, updated_at: new Date().toISOString(),
     }).eq('id', 1);
     if (error) return toast(errText(error), false);
     toast('Settings saved');
@@ -674,6 +676,76 @@ function FeedbackPage({ toast, onChange }: { toast: ToastFn; onChange: () => voi
   );
 }
 
+/* ---------------- Today's winner ---------------- */
+const todayStr = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+function TodayWinnerPage({ toast, settings, reload }: { toast: ToastFn; settings: Settings; reload: () => void }) {
+  const blank = (): TodayWinner => ({ name: '', country: 'sa', prize: 'umrah', date: todayStr(), link: '' });
+  const [w, setW] = useState<TodayWinner>(() => parseToday(settings.content) ?? blank());
+  const [busy, setBusy] = useState(false);
+  useEffect(() => setW(parseToday(settings.content) ?? blank()), [settings]); // eslint-disable-line react-hooks/exhaustive-deps
+  const countries = useMemo(() => {
+    const pinned = COUNTRY_CODES.slice(0, PINNED_COUNT).map((c) => ({ c, n: countryName(c) }));
+    const rest = COUNTRY_CODES.slice(PINNED_COUNT).map((c) => ({ c, n: countryName(c) })).sort((a, b) => a.n.localeCompare(b.n));
+    return { pinned, rest };
+  }, []);
+
+  async function write(value: TodayWinner | null) {
+    setBusy(true);
+    const { data, error: e1 } = await sb!.from('nusuk_settings').select('content').eq('id', 1).single();
+    if (e1) { setBusy(false); return toast(errText(e1), false); }
+    const content = { ...((data?.content as object) ?? {}), today_winner: value };
+    const { error } = await sb!.from('nusuk_settings').update({ content, updated_at: new Date().toISOString() }).eq('id', 1);
+    setBusy(false);
+    if (error) return toast(errText(error), false);
+    toast(value ? "Today's winner saved" : "Today's winner hidden");
+    reload();
+  }
+  function save() {
+    if (!w.name.trim()) return toast('Enter the winner name', false);
+    if (w.link && !/^https:\/\//.test(w.link.trim())) return toast('Link must start with https://', false);
+    write({ name: w.name.trim(), country: w.country, prize: w.prize, prize_text: w.prize === 'other' ? w.prize_text?.trim() || undefined : undefined, date: w.date || todayStr(), link: w.link?.trim() || undefined });
+  }
+  const saved = parseToday(settings.content);
+
+  return (
+    <div className="grid gap-4 lg:grid-cols-[1fr_20rem]">
+      <Card title="Today's winner" actions={<>{saved && <Btn kind="ghost" disabled={busy} onClick={() => confirm("Hide today's winner card from the page?") && write(null)}>Hide card</Btn>}<Btn onClick={save} disabled={busy}>{busy ? 'Saving…' : 'Save'}</Btn></>}>
+        <p className="mb-4 text-sm text-emerald-900/75">Shown on /nusuk between the code box and the Bangladeshi winners. If the date isn't today, the card says "সর্বশেষ বিজয়ী" (latest winner) instead of "আজকের বিজয়ী", so it's never wrong.</p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="grid gap-1 text-sm font-semibold sm:col-span-2">Winner name<input className="nk-input" value={w.name} maxLength={120} onChange={(e) => setW({ ...w, name: e.target.value })} placeholder="As Nusuk announced it" /></label>
+          <label className="grid gap-1 text-sm font-semibold">Country
+            <span className="flex items-center gap-2">
+              <img src={flagUrl(w.country, 40)} alt="" width={28} height={20} className="h-5 w-7 shrink-0 rounded-sm object-cover ring-1 ring-black/10" />
+              <select className="nk-input" value={w.country} onChange={(e) => setW({ ...w, country: e.target.value })}>
+                <optgroup label="Common">{countries.pinned.map(({ c, n }) => <option key={c} value={c}>{n}</option>)}</optgroup>
+                <optgroup label="All countries">{countries.rest.map(({ c, n }) => <option key={c} value={c}>{n}</option>)}</optgroup>
+              </select>
+            </span>
+          </label>
+          <label className="grid gap-1 text-sm font-semibold">Date<input type="date" className="nk-input" value={w.date} onChange={(e) => setW({ ...w, date: e.target.value })} /></label>
+          <label className="grid gap-1 text-sm font-semibold">Prize
+            <select className="nk-input" value={w.prize} onChange={(e) => setW({ ...w, prize: e.target.value as Prize })}>
+              <option value="umrah">{prizeLabel.umrah} (Umrah trip for two)</option>
+              <option value="zamzam">{prizeLabel.zamzam} (20 cartons Zamzam)</option>
+              <option value="other">Other…</option>
+            </select>
+          </label>
+          {w.prize === 'other' && <label className="grid gap-1 text-sm font-semibold">Prize text<input className="nk-input" value={w.prize_text ?? ''} maxLength={60} onChange={(e) => setW({ ...w, prize_text: e.target.value })} /></label>}
+          <label className="grid gap-1 text-sm font-semibold sm:col-span-2">Nusuk post link (optional)<input className="nk-input" value={w.link ?? ''} onChange={(e) => setW({ ...w, link: e.target.value })} placeholder="https://www.facebook.com/MyNusuk/posts/…" /></label>
+        </div>
+      </Card>
+      <Card title="Preview">
+        <div className="rounded-2xl border-2 border-gold-500/60 bg-cream p-4 text-center">
+          <div className="text-xs font-bold text-gold-600">🎉 {w.date === todayStr() ? 'আজকের বিজয়ী' : 'সর্বশেষ বিজয়ী'}</div>
+          <img src={flagUrl(w.country, 80)} alt="" className="mx-auto mt-3 h-10 w-[60px] rounded object-cover shadow ring-1 ring-black/10" />
+          <div className="mt-2 break-words text-lg font-bold" dir="auto">{w.name || 'Winner name'}</div>
+          <div className="text-sm text-emerald-900/70">{countryName(w.country, 'bn')}</div>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
 /* ---------------- Winners ---------------- */
 const blankWinner = (): Winner => ({ name: '', prize: 'umrah', date: new Date().toISOString().slice(0, 10), link: '' });
 function WinnersPage({ toast, settings, reload }: { toast: ToastFn; settings: Settings; reload: () => void }) {
@@ -726,12 +798,13 @@ function WinnersPage({ toast, settings, reload }: { toast: ToastFn; settings: Se
 }
 
 /* ---------------- Shell ---------------- */
-type Route = 'dashboard' | 'codes' | 'review' | 'upload' | 'winners' | 'feedback' | 'settings';
+type Route = 'dashboard' | 'codes' | 'review' | 'upload' | 'today' | 'winners' | 'feedback' | 'settings';
 const nav: { r: Route; label: string; icon: string }[] = [
   { r: 'dashboard', label: 'Dashboard', icon: 'M3 13h8V3H3zm10 8h8V11h-8zM3 21h8v-6H3zm10-18v6h8V3z' },
   { r: 'codes', label: 'Codes', icon: 'M4 6h16M4 12h16M4 18h10' },
   { r: 'review', label: 'Review', icon: 'M9 12l2 2 4-4M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z' },
   { r: 'upload', label: 'Paste codes', icon: 'M12 16V4m0 0l-4 4m4-4l4 4M4 20h16' },
+  { r: 'today', label: "Today's winner", icon: 'M12 2l3 6.5 7 .8-5.2 4.8 1.5 7L12 17.6 5.7 21.1l1.5-7L2 9.3l7-.8z' },
   { r: 'feedback', label: 'Feedback', icon: 'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z' },
   { r: 'winners', label: 'Winners', icon: 'M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4' },
   { r: 'settings', label: 'Settings', icon: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z' },
@@ -835,6 +908,7 @@ export default function NusukAdmin() {
         {route === 'codes' && <CodesPage key="codes" toast={toast} />}
         {route === 'review' && <CodesPage key="review" toast={toast} reviewMode />}
         {route === 'upload' && <Upload toast={toast} defaultMax={settings?.default_max_uses ?? 1} />}
+        {route === 'today' && settings && <TodayWinnerPage toast={toast} settings={settings} reload={loadSettings} />}
         {route === 'feedback' && <FeedbackPage toast={toast} onChange={loadUnread} />}
         {route === 'winners' && settings && <WinnersPage toast={toast} settings={settings} reload={loadSettings} />}
         {route === 'settings' && settings && <SettingsPage toast={toast} settings={settings} reload={loadSettings} />}

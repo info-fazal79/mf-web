@@ -77,5 +77,31 @@ export const parseWinners = (c: unknown): Winner[] => {
   return [...byKey.values()];
 };
 
+/** "Today's winner" card, stored in nusuk_settings.content.today_winner and edited from Nusuk Manager → Today's winner. */
+export type TodayWinner = { name: string; country: string; prize: Prize; prize_text?: string; date: string; link?: string };
+
+export const parseToday = (c: unknown): TodayWinner | null => {
+  const t = c && typeof c === 'object' ? (c as Record<string, unknown>).today_winner : null;
+  if (!t || typeof t !== 'object') return null;
+  const w = t as TodayWinner;
+  if (typeof w.name !== 'string' || !w.name.trim() || typeof w.country !== 'string' || !COUNTRY_CODES.includes(w.country)) return null;
+  return { ...w, prize: (['umrah', 'zamzam', 'other'] as const).includes(w.prize) ? w.prize : 'other' };
+};
+
+/** ISO 3166-1 alpha-2 codes, most common Nusuk winner countries first. Names come from Intl.DisplayNames. */
+const PINNED = 'sa eg pk bd in id my tr ng dz ma jo ae iq ye sd gb us'.split(' ');
+const ALL =
+  'ad ae af ag ai al am ao ar as at au aw az ba bb bd be bf bg bh bi bj bm bn bo br bs bt bw by bz ca cd cf cg ch ci ck cl cm cn co cr cu cv cw cy cz de dj dk dm do dz ec ee eg eh er es et fi fj fk fm fo fr ga gb gd ge gf gg gh gi gl gm gn gp gq gr gt gu gw gy hk hn hr ht hu id ie il im in iq ir is it je jm jo jp ke kg kh ki km kn kp kr kw ky kz la lb lc li lk lr ls lt lu lv ly ma mc md me mg mh mk ml mm mn mo mq mr ms mt mu mv mw mx my mz na nc ne ng ni nl no np nr nu nz om pa pe pf pg ph pk pl pr ps pt pw py qa re ro rs ru rw sa sb sc sd se sg si sk sl sm sn so sr ss st sv sy sz tc td tg th tj tl tm tn to tr tt tv tw tz ua ug us uy uz va vc ve vg vi vn vu ws xk ye yt za zm zw'.split(' ');
+export const COUNTRY_CODES = [...PINNED, ...ALL.filter((c) => !PINNED.includes(c))];
+export const PINNED_COUNT = PINNED.length;
+
+const names = new Map<string, Intl.DisplayNames | null>();
+export function countryName(code: string, lang: 'en' | 'bn' = 'en') {
+  if (!names.has(lang)) { try { names.set(lang, new Intl.DisplayNames([lang], { type: 'region' })); } catch { names.set(lang, null); } }
+  try { return names.get(lang)?.of(code.toUpperCase()) ?? code.toUpperCase(); } catch { return code.toUpperCase(); }
+}
+/** Flag image (works on every OS, unlike flag emoji). */
+export const flagUrl = (code: string, w: 40 | 80 | 160 = 80) => `https://flagcdn.com/w${w}/${code}.png`;
+
 /** A Nusuk referral code: always "NG-" followed by exactly 8 letters/digits, e.g. NG-y3JkB7lU. */
 export const CODE_RE = /^NG-[A-Za-z0-9]{8}$/;
