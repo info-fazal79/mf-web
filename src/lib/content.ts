@@ -11,7 +11,27 @@ import * as d from '@/data/site';
 export const defaults = {
   general: { ...d.site, logoUrl: '', faviconUrl: '' },
   nav: { items: d.nav },
-  hero: d.hero,
+  /** Logo block in the header (and footer). Empty fields fall back to General settings. */
+  header: {
+    name: d.site.name,
+    subtitle: '<automation · dev />',
+    showText: true,
+    logoUrl: '',
+    /** Optional logo shown in light mode (e.g. a dark-text version). Empty = use the main logo. */
+    logoUrlLight: '',
+    logoSize: 36,
+    initials: d.site.shortName,
+  },
+  hero: {
+    ...d.hero,
+    /** Slideshow (Admin → Home page → Hero). Empty list = use the single `photo`. */
+    photos: [] as { url: string; caption: string }[],
+    photoTemplate: 'classic',
+    slideEffect: 'fade',
+    slideInterval: 5,
+    showBadges: true,
+    showDots: true,
+  },
   stats: { items: d.stats },
   services: { items: d.services },
   tools: { items: d.tools },
@@ -28,6 +48,8 @@ export const defaults = {
   },
   consultation: d.consultation,
   floating: { enabled: true, whatsapp: true, call: true, email: true },
+  /** Site-wide colour palette. 'classic' = green (default), 'mono' = black & white developer theme. */
+  appearance: { theme: 'classic' },
   payments: {
     bkashEnabled: true,
     bkashNumber: '',
@@ -49,6 +71,16 @@ export const defaults = {
     cta: true,
   },
 };
+
+/** Site palettes (Admin → Settings → Theme). Unknown values fall back to 'classic'. */
+export const PALETTES = ['classic', 'mono', 'ink', 'forest'] as const;
+export type Palette = (typeof PALETTES)[number];
+export const paletteOf = (theme: unknown): Palette =>
+  (PALETTES as readonly string[]).includes(String(theme)) ? (theme as Palette) : 'classic';
+/** Extra Google Fonts a palette needs (loaded only when that palette is active). */
+const GEIST = 'https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500;600&display=swap';
+export const paletteFonts: Partial<Record<Palette, string>> = { ink: GEIST, forest: GEIST };
+export const paletteThemeColor: Record<Palette, string> = { classic: '#07100b', mono: '#000000', ink: '#09090b', forest: '#0a0c0b' };
 
 export type SettingsKey = keyof typeof defaults;
 export type Settings = typeof defaults;

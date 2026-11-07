@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { supabase } from '@/lib/supabase';
 import { deleteMedia, formatBytes, uploadMedia, type MediaItem } from './media';
+import { CropEditor, isCroppable } from './crop';
 
 /* ---------------- Icons ---------------- */
 const paths: Record<string, string> = {
@@ -30,6 +31,7 @@ const paths: Record<string, string> = {
   file: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6',
   send: 'm22 2-7 20-4-9-9-4 20-7ZM22 2 11 13',
   refresh: 'M3 12a9 9 0 0 1 15.5-6.3L21 8M21 3v5h-5M21 12a9 9 0 0 1-15.5 6.3L3 16M3 21v-5h5',
+  crop: 'M6 2v14a2 2 0 0 0 2 2h14M18 22V8a2 2 0 0 0-2-2H2',
 };
 
 export function I({ n, s = 18, className = '' }: { n: string; s?: number; className?: string }) {
@@ -147,6 +149,7 @@ export function MediaLibrary({ onPick, accept = 'image/*' }: { onPick?: (m: Medi
   const [uploading, setUploading] = useState(0);
   const [q, setQ] = useState('');
   const [drag, setDrag] = useState(false);
+  const [cropping, setCropping] = useState<MediaItem | null>(null);
   const input = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
@@ -253,6 +256,11 @@ export function MediaLibrary({ onPick, accept = 'image/*' }: { onPick?: (m: Medi
                 >
                   <I n="copy" s={14} />
                 </button>
+                {isCroppable(m.url, m.mime) && (
+                  <button type="button" title="Crop" onClick={() => setCropping(m)} className="grid h-7 w-7 place-items-center rounded-md text-muted hover:bg-surface hover:text-fg">
+                    <I n="crop" s={14} />
+                  </button>
+                )}
                 <button type="button" title="Delete" onClick={() => remove(m)} className="grid h-7 w-7 place-items-center rounded-md text-muted hover:bg-surface hover:text-red-500">
                   <I n="trash" s={14} />
                 </button>
@@ -261,12 +269,23 @@ export function MediaLibrary({ onPick, accept = 'image/*' }: { onPick?: (m: Medi
           ))}
         </ul>
       )}
+      {cropping && (
+        <CropEditor
+          open
+          src={cropping.url}
+          name={cropping.name}
+          folder={cropping.folder}
+          onClose={() => setCropping(null)}
+          onSaved={(m) => setItems((x) => [m, ...x])}
+        />
+      )}
     </div>
   );
 }
 
 export function ImageField({ value, onChange, accept = 'image/*' }: { value: string; onChange: (v: string) => void; accept?: string }) {
   const [open, setOpen] = useState(false);
+  const [crop, setCrop] = useState(false);
   const isImage = !value || /\.(png|jpe?g|webp|gif|svg|avif)(\?|$)/i.test(value);
   return (
     <div className="flex items-start gap-3">
@@ -279,6 +298,11 @@ export function ImageField({ value, onChange, accept = 'image/*' }: { value: str
           <button type="button" onClick={() => setOpen(true)} className="btn-ghost px-3 py-1.5 text-xs">
             <I n="image" s={14} /> Choose / upload
           </button>
+          {value && isCroppable(value) && (
+            <button type="button" onClick={() => setCrop(true)} className="btn-ghost px-3 py-1.5 text-xs">
+              <I n="crop" s={14} /> Crop
+            </button>
+          )}
           {value && (
             <button type="button" onClick={() => onChange('')} className="btn-ghost px-3 py-1.5 text-xs">
               Remove
@@ -286,6 +310,15 @@ export function ImageField({ value, onChange, accept = 'image/*' }: { value: str
           )}
         </div>
       </div>
+      {crop && (
+        <CropEditor
+          open
+          src={value}
+          name={decodeURIComponent(value.split('?')[0].split('/').pop() ?? 'image').replace(/^[0-9a-f]{8}-/, '')}
+          onClose={() => setCrop(false)}
+          onSaved={(m) => onChange(m.url)}
+        />
+      )}
       <Modal open={open} onClose={() => setOpen(false)} title="Media library" wide>
         <MediaLibrary
           accept={accept}

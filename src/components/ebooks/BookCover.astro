@@ -14,7 +14,7 @@ const { title, cover, author = '', class: cls = '', eager = false } = Astro.prop
     cover ? (
       <img src={cover} alt={`${title} cover`} loading={eager ? 'eager' : 'lazy'} decoding="async" class="h-full w-full object-cover" />
     ) : (
-      <div class="relative flex h-full flex-col justify-between bg-gradient-to-br from-emerald-700 via-emerald-900 to-[#04140b] p-5 text-white">
+      <div class="cover-fallback relative flex h-full flex-col justify-between bg-gradient-to-br from-emerald-700 via-emerald-900 to-[#04140b] p-5 text-white">
         <div class="bg-grid absolute inset-0 opacity-40" />
         <span class="relative font-mono text-[10px] tracking-widest opacity-70">MF · E-BOOK</span>
         <span class="relative text-lg leading-tight font-extrabold">{title}</span>

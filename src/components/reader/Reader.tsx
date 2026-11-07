@@ -15,6 +15,7 @@ import {
   savePosition,
   savePrefs,
   themes,
+  readerAccent,
   unwrapAll,
   updateAnnotation,
   widths,
@@ -76,6 +77,7 @@ export default function Reader() {
   const pdf = useRef<PdfHandle>(null);
   const userId = session?.user.id ?? null;
   const t = themes[prefs.theme];
+  const { accent, onAccent } = readerAccent(t, prefs.theme);
   const protect = book?.access_mode === 'paid';
 
   useEffect(() => savePrefs(prefs), [prefs]);
@@ -344,7 +346,7 @@ export default function Reader() {
   const noContent = mode === 'book' ? toc.length === 0 : !book.pdf_path;
   const paywall = (
     <div className="mx-auto my-16 max-w-md rounded-2xl border p-8 text-center" style={{ borderColor: t.line, background: t.panel }}>
-      <span className="mx-auto grid h-12 w-12 place-items-center rounded-full" style={{ background: 'rgba(34,211,138,.15)', color: '#22d38a' }}><I d={ICON.lock} /></span>
+      <span className="mx-auto grid h-12 w-12 place-items-center rounded-full" style={{ background: 'color-mix(in srgb, var(--r-accent) 15%, transparent)', color: 'var(--r-accent)' }}><I d={ICON.lock} /></span>
       <h2 className="mt-4 text-xl font-bold">Continue reading</h2>
       <p className="mt-2 text-sm" style={{ color: t.muted }}>
         {book.access_mode === 'paid' ? 'This part is available after purchase. Your highlights and place are kept.' : book.access_mode === 'whatsapp' ? 'Join the WhatsApp group to get the full book.' : 'Sign in to keep reading.'}
@@ -357,7 +359,7 @@ export default function Reader() {
   return (
     <div
       className="reader fixed inset-0 flex flex-col"
-      style={{ background: t.bg, color: t.fg, ['--r-line' as string]: t.line, ['--r-muted' as string]: t.muted, ['--r-panel' as string]: t.panel }}
+      style={{ background: t.bg, color: t.fg, ['--r-line' as string]: t.line, ['--r-muted' as string]: t.muted, ['--r-panel' as string]: t.panel, ['--r-accent' as string]: accent, ['--r-on-accent' as string]: onAccent }}
       onCopy={(e) => protect && (e.preventDefault(), alert('Copying is disabled for this e-book.'))}
       onContextMenu={(e) => protect && e.preventDefault()}
     >
@@ -372,20 +374,20 @@ export default function Reader() {
         {book.format === 'both' && toc.length > 0 && book.pdf_path && canRead && (
           <div className="mr-1 hidden rounded-lg border p-0.5 text-xs sm:flex" style={{ borderColor: t.line }}>
             {(['book', 'pdf'] as const).map((m) => (
-              <button key={m} type="button" onClick={() => { stopSpeak(); setMode(m); }} className="rounded-md px-2.5 py-1 font-semibold capitalize" style={mode === m ? { background: '#22d38a', color: '#04140b' } : { color: t.muted }}>{m === 'book' ? 'Book' : 'PDF'}</button>
+              <button key={m} type="button" onClick={() => { stopSpeak(); setMode(m); }} className="rounded-md px-2.5 py-1 font-semibold capitalize" style={mode === m ? { background: 'var(--r-accent)', color: 'var(--r-on-accent)' } : { color: t.muted }}>{m === 'book' ? 'Book' : 'PDF'}</button>
             ))}
           </div>
         )}
         <button type="button" className="r-btn" onClick={() => setPanel(panel === 'search' ? null : 'search')} aria-label="Search in book"><I d={ICON.search} /></button>
-        {mode === 'book' && <button type="button" className={`r-btn ${speaking !== 'off' ? 'text-[#22d38a]' : ''}`} onClick={() => (speaking === 'off' ? startSpeak() : stopSpeak())} aria-label="Read aloud"><I d={ICON.speak} /></button>}
-        <button type="button" className={`r-btn ${isBookmarked ? 'text-[#22d38a]' : ''}`} onClick={toggleBookmark} aria-label="Bookmark this place"><I d={ICON.bookmark} /></button>
+        {mode === 'book' && <button type="button" className={`r-btn ${speaking !== 'off' ? 'text-[var(--r-accent)]' : ''}`} onClick={() => (speaking === 'off' ? startSpeak() : stopSpeak())} aria-label="Read aloud"><I d={ICON.speak} /></button>}
+        <button type="button" className={`r-btn ${isBookmarked ? 'text-[var(--r-accent)]' : ''}`} onClick={toggleBookmark} aria-label="Bookmark this place"><I d={ICON.bookmark} /></button>
         <button type="button" className="r-btn" onClick={() => setPanel(panel === 'notes' ? null : 'notes')} aria-label="Highlights and notes"><I d={ICON.notes} /></button>
         <button type="button" className="r-btn" onClick={() => setShowType(!showType)} aria-label="Display settings"><I d={ICON.type} /></button>
         <span className="hidden sm:block"><button type="button" className="r-btn" onClick={() => (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen?.())} aria-label="Fullscreen"><I d={ICON.full} /></button></span>
       </header>
 
       {/* Progress bar */}
-      <div className="h-0.5 w-full" style={{ background: t.line }}><div className="h-full bg-[#22d38a] transition-all" style={{ width: `${progress * 100}%` }} /></div>
+      <div className="h-0.5 w-full" style={{ background: t.line }}><div className="h-full bg-[var(--r-accent)] transition-all" style={{ width: `${progress * 100}%` }} /></div>
 
       {/* Display settings */}
       {showType && (
@@ -393,7 +395,7 @@ export default function Reader() {
           <p className="r-label">Theme</p>
           <div className="grid grid-cols-4 gap-2">
             {(Object.keys(themes) as (keyof typeof themes)[]).map((k) => (
-              <button key={k} type="button" onClick={() => setPrefs((p) => ({ ...p, theme: k }))} className="rounded-lg border py-2 text-xs font-semibold" style={{ background: themes[k].bg, color: themes[k].fg, borderColor: prefs.theme === k ? '#22d38a' : themes[k].line, borderWidth: prefs.theme === k ? 2 : 1 }}>{themes[k].label}</button>
+              <button key={k} type="button" onClick={() => setPrefs((p) => ({ ...p, theme: k }))} className="rounded-lg border py-2 text-xs font-semibold" style={{ background: themes[k].bg, color: themes[k].fg, borderColor: prefs.theme === k ? 'var(--r-accent)' : themes[k].line, borderWidth: prefs.theme === k ? 2 : 1 }}>{themes[k].label}</button>
             ))}
           </div>
           {mode === 'book' ? (
@@ -401,7 +403,7 @@ export default function Reader() {
               <p className="r-label mt-4">Text size · {prefs.size}px</p>
               <div className="flex items-center gap-2">
                 <button type="button" className="r-chip" onClick={() => setPrefs((p) => ({ ...p, size: Math.max(14, prefs.size - 1) }))}>A−</button>
-                <input type="range" min={14} max={30} value={prefs.size} onChange={(e) => setPrefs((p) => ({ ...p, size: Number(e.target.value) }))} className="flex-1 accent-[#22d38a]" aria-label="Text size" />
+                <input type="range" min={14} max={30} value={prefs.size} onChange={(e) => setPrefs((p) => ({ ...p, size: Number(e.target.value) }))} className="flex-1 accent-[var(--r-accent)]" aria-label="Text size" />
                 <button type="button" className="r-chip" onClick={() => setPrefs((p) => ({ ...p, size: Math.min(30, prefs.size + 1) }))}>A+</button>
               </div>
               <p className="r-label mt-4">Line spacing</p>
@@ -410,9 +412,9 @@ export default function Reader() {
               <div className="grid grid-cols-3 gap-2">{(['serif', 'sans', 'bangla'] as const).map((f) => <button key={f} type="button" className="r-chip" data-on={prefs.font === f} style={{ fontFamily: fonts[f] }} onClick={() => setPrefs((p) => ({ ...p, font: f }))}>{f === 'bangla' ? 'বাংলা' : f === 'serif' ? 'Serif' : 'Sans'}</button>)}</div>
               <p className="r-label mt-4">Page width</p>
               <div className="grid grid-cols-3 gap-2">{(['narrow', 'normal', 'wide'] as const).map((w) => <button key={w} type="button" className="r-chip capitalize" data-on={prefs.width === w} onClick={() => setPrefs((p) => ({ ...p, width: w }))}>{w}</button>)}</div>
-              <label className="mt-4 flex items-center justify-between text-sm"><span>Justify text</span><input type="checkbox" checked={prefs.justify} onChange={(e) => setPrefs((p) => ({ ...p, justify: e.target.checked }))} className="accent-[#22d38a]" /></label>
+              <label className="mt-4 flex items-center justify-between text-sm"><span>Justify text</span><input type="checkbox" checked={prefs.justify} onChange={(e) => setPrefs((p) => ({ ...p, justify: e.target.checked }))} className="accent-[var(--r-accent)]" /></label>
               <p className="r-label mt-4">Read-aloud speed · {prefs.rate}×</p>
-              <input type="range" min={0.6} max={1.8} step={0.1} value={prefs.rate} onChange={(e) => setPrefs((p) => ({ ...p, rate: Number(e.target.value) }))} className="w-full accent-[#22d38a]" aria-label="Speech rate" />
+              <input type="range" min={0.6} max={1.8} step={0.1} value={prefs.rate} onChange={(e) => setPrefs((p) => ({ ...p, rate: Number(e.target.value) }))} className="w-full accent-[var(--r-accent)]" aria-label="Speech rate" />
             </>
           ) : (
             <>
@@ -443,7 +445,7 @@ export default function Reader() {
                     const available = chapters.some((x) => x.id === c.id);
                     return (
                       <li key={c.id}>
-                        <button type="button" onClick={() => { setMode('book'); go(i); }} className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm" style={i === chapter && mode === 'book' ? { background: 'rgba(34,211,138,.14)', color: '#22d38a' } : undefined}>
+                        <button type="button" onClick={() => { setMode('book'); go(i); }} className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm" style={i === chapter && mode === 'book' ? { background: 'color-mix(in srgb, var(--r-accent) 14%, transparent)', color: 'var(--r-accent)' } : undefined}>
                           <span className="w-6 font-mono text-xs opacity-60">{i + 1}</span>
                           <span className="flex-1">{c.title}</span>
                           {!available && <span className="opacity-50"><I d={ICON.lock} s={14} /></span>}
@@ -455,7 +457,7 @@ export default function Reader() {
               )}
               {panel === 'notes' && (
                 <div className="grid gap-2">
-                  {!userId && <p className="rounded-lg p-3 text-xs" style={{ background: t.bg, color: t.muted }}>Saved in this browser. <a href="/account" className="text-[#22d38a] underline">Sign in</a> to sync across devices.</p>}
+                  {!userId && <p className="rounded-lg p-3 text-xs" style={{ background: t.bg, color: t.muted }}>Saved in this browser. <a href="/account" className="text-[var(--r-accent)] underline">Sign in</a> to sync across devices.</p>}
                   {notes.length === 0 && <p className="p-3 text-sm" style={{ color: t.muted }}>Select text to highlight it, or tap the bookmark icon to save your place.</p>}
                   {notes.slice().reverse().map((n) => (
                     <div key={n.id} className="rounded-xl border p-3" style={{ borderColor: t.line, background: t.bg }}>
@@ -573,7 +575,7 @@ export default function Reader() {
       {/* Read-aloud bar */}
       {speaking !== 'off' && (
         <div className="fixed bottom-4 left-1/2 z-30 flex -translate-x-1/2 items-center gap-2 rounded-full border px-4 py-2 shadow-2xl" style={{ background: t.panel, borderColor: t.line }}>
-          <span className="h-2 w-2 animate-pulse rounded-full bg-[#22d38a]" />
+          <span className="h-2 w-2 animate-pulse rounded-full bg-[var(--r-accent)]" />
           <span className="text-sm">Reading aloud</span>
           <button type="button" className="r-chip" onClick={() => { if (speaking === 'on') { speechSynthesis.pause(); setSpeaking('paused'); } else { speechSynthesis.resume(); setSpeaking('on'); } }}>{speaking === 'on' ? 'Pause' : 'Resume'}</button>
           <button type="button" className="r-chip" onClick={stopSpeak}>Stop</button>
@@ -615,10 +617,10 @@ export default function Reader() {
           />
           <div className="mt-2 flex items-center gap-2">
             {(Object.keys(HL_COLORS) as HlColor[]).map((c) => (
-              <button key={c} type="button" onClick={async () => { await updateAnnotation(book.id, userId, active.id, { color: c }); setNotes((x) => x.map((n) => (n.id === active.id ? { ...n, color: c } : n))); setActive({ ...active, color: c }); }} className="h-6 w-6 rounded-full" style={{ background: HL_COLORS[c], outline: active.color === c ? '2px solid #22d38a' : undefined }} aria-label={c} />
+              <button key={c} type="button" onClick={async () => { await updateAnnotation(book.id, userId, active.id, { color: c }); setNotes((x) => x.map((n) => (n.id === active.id ? { ...n, color: c } : n))); setActive({ ...active, color: c }); }} className="h-6 w-6 rounded-full" style={{ background: HL_COLORS[c], outline: active.color === c ? '2px solid var(--r-accent)' : undefined }} aria-label={c} />
             ))}
             <button type="button" className="r-chip ml-auto" onClick={async () => { await removeAnnotation(book.id, userId, active.id); setNotes((x) => x.filter((n) => n.id !== active.id)); setActive(null); }}>Remove</button>
-            <button type="button" className="r-chip" style={{ background: '#22d38a', color: '#04140b' }} onClick={() => setActive(null)}>Done</button>
+            <button type="button" className="r-chip" style={{ background: 'var(--r-accent)', color: 'var(--r-on-accent)' }} onClick={() => setActive(null)}>Done</button>
           </div>
         </div>
       )}

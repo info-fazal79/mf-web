@@ -19,6 +19,8 @@ function initHeader() {
   const onScroll = () => {
     const y = window.scrollY;
     header?.classList.toggle('is-scrolled', y > 12);
+    const max = document.documentElement.scrollHeight - window.innerHeight;
+    header?.style.setProperty('--progress', String(max > 0 ? Math.min(1, y / max) : 0));
     toTop?.classList.toggle('is-visible', y > 600);
   };
   onScroll();

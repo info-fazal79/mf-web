@@ -9,6 +9,11 @@ function syncBadge(items: CartItem[]) {
     el.classList.toggle('hidden', items.length === 0);
     el.classList.toggle('grid', items.length > 0);
   });
+  // The header cart button only shows when the cart has something in it.
+  document.querySelectorAll<HTMLElement>('[data-cart-btn]').forEach((el) => {
+    el.classList.toggle('hidden', items.length === 0);
+    el.classList.toggle('grid', items.length > 0);
+  });
 }
 
 export default function CartPanel() {

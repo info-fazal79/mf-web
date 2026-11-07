@@ -8,11 +8,11 @@ const path = Astro.url.pathname.replace(/\/$/, '') || '/';
 const isActive = (href: string) => (href === '/' ? path === '/' : path.startsWith(href));
 ---
 
-<header id="site-header" class="fixed inset-x-0 top-0 z-40 transition-all duration-300">
+<header id="site-header" class="fixed inset-x-0 top-0 z-40">
   <div class="container-x">
     <div
       id="header-bar"
-      class="mt-3 flex h-16 items-center justify-between gap-4 rounded-2xl border border-transparent px-3 transition-all duration-300 sm:px-4"
+      class="flex min-h-16 items-center justify-between gap-4 py-3"
     >
       <Logo />
 
@@ -53,7 +53,8 @@ const isActive = (href: string) => (href === '/' ? path === '/' : path.startsWit
         <button
           type="button"
           data-open="cart"
-          class="relative grid h-10 w-10 place-items-center rounded-xl text-muted transition hover:bg-surface-2 hover:text-fg"
+          data-cart-btn
+          class="relative hidden h-10 w-10 place-items-center rounded-xl text-muted transition hover:bg-surface-2 hover:text-fg"
           aria-label="Open cart"
         >
           <Icon name="cart" />
@@ -115,14 +116,55 @@ const isActive = (href: string) => (href === '/' ? path === '/' : path.startsWit
       </button>
     </div>
   </div>
+  <span id="scroll-progress" aria-hidden="true"></span>
 </header>
 
+<script is:inline>
+  // Cart button stays hidden until something is in the cart (CartPanel keeps it in sync after that).
+  (() => {
+    let n = 0;
+    try { n = JSON.parse(localStorage.getItem('cart:v1') || '[]').length; } catch {}
+    if (!n) return;
+    document.querySelectorAll('[data-cart-btn]').forEach((b) => { b.classList.remove('hidden'); b.classList.add('grid'); });
+    document.querySelectorAll('[data-cart-count]').forEach((b) => { b.textContent = String(n); b.classList.remove('hidden'); b.classList.add('grid'); });
+  })();
+</script>
+
 <style>
+  /* Top of page: transparent, roomy. Scrolled: full-width glass bar pinned to
+     the top, a little shorter, hairline bottom border + reading-progress line. */
+  #site-header {
+    border-bottom: 1px solid transparent;
+    transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+  }
+  #header-bar {
+    transition: padding 0.3s ease, min-height 0.3s ease;
+  }
+  #site-header.is-scrolled {
+    background: color-mix(in srgb, var(--bg) 72%, transparent);
+    backdrop-filter: blur(16px) saturate(1.5);
+    -webkit-backdrop-filter: blur(16px) saturate(1.5);
+    border-bottom-color: var(--border);
+    box-shadow: 0 10px 30px -22px rgba(0, 0, 0, 0.6);
+  }
   #site-header.is-scrolled #header-bar {
-    border-color: var(--border);
-    background: color-mix(in srgb, var(--surface) 78%, transparent);
-    backdrop-filter: blur(14px) saturate(1.4);
-    -webkit-backdrop-filter: blur(14px) saturate(1.4);
-    box-shadow: var(--shadow);
+    min-height: 3.5rem;
+    padding-block: 0.4rem;
+  }
+  #scroll-progress {
+    position: absolute;
+    left: 0;
+    bottom: -1px;
+    height: 2px;
+    width: 100%;
+    transform-origin: left;
+    transform: scaleX(var(--progress, 0));
+    background: linear-gradient(90deg, var(--accent), var(--accent-strong));
+    box-shadow: 0 0 10px var(--glow);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  #site-header.is-scrolled #scroll-progress {
+    opacity: 1;
   }
 </style>

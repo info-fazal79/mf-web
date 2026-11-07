@@ -11,6 +11,27 @@ export const themes: Record<Theme, { bg: string; fg: string; muted: string; pane
   dark: { bg: '#0d1b13', fg: '#e3efe7', muted: '#8eab98', panel: '#112218', line: '#1c3326', label: 'Dark' },
   night: { bg: '#000000', fg: '#c9c9c9', muted: '#7a7a7a', panel: '#0b0b0b', line: '#1f1f1f', label: 'Night' },
 };
+/** Site palette (Admin → Settings → Theme) so the reader matches the rest of the site. */
+const palette = typeof document !== 'undefined' ? document.documentElement.dataset.palette : undefined;
+export const isMono = palette === 'mono';
+if (isMono) themes.dark = { bg: '#0c0c0c', fg: '#ededed', muted: '#8c8c8c', panel: '#141414', line: '#262626', label: 'Dark' };
+if (palette === 'ink') themes.dark = { bg: '#0c0c0f', fg: '#e6e6ea', muted: '#8c8c97', panel: '#141418', line: '#24242a', label: 'Dark' };
+if (palette === 'forest') themes.dark = { bg: '#0d100f', fg: '#e6ebe8', muted: '#8b9690', panel: '#141917', line: '#232a26', label: 'Dark' };
+
+/** Accent colour for buttons, progress and highlights in the reader. */
+export function readerAccent(t: { bg: string; fg: string }, theme: Theme): { accent: string; onAccent: string } {
+  if (isMono) return { accent: t.fg, onAccent: t.bg };
+  if (palette === 'ink') {
+    const dark = theme === 'dark' || theme === 'night';
+    return dark ? { accent: '#8b95ff', onAccent: '#0b0b16' } : { accent: '#4b55d6', onAccent: '#ffffff' };
+  }
+  if (palette === 'forest') {
+    const dark = theme === 'dark' || theme === 'night';
+    return dark ? { accent: '#3ec48d', onAccent: '#03130c' } : { accent: '#0f7f58', onAccent: '#ffffff' };
+  }
+  return { accent: '#22d38a', onAccent: '#04140b' };
+}
+
 export const fonts = {
   serif: '"Literata", "Noto Serif Bengali", Georgia, serif',
   sans: '"Inter", "Hind Siliguri", system-ui, sans-serif',

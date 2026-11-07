@@ -1,10 +1,15 @@
 ---
 import '@/styles/global.css';
 import AdminApp from '@/admin/AdminApp';
+import { getContent, paletteFonts, paletteOf } from '@/lib/content';
+
+const { appearance } = await getContent();
+const palette = paletteOf(appearance.theme);
+const paletteFont = paletteFonts[palette];
 ---
 
 <!doctype html>
-<html lang="en" data-theme="dark">
+<html lang="en" data-theme="dark" data-palette={palette}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -17,6 +22,7 @@ import AdminApp from '@/admin/AdminApp';
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
     />
+    {paletteFont && <link rel="stylesheet" href={paletteFont} />}
     <script is:inline>
       try {
         document.documentElement.dataset.theme = localStorage.getItem('theme') || 'dark';

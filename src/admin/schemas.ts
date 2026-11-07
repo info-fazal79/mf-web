@@ -13,19 +13,37 @@ export type SettingsPage = {
 
 export const settingsPages: SettingsPage[] = [
   {
+    key: 'appearance',
+    title: 'Theme',
+    sub: 'Colour theme for the whole website (public pages, reader and this admin panel).',
+    fields: [
+      {
+        key: 'theme',
+        label: 'Site theme',
+        type: 'select',
+        wide: true,
+        options: [
+          { value: 'classic', label: 'Classic Green (default)' },
+          { value: 'mono', label: 'Black & White (developer mode)' },
+          { value: 'ink', label: 'Ink & Indigo (developer pro)' },
+          { value: 'forest', label: 'Forest Pro (professional green)' },
+        ],
+        help: 'Black & White: monochrome with monospace type. Ink & Indigo: neutral dark surfaces, Geist type, silver headings and a restrained indigo accent. Forest Pro: the same professional look built on your brand green. Visitors can still switch light/dark mode with the sun icon.',
+      },
+    ],
+  },
+  {
     key: 'general',
     title: 'General',
     sub: 'Site name, contact details, logo and CV.',
     fields: [
       { key: 'name', label: 'Site / your name', type: 'text' },
-      { key: 'shortName', label: 'Logo initials', type: 'text', help: 'Shown in the logo badge when no logo image is set.' },
       { key: 'tagline', label: 'Tagline', type: 'text', wide: true },
       { key: 'description', label: 'SEO description', type: 'textarea', help: 'Shown on Google and when the site is shared. Keep it near 155 characters.' },
       { key: 'email', label: 'Email', type: 'email' },
       { key: 'phone', label: 'Phone', type: 'text' },
       { key: 'whatsapp', label: 'WhatsApp number', type: 'text', help: 'Digits only with country code, e.g. 8801317947048' },
       { key: 'location', label: 'Location', type: 'text' },
-      { key: 'logoUrl', label: 'Logo image', type: 'image' },
       { key: 'faviconUrl', label: 'Favicon', type: 'image', help: 'Square image, 64×64 or larger.' },
       { key: 'cvUrl', label: 'Public CV (PDF)', type: 'file', help: 'Powers the "Download CV" button. Upload a version without private details.' },
     ],
@@ -86,6 +104,19 @@ export const settingsPages: SettingsPage[] = [
     ],
   },
   {
+    key: 'header',
+    title: 'Header',
+    sub: 'Logo, name and subtitle at the top-left of every page (also used in the footer).',
+    fields: [
+      { key: 'logoUrl', label: 'Logo image (dark mode)', type: 'image', help: 'PNG or SVG. Transparent background looks best. Leave empty to show the initials badge.' },
+      { key: 'logoUrlLight', label: 'Logo image (light mode)', type: 'image', help: 'Shown when visitors use light mode, e.g. a version with dark text. Leave empty to use the logo above in both modes.' },      { key: 'logoSize', label: 'Logo size', type: 'range', min: 12, max: 80, unit: 'px', wide: true, help: 'Height of the logo. Wide logos keep their shape.' },
+      { key: 'showText', label: 'Show name and subtitle next to the logo', type: 'toggle', wide: true, help: 'Turn off if your logo image already contains your name.' },
+      { key: 'name', label: 'Name', type: 'text' },
+      { key: 'subtitle', label: 'Subtitle', type: 'text', placeholder: '<automation · dev />' },
+      { key: 'initials', label: 'Initials (when no logo image)', type: 'text', help: '1–3 letters shown in the badge.' },
+    ],
+  },
+  {
     key: 'hero',
     title: 'Hero',
     sub: 'The first section of the home page.',
@@ -94,7 +125,49 @@ export const settingsPages: SettingsPage[] = [
       { key: 'name', label: 'Name', type: 'text' },
       { key: 'roles', label: 'Roles (typing animation)', type: 'tags' },
       { key: 'intro', label: 'Intro paragraph', type: 'textarea' },
-      { key: 'photo', label: 'Photo', type: 'image', help: 'Portrait works best (4:5). A transparent PNG looks great.' },
+      { key: 'photo', label: 'Photo (single)', type: 'image', help: 'Used when the slideshow below is empty. Portrait works best (4:5).' },
+      {
+        key: 'photos',
+        label: 'Slideshow photos',
+        type: 'list',
+        itemLabel: 'caption',
+        help: 'Add 2 or more photos and they rotate automatically. Order = play order. Portrait (4:5) photos fit best.',
+        fields: [
+          { key: 'url', label: 'Photo', type: 'image' },
+          { key: 'caption', label: 'Caption (optional)', type: 'text', wide: true, help: 'Shown in the Polaroid and Window templates, and used as alt text.' },
+        ],
+      },
+      {
+        key: 'photoTemplate',
+        label: 'Photo template',
+        type: 'select',
+        options: [
+          { value: 'classic', label: 'Classic card (dashed frame)' },
+          { value: 'window', label: 'Code window (browser bar)' },
+          { value: 'stack', label: 'Photo stack (cards behind)' },
+          { value: 'circle', label: 'Circle with orbit ring' },
+          { value: 'polaroid', label: 'Polaroid (tilted, caption)' },
+          { value: 'arch', label: 'Arch (rounded top)' },
+        ],
+      },
+      {
+        key: 'slideEffect',
+        label: 'Transition effect',
+        type: 'select',
+        options: [
+          { value: 'fade', label: 'Fade' },
+          { value: 'slide', label: 'Slide' },
+          { value: 'zoom', label: 'Zoom' },
+          { value: 'kenburns', label: 'Ken Burns (slow zoom)' },
+          { value: 'blink', label: 'Blink' },
+          { value: 'flip', label: 'Flip (3D)' },
+          { value: 'blur', label: 'Blur' },
+          { value: 'wipe', label: 'Wipe' },
+        ],
+      },
+      { key: 'slideInterval', label: 'Seconds per photo', type: 'range', min: 2, max: 15, unit: 's', wide: true },
+      { key: 'showBadges', label: 'Show floating badges (Apps Script / AI Automation)', type: 'toggle' },
+      { key: 'showDots', label: 'Show slide dots under the photo', type: 'toggle' },
       { key: 'available', label: 'Show "Available for new projects" badge', type: 'toggle', wide: true },
     ],
   },
@@ -162,7 +235,8 @@ export const settingsPages: SettingsPage[] = [
         fields: [
           { key: 'name', label: 'Name', type: 'text' },
           { key: 'group', label: 'Group', type: 'text' },
-          { key: 'short', label: 'Badge text', type: 'text', help: '1–2 characters' },
+          { key: 'logo', label: 'Logo (optional)', type: 'image', help: 'Leave empty: known tools (Excel, Word, PowerPoint, Sheets, Apps Script, Tally, WordPress, Elementor, Claude, ChatGPT, AI Studio, NotebookLM) show their official logo automatically. Others show the letter badge below.' },
+          { key: 'short', label: 'Badge text', type: 'text', help: '1–2 characters, used when there is no logo' },
           { key: 'color', label: 'Badge color', type: 'color' },
         ],
       },
@@ -191,7 +265,7 @@ export const settingsPages: SettingsPage[] = [
   {
     key: 'about',
     title: 'About page',
-    sub: 'Your story, experience, skills, education and certifications.',
+    sub: 'Your story, experience, skills and achievements.',
     fields: [
       { key: 'heading', label: 'Heading', type: 'text' },
       { key: 'photo', label: 'Photo (falls back to hero photo)', type: 'image' },
@@ -217,28 +291,6 @@ export const settingsPages: SettingsPage[] = [
         fields: [
           { key: 'group', label: 'Group name', type: 'text', wide: true },
           { key: 'items', label: 'Skills', type: 'tags' },
-        ],
-      },
-      {
-        key: 'education',
-        label: 'Education',
-        type: 'list',
-        itemLabel: 'title',
-        fields: [
-          { key: 'title', label: 'Degree', type: 'text' },
-          { key: 'period', label: 'Year', type: 'text' },
-          { key: 'org', label: 'Institution / details', type: 'text', wide: true },
-        ],
-      },
-      {
-        key: 'certifications',
-        label: 'Training & certifications',
-        type: 'list',
-        itemLabel: 'title',
-        fields: [
-          { key: 'title', label: 'Title', type: 'text' },
-          { key: 'period', label: 'Year / duration', type: 'text' },
-          { key: 'org', label: 'Provider', type: 'text', wide: true },
         ],
       },
       {

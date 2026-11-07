@@ -6,7 +6,7 @@ const site = c.general;
 const f = c.floating;
 ---
 
-<div class="fixed right-4 bottom-4 z-30 flex flex-col items-end gap-3 sm:right-6 sm:bottom-6">
+<div class="floating-actions fixed right-4 bottom-4 z-30 flex flex-col items-end gap-3 sm:right-6 sm:bottom-6">
   <button
     type="button"
     data-back-to-top
@@ -20,7 +20,7 @@ const f = c.floating;
   <div class="relative" data-fab>
     <div
       data-fab-menu
-      class="pointer-events-none absolute right-0 bottom-16 flex translate-y-2 flex-col items-end gap-2 opacity-0 transition-all duration-200"
+      class="pointer-events-none absolute right-0 bottom-14 flex translate-y-2 flex-col items-end gap-2 opacity-0 transition-all duration-200"
     >
       {f.whatsapp && (
       <a href={`https://wa.me/${site.whatsapp}`} target="_blank" rel="noopener" class="fab-item">
@@ -44,13 +44,13 @@ const f = c.floating;
     <button
       type="button"
       data-fab-toggle
-      class="relative grid h-14 w-14 place-items-center rounded-2xl bg-accent text-accent-contrast shadow-[0_10px_30px_-8px_var(--glow)] transition hover:scale-105"
+      class="relative grid h-11 w-11 place-items-center rounded-xl bg-accent text-accent-contrast shadow-[0_10px_30px_-8px_var(--glow)] transition hover:scale-105"
       aria-label="Contact options"
       aria-expanded="false"
     >
-      <span class="absolute inset-0 animate-ping rounded-2xl bg-accent opacity-20"></span>
-      <Icon name="chat" class="fab-open" size={22} />
-      <Icon name="close" class="fab-close hidden" size={22} />
+      <span class="absolute inset-0 animate-ping rounded-xl bg-accent opacity-20"></span>
+      <Icon name="chat" class="fab-open" size={18} />
+      <Icon name="close" class="fab-close hidden" size={18} />
     </button>
   </div>
   )}
@@ -99,5 +99,10 @@ const f = c.floating;
     opacity: 1;
     translate: none;
     pointer-events: auto;
+  }
+  /* The contact menu opens upward over the back-to-top button: hide it meanwhile. */
+  .floating-actions:has([data-fab].is-open) [data-back-to-top] {
+    opacity: 0;
+    pointer-events: none;
   }
 </style>

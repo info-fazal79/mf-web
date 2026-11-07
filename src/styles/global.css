@@ -37,6 +37,191 @@
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 32px -16px rgba(0, 0, 0, 0.6);
 }
 
+/* ---------- Palette: Black & White (developer mode) ----------
+   Chosen in Admin → Settings → Theme. Sets data-palette="mono" on <html>.
+   Works with both the light and dark mode toggle. */
+:root[data-palette="mono"] {
+  --bg: #ffffff;
+  --bg-soft: #f5f5f5;
+  --surface: #ffffff;
+  --surface-2: #f3f3f3;
+  --border: #e0e0e0;
+  --text: #0a0a0a;
+  --muted: #666666;
+  --accent: #0a0a0a;
+  --accent-strong: #333333;
+  --accent-soft: rgba(0, 0, 0, 0.06);
+  --accent-contrast: #ffffff;
+  --grid-line: rgba(0, 0, 0, 0.06);
+  --glow: rgba(0, 0, 0, 0.18);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.05), 0 8px 24px -12px rgba(0, 0, 0, 0.14);
+}
+:root[data-palette="mono"][data-theme="dark"] {
+  --bg: #000000;
+  --bg-soft: #070707;
+  --surface: #0c0c0c;
+  --surface-2: #141414;
+  --border: #262626;
+  --text: #f2f2f2;
+  --muted: #8c8c8c;
+  --accent: #ffffff;
+  --accent-strong: #d4d4d4;
+  --accent-soft: rgba(255, 255, 255, 0.08);
+  --accent-contrast: #000000;
+  --grid-line: rgba(255, 255, 255, 0.055);
+  --glow: rgba(255, 255, 255, 0.12);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.6), 0 12px 32px -16px rgba(0, 0, 0, 0.8);
+}
+/* Photos, videos and brand colours (tool badges, WhatsApp, bKash…) keep their
+   real colours. Only theme elements that hard-code green are switched here. */
+:root[data-palette="mono"] .logo-dot {
+  background: var(--accent);
+}
+:root[data-palette="mono"] .cover-fallback {
+  background-image: linear-gradient(135deg, #3a3a3a 0%, #161616 55%, #000000 100%);
+}
+/* Developer look: monospace type everywhere (Bangla falls back to Hind Siliguri). */
+:root[data-palette="mono"] body,
+:root[data-palette="mono"] .font-sans {
+  font-family: "JetBrains Mono", "Hind Siliguri", ui-monospace, SFMono-Regular, monospace;
+  letter-spacing: -0.01em;
+}
+:root[data-palette="mono"] .text-gradient {
+  background-image: linear-gradient(120deg, var(--text) 0%, var(--text) 55%, var(--muted) 100%);
+}
+
+/* ---------- Palette: Ink & Indigo (developer pro) ----------
+   Neutral ink surfaces, Geist type, one restrained indigo accent, silver
+   headings and monochrome primary buttons (Linear / Vercel style). */
+:root[data-palette="ink"] {
+  --bg: #fcfcfd;
+  --bg-soft: #f6f6f8;
+  --surface: #ffffff;
+  --surface-2: #f4f4f6;
+  --border: #e4e4e9;
+  --text: #0e0e11;
+  --muted: #62626d;
+  --accent: #4b55d6;
+  --accent-strong: #3a43b8;
+  --accent-soft: rgba(75, 85, 214, 0.08);
+  --accent-contrast: #ffffff;
+  --grid-line: rgba(14, 14, 17, 0.035);
+  --glow: rgba(75, 85, 214, 0.1);
+  --shadow: 0 1px 2px rgba(14, 14, 17, 0.04), 0 10px 30px -18px rgba(14, 14, 17, 0.18);
+}
+:root[data-palette="ink"][data-theme="dark"] {
+  --bg: #09090b;
+  --bg-soft: #0c0c0f;
+  --surface: #111114;
+  --surface-2: #17171b;
+  --border: #232329;
+  --text: #ededf0;
+  --muted: #8c8c97;
+  --accent: #8b95ff;
+  --accent-strong: #aab2ff;
+  --accent-soft: rgba(139, 149, 255, 0.1);
+  --accent-contrast: #0b0b16;
+  --grid-line: rgba(255, 255, 255, 0.028);
+  --glow: rgba(139, 149, 255, 0.09);
+  --shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 16px 40px -24px rgba(0, 0, 0, 0.9);
+}
+:root:is([data-palette="ink"], [data-palette="forest"]) body,
+:root:is([data-palette="ink"], [data-palette="forest"]) .font-sans {
+  font-family: "Geist", "Hind Siliguri", ui-sans-serif, system-ui, sans-serif;
+  font-feature-settings: "ss01", "cv11";
+}
+:root:is([data-palette="ink"], [data-palette="forest"]) .font-mono,
+:root:is([data-palette="ink"], [data-palette="forest"]) code,
+:root:is([data-palette="ink"], [data-palette="forest"]) pre {
+  font-family: "Geist Mono", ui-monospace, SFMono-Regular, monospace;
+}
+/* Highlighted words: soft indigo → lavender instead of neon green → lime.
+   The hero name gets a silver gradient (the classic developer-site look). */
+:root[data-palette="ink"] .text-gradient {
+  background-image: linear-gradient(110deg, var(--accent) 0%, color-mix(in srgb, var(--accent-strong) 70%, #e9d5ff) 100%);
+}
+:root:is([data-palette="ink"], [data-palette="forest"]) .hero-title .text-gradient {
+  background-image: linear-gradient(180deg, var(--text) 30%, color-mix(in srgb, var(--text) 55%, var(--muted)) 100%);
+}
+/* Monochrome primary buttons; indigo stays for links, active states, icons. */
+:root[data-palette="ink"] .btn-primary {
+  background: var(--text);
+  color: var(--bg);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.12) inset, 0 8px 24px -14px rgba(0, 0, 0, 0.6);
+}
+:root[data-palette="ink"] .btn-primary:hover {
+  background: color-mix(in srgb, var(--text) 86%, var(--bg));
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.12) inset, 0 12px 28px -14px rgba(0, 0, 0, 0.7);
+}
+:root:is([data-palette="ink"], [data-palette="forest"]) .btn-ghost:hover {
+  border-color: color-mix(in srgb, var(--text) 30%, var(--border));
+  color: var(--text);
+}
+:root:is([data-palette="ink"], [data-palette="forest"]) .card-hover:hover {
+  border-color: color-mix(in srgb, var(--text) 18%, var(--border));
+}
+:root:is([data-palette="ink"], [data-palette="forest"]) .eyebrow {
+  color: var(--muted);
+}
+:root:is([data-palette="ink"], [data-palette="forest"]) .logo-dot {
+  background: var(--accent);
+}
+:root[data-palette="ink"] .cover-fallback {
+  background-image: linear-gradient(140deg, #2a2f6b 0%, #15172f 55%, #09090b 100%);
+}
+
+/* ---------- Palette: Forest Pro (professional green) ----------
+   Keeps the brand green but drops the "AI template" tells: no neon/lime
+   gradients, no glows, near-neutral graphite surfaces with only a hint of
+   green, Geist type, silver hero name, a calm jade accent and flat buttons.
+   Shares type, hovers and hero styling with Ink & Indigo (rules above). */
+:root[data-palette="forest"] {
+  --bg: #fafbfa;
+  --bg-soft: #f3f5f4;
+  --surface: #ffffff;
+  --surface-2: #f2f4f3;
+  --border: #e1e6e3;
+  --text: #0d1411;
+  --muted: #5d6b64;
+  --accent: #0f7f58;
+  --accent-strong: #0b6646;
+  --accent-soft: rgba(15, 127, 88, 0.08);
+  --accent-contrast: #ffffff;
+  --grid-line: rgba(13, 20, 17, 0.035);
+  --glow: rgba(15, 127, 88, 0.08);
+  --shadow: 0 1px 2px rgba(13, 20, 17, 0.04), 0 10px 30px -18px rgba(13, 20, 17, 0.18);
+}
+:root[data-palette="forest"][data-theme="dark"] {
+  --bg: #0a0c0b;
+  --bg-soft: #0d100f;
+  --surface: #121614;
+  --surface-2: #171c19;
+  --border: #232a26;
+  --text: #e9eeeb;
+  --muted: #8b9690;
+  --accent: #3ec48d;
+  --accent-strong: #6ad7a8;
+  --accent-soft: rgba(62, 196, 141, 0.1);
+  --accent-contrast: #03130c;
+  --grid-line: rgba(255, 255, 255, 0.028);
+  --glow: rgba(62, 196, 141, 0.07);
+  --shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 16px 40px -24px rgba(0, 0, 0, 0.9);
+}
+/* Highlighted words: one calm green (no lime, no rainbow). */
+:root[data-palette="forest"] .text-gradient {
+  background-image: linear-gradient(110deg, var(--accent) 0%, var(--accent-strong) 100%);
+}
+/* Flat green primary button: no glow, a fine inner highlight instead. */
+:root[data-palette="forest"] .btn-primary {
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.18) inset, 0 6px 18px -12px rgba(0, 0, 0, 0.55);
+}
+:root[data-palette="forest"] .btn-primary:hover {
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.18) inset, 0 10px 24px -12px rgba(0, 0, 0, 0.6);
+}
+:root[data-palette="forest"] .cover-fallback {
+  background-image: linear-gradient(140deg, #1f5a43 0%, #10291f 55%, #0a0c0b 100%);
+}
+
 @theme inline {
   --color-bg: var(--bg);
   --color-bg-soft: var(--bg-soft);
@@ -52,6 +237,26 @@
   --font-sans: "Inter", "Hind Siliguri", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
   --shadow-card: var(--shadow);
+}
+
+/* ---------- Header bar in light mode ----------
+   A clearly visible bar (not blended into the page): a soft tint of the
+   theme's accent, a tinted hairline and a gentle shadow. Built from tokens,
+   so every palette gets its own tint. Dark mode keeps the glass header. */
+:root:not([data-theme="dark"]) #site-header,
+:root:not([data-theme="dark"]) #site-header.is-scrolled {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--accent) 16%, var(--surface)) 0%, color-mix(in srgb, var(--accent) 10%, var(--surface)) 100%);
+  backdrop-filter: blur(14px) saturate(1.4);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
+  border-bottom: 1px solid color-mix(in srgb, var(--accent) 22%, var(--border));
+  box-shadow: 0 8px 28px -20px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+/* ---------- Logo per light / dark mode (Admin → Home page → Header) ---------- */
+:root:not([data-theme="dark"]) .logo-dark-only,
+:root[data-theme="dark"] .logo-light-only {
+  display: none;
 }
 
 /* ---------- Base ---------- */

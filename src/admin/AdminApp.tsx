@@ -29,6 +29,7 @@ const navGroups: { title: string; items: NavEntry[] }[] = [
   {
     title: 'Home page',
     items: [
+      { route: 's/header', label: 'Header', icon: 'menu' },
       { route: 's/hero', label: 'Hero', icon: 'home' },
       { route: 's/stats', label: 'Stats', icon: 'dashboard' },
       { route: 's/sections', label: 'Sections', icon: 'eye' },
@@ -77,6 +78,7 @@ const navGroups: { title: string; items: NavEntry[] }[] = [
     title: 'Settings',
     items: [
       { route: 's/general', label: 'General', icon: 'settings' },
+      { route: 's/appearance', label: 'Theme', icon: 'eye' },
       { route: 's/nav', label: 'Navigation', icon: 'menu' },
       { route: 's/socials', label: 'Social links', icon: 'link' },
       { route: 's/footer', label: 'Footer', icon: 'layers' },

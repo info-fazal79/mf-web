@@ -1,12 +1,13 @@
 ---
 import Icon from '@/components/Icon.astro';
+import HeroPhoto from '@/components/home/HeroPhoto.astro';
 import { getContent } from '@/lib/content';
 const c = await getContent();
 const { hero, general: site } = c;
 const stats = c.stats.items;
 ---
 
-<section class="relative overflow-hidden pt-32 pb-20 sm:pt-40 sm:pb-28">
+<section class="hero relative overflow-hidden pt-32 pb-20 sm:pt-40 sm:pb-28 lg:flex lg:min-h-[100svh] lg:items-center lg:pt-24 lg:pb-10">
   <div class="bg-grid pointer-events-none absolute inset-0" aria-hidden="true"></div>
   <div
     class="pointer-events-none absolute top-24 left-1/2 h-[480px] w-[720px] -translate-x-1/2 rounded-full opacity-60 blur-3xl"
@@ -15,7 +16,7 @@ const stats = c.stats.items;
   >
   </div>
 
-  <div class="container-x relative grid items-center gap-14 lg:grid-cols-[1.15fr_0.85fr]">
+  <div class="container-x relative grid w-full items-center gap-14 lg:grid-cols-[1.2fr_0.8fr] lg:gap-10">
     <div>
       {
         hero.available && (
@@ -29,20 +30,20 @@ const stats = c.stats.items;
         )
       }
 
-      <h1 class="mt-6 text-4xl leading-[1.1] font-extrabold tracking-tight sm:text-5xl lg:text-6xl">
+      <h1 class="hero-title mt-6 text-4xl leading-[1.1] font-extrabold tracking-tight sm:text-5xl lg:mt-5 lg:text-6xl">
         <span class="block text-xl font-medium text-muted sm:text-2xl">{hero.greeting}</span>
         <span class="text-gradient">{hero.name}</span>
       </h1>
 
-      <p class="mt-5 flex min-h-8 flex-wrap items-center gap-x-2 font-mono text-lg text-fg sm:text-xl">
+      <p class="mt-5 flex min-h-8 flex-wrap items-center gap-x-2 font-mono text-lg text-fg sm:text-xl lg:mt-4">
         <span class="text-accent">&gt;</span>
         <span data-typing={JSON.stringify(hero.roles)} class="caret">{hero.roles[0]}</span>
       </p>
       <ul class="sr-only">{hero.roles.map((r) => <li>{r}</li>)}</ul>
 
-      <p class="mt-6 max-w-xl text-base leading-relaxed text-muted sm:text-lg">{hero.intro}</p>
+      <p class="hero-intro mt-6 max-w-xl text-base leading-relaxed text-muted sm:text-lg lg:mt-5 lg:text-[17px]">{hero.intro}</p>
 
-      <div class="mt-8 flex flex-wrap gap-3">
+      <div class="mt-8 flex flex-wrap gap-3 lg:mt-7">
         {
           site.cvUrl ? (
             <a href={site.cvUrl} class="btn-primary px-6 py-3" download>
@@ -59,7 +60,7 @@ const stats = c.stats.items;
         </button>
       </div>
 
-      <dl class="mt-12 grid max-w-lg grid-cols-3 gap-4 border-t border-line pt-8">
+      <dl class="hero-stats mt-12 grid max-w-lg grid-cols-3 gap-4 border-t border-line pt-8 lg:mt-8 lg:pt-6">
         {
           stats.map((s) => (
             <div>
@@ -75,40 +76,16 @@ const stats = c.stats.items;
       </dl>
     </div>
 
-    <div class="relative mx-auto w-full max-w-sm lg:max-w-md">
-      <div class="absolute -inset-4 rounded-[2.5rem] border border-dashed border-line" aria-hidden="true"></div>
-      <div class="card relative aspect-[4/5] overflow-hidden rounded-[2rem] p-0">
-        {
-          hero.photo ? (
-            <img src={hero.photo} alt={hero.name} class="h-full w-full object-cover" width="480" height="600" fetchpriority="high" />
-          ) : (
-            <div class="relative grid h-full place-items-center bg-surface-2">
-              <div class="bg-grid absolute inset-0" />
-              <div class="relative text-center">
-                <span class="mx-auto grid h-28 w-28 place-items-center rounded-3xl bg-accent font-mono text-4xl font-bold text-accent-contrast shadow-[0_20px_50px_-12px_var(--glow)]">
-                  MF
-                </span>
-                <p class="mt-5 font-mono text-xs text-muted">// your photo goes here</p>
-              </div>
-            </div>
-          )
-        }
-      </div>
-
-      <div class="card float absolute top-10 -left-6 hidden items-center gap-3 px-4 py-3 sm:flex">
-        <span class="grid h-9 w-9 place-items-center rounded-xl bg-accent-soft text-accent"><Icon name="sheet" size={18} /></span>
-        <div class="text-left">
-          <p class="text-xs font-bold">Apps Script</p>
-          <p class="font-mono text-[11px] text-muted">automation.run()</p>
-        </div>
-      </div>
-      <div class="card float absolute -right-5 bottom-12 hidden items-center gap-3 px-4 py-3 sm:flex" style="animation-delay:-3s">
-        <span class="grid h-9 w-9 place-items-center rounded-xl bg-accent-soft text-accent"><Icon name="award" size={18} /></span>
-        <div class="text-left">
-          <p class="text-xs font-bold">Fiverr Level 1</p>
-          <p class="text-[11px] text-muted">★★★★★ rated</p>
-        </div>
-      </div>
-    </div>
+    <HeroPhoto />
   </div>
 </section>
+
+<style>
+  /* The photo column (size + alignment) lives in HeroPhoto.astro. */
+  /* Short laptop screens (e.g. 1366×768): tighten type a little more. */
+  @media (min-width: 1024px) and (max-height: 820px) {
+    .hero-title { font-size: 3.25rem; }
+    .hero-intro { font-size: 1rem; line-height: 1.65; }
+    .hero-stats { margin-top: 1.5rem; padding-top: 1.25rem; }
+  }
+</style>

@@ -1,8 +1,31 @@
 ---
 import SectionHeader from '@/components/SectionHeader.astro';
 import { getContent } from '@/lib/content';
-const tools = (await getContent()).tools.items;
-const row = [...tools, ...tools];
+const tools = (await getContent()).tools.items as { name: string; group: string; color: string; short: string; logo?: string }[];
+
+/**
+ * Built-in official logos (public/tools/) matched by tool name, so known tools
+ * show their real logo even when no logo was uploaded in Admin → Home page → Toolkit.
+ * An uploaded logo always wins; unknown tools fall back to the coloured letter badge.
+ * Order matters: "WordPress" must be checked before "Word".
+ */
+const builtIn: [RegExp, string][] = [
+  [/wordpress/i, '/tools/wordpress.svg'],
+  [/excel/i, '/tools/excel.svg'],
+  [/sheets/i, '/tools/google-sheets.svg'],
+  [/apps\s*script/i, '/tools/apps-script.svg'],
+  [/\bword\b/i, '/tools/word.svg'],
+  [/power\s*point/i, '/tools/powerpoint.svg'],
+  [/tally/i, '/tools/tally.png'],
+  [/elementor/i, '/tools/elementor.svg'],
+  [/claude/i, '/tools/claude.svg'],
+  [/chat\s*gpt|openai/i, '/tools/chatgpt.svg'],
+  [/ai\s*studio|gemini/i, '/tools/google-ai-studio.svg'],
+  [/notebook\s*lm/i, '/tools/notebooklm.svg'],
+];
+const logoFor = (t: { name: string; logo?: string }) => t.logo || builtIn.find(([re]) => re.test(t.name))?.[1] || '';
+
+const row = [...tools, ...tools].map((t) => ({ ...t, logoSrc: logoFor(t) }));
 ---
 
 <section class="section border-y border-line bg-bg-soft">
@@ -18,14 +41,20 @@ const row = [...tools, ...tools];
   <div class="relative mt-12 overflow-hidden [mask-image:linear-gradient(to_right,transparent,#000_10%,#000_90%,transparent)]">
     <ul class="marquee flex w-max gap-4">
       {
-        row.map((t) => (
-          <li class="card flex shrink-0 items-center gap-3 px-5 py-3.5">
-            <span
-              class="grid h-9 w-9 place-items-center rounded-lg font-mono text-xs font-bold text-white"
-              style={`background:${t.color}`}
-            >
-              {t.short}
-            </span>
+        row.map((t, i) => (
+          <li class="card flex shrink-0 items-center gap-3 px-5 py-3.5" aria-hidden={i >= tools.length ? 'true' : undefined}>
+            {t.logoSrc ? (
+              <span class="tool-logo grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-white p-1.5">
+                <img src={t.logoSrc} alt={`${t.name} logo`} width="24" height="24" loading="lazy" decoding="async" class="h-full w-full object-contain" />
+              </span>
+            ) : (
+              <span
+                class="grid h-9 w-9 shrink-0 place-items-center rounded-lg font-mono text-xs font-bold text-white"
+                style={`background:${t.color}`}
+              >
+                {t.short}
+              </span>
+            )}
             <span>
               <span class="block text-sm font-semibold whitespace-nowrap">{t.name}</span>
               <span class="block font-mono text-[11px] text-muted">{t.group}</span>
@@ -36,3 +65,10 @@ const row = [...tools, ...tools];
     </ul>
   </div>
 </section>
+
+<style>
+  /* White tile keeps every brand logo (colour or black) readable in light and dark mode. */
+  .tool-logo {
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.06), 0 2px 6px -2px rgba(0, 0, 0, 0.25);
+  }
+</style>

@@ -7,7 +7,7 @@ import FloatingActions from '@/components/layout/FloatingActions.astro';
 import Icon from '@/components/Icon.astro';
 import ConsultationForm from '@/components/islands/ConsultationForm';
 import CartPanel from '@/components/islands/CartPanel';
-import { getContent } from '@/lib/content';
+import { getContent, paletteFonts, paletteOf, paletteThemeColor } from '@/lib/content';
 
 interface Props {
   title?: string;
@@ -16,7 +16,9 @@ interface Props {
   image?: string | null;
   type?: 'website' | 'article' | 'book';
 }
-const { general: site, consultation } = await getContent();
+const { general: site, consultation, appearance } = await getContent();
+const palette = paletteOf(appearance.theme);
+const paletteFont = paletteFonts[palette];
 const { title, description = site.description, noindex = false, image, type = 'website' } = Astro.props;
 const ogImage = new URL(image || '/og-default.png', Astro.site).href;
 const fullTitle = title ? `${title} | ${site.name}` : `${site.name} | ${site.tagline}`;
@@ -24,7 +26,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
 ---
 
 <!doctype html>
-<html lang="en" data-theme="dark">
+<html lang="en" data-theme="dark" data-palette={palette}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -33,7 +35,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     <link rel="canonical" href={canonical} />
     {noindex && <meta name="robots" content="noindex" />}
     <link rel="icon" href={site.faviconUrl || '/favicon.svg'} />
-    <meta name="theme-color" content="#07100b" />
+    <meta name="theme-color" content={paletteThemeColor[palette]} />
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta property="og:type" content={type === 'book' ? 'book' : type} />
@@ -52,6 +54,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Hind+Siliguri:wght@400;500;600&display=swap"
     />
+    {paletteFont && <link rel="stylesheet" href={paletteFont} />}
 
     <script is:inline>
       (() => {

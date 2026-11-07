@@ -48,6 +48,7 @@ export function SettingsEditor({ page }: { page: SettingsPage }) {
     setSaving(false);
     if (error) return toast(error.message, false);
     setSaved(JSON.stringify(value));
+    if (page.key === 'appearance') document.documentElement.dataset.palette = String(value.theme ?? 'classic');
     toast('Saved');
   }
 

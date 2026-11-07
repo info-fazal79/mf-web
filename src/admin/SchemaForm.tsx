@@ -5,18 +5,23 @@ export type Field =
   | { key: string; label: string; type: 'text' | 'url' | 'email' | 'textarea' | 'color' | 'number'; help?: string; placeholder?: string; wide?: boolean }
   | { key: string; label: string; type: 'image' | 'file'; help?: string; wide?: boolean }
   | { key: string; label: string; type: 'toggle'; help?: string; wide?: boolean }
+  | { key: string; label: string; type: 'range'; min: number; max: number; step?: number; unit?: string; help?: string; wide?: boolean }
   | { key: string; label: string; type: 'tags'; help?: string; wide?: boolean }
-  | { key: string; label: string; type: 'select'; options: string[]; help?: string; wide?: boolean }
+  | { key: string; label: string; type: 'select'; options: (string | { value: string; label: string })[]; help?: string; wide?: boolean }
   | { key: string; label: string; type: 'textlist'; help?: string; wide?: boolean }
   | { key: string; label: string; type: 'list'; fields: Field[]; itemLabel: string; help?: string; wide?: boolean };
 
 type Obj = Record<string, unknown>;
 
+type Opt = string | { value: string; label: string };
+const optValue = (o: Opt) => (typeof o === 'string' ? o : o.value);
+const optLabel = (o: Opt) => (typeof o === 'string' ? o : o.label);
+
 function blankFor(fields: Field[]): Obj {
   const o: Obj = {};
   for (const f of fields) {
     o[f.key] =
-      f.type === 'toggle' ? false : f.type === 'number' ? 0 : f.type === 'tags' || f.type === 'list' || f.type === 'textlist' ? [] : f.type === 'select' ? f.options[0] : '';
+      f.type === 'toggle' ? false : f.type === 'number' ? 0 : f.type === 'range' ? f.min : f.type === 'tags' || f.type === 'list' || f.type === 'textlist' ? [] : f.type === 'select' ? optValue(f.options[0]) : '';
   }
   return o;
 }
@@ -114,6 +119,11 @@ export function SchemaForm({ fields, value, onChange }: { fields: Field[]; value
               <textarea id={id} value={String(v ?? '')} rows={4} onChange={(e) => set(f.key, e.target.value)} className="input resize-y" placeholder={f.placeholder} />
             ) : f.type === 'number' ? (
               <input id={id} type="number" step="any" value={Number(v ?? 0)} onChange={(e) => set(f.key, e.target.valueAsNumber || 0)} className="input" />
+            ) : f.type === 'range' ? (
+              <div className="flex items-center gap-3">
+                <input id={id} type="range" min={f.min} max={f.max} step={f.step ?? 1} value={Number(v ?? f.min)} onChange={(e) => set(f.key, e.target.valueAsNumber)} className="flex-1 accent-[var(--accent)]" />
+                <span className="w-16 rounded-lg border border-line bg-surface-2 px-2 py-1.5 text-center font-mono text-xs">{Number(v ?? f.min)}{f.unit ?? ''}</span>
+              </div>
             ) : f.type === 'color' ? (
               <div className="flex gap-2">
                 <input type="color" value={String(v || '#000000')} onChange={(e) => set(f.key, e.target.value)} className="h-11 w-14 cursor-pointer rounded-lg border border-line bg-surface-2" />
@@ -130,7 +140,7 @@ export function SchemaForm({ fields, value, onChange }: { fields: Field[]; value
             ) : f.type === 'select' ? (
               <select id={id} value={String(v ?? '')} onChange={(e) => set(f.key, e.target.value)} className="input">
                 {f.options.map((o) => (
-                  <option key={o}>{o}</option>
+                  <option key={optValue(o)} value={optValue(o)}>{optLabel(o)}</option>
                 ))}
               </select>
             ) : f.type === 'textlist' ? (
