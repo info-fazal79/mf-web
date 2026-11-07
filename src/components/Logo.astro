@@ -1,0 +1,53 @@
+---
+import { getContent } from '@/lib/content';
+interface Props {
+  class?: string;
+}
+const { class: cls = '' } = Astro.props;
+const { general, header: h } = await getContent();
+
+// Admin → Home page → Header. Empty fields fall back to General settings.
+const name = h.name || general.name;
+const logoUrl = h.logoUrl || general.logoUrl;
+// Optional light-mode logo: both images are rendered and CSS shows the right one.
+const logoLight = logoUrl ? h.logoUrlLight : '';
+const initials = h.initials || general.shortName;
+const size = Math.min(80, Math.max(12, Number(h.logoSize) || 36));
+---
+
+<a href="/" class={`group inline-flex items-center gap-2.5 ${cls}`} aria-label={`${name}, home`}>
+  {logoUrl ? (
+    <>
+      <img
+        src={logoUrl}
+        alt={h.showText ? '' : name}
+        class:list={['w-auto max-w-[260px] object-contain', logoLight && 'logo-dark-only']}
+        style={`height:${size}px`}
+        height={size}
+      />
+      {logoLight && (
+        <img
+          src={logoLight}
+          alt={h.showText ? '' : name}
+          class="logo-light-only w-auto max-w-[260px] object-contain"
+          style={`height:${size}px`}
+          height={size}
+        />
+      )}
+    </>
+  ) : (
+  <span
+    class="relative grid shrink-0 place-items-center rounded-xl bg-accent font-mono font-bold text-accent-contrast shadow-[0_6px_18px_-6px_var(--glow)] transition-transform group-hover:rotate-[-6deg]"
+    style={`width:${size}px;height:${size}px;font-size:${Math.round(size * 0.39)}px`}
+  >
+    {initials}
+    <span class="absolute -right-0.5 -bottom-0.5 h-2.5 w-2.5 rounded-full border-2 border-bg bg-lime-400 logo-dot"></span>
+  </span>
+  )}
+  {h.showText && (
+  <span class="leading-tight whitespace-nowrap">
+    <span class="block text-[15px] font-bold tracking-tight">{name}</span>
+    {h.subtitle && <span class="block font-mono text-[10.5px] text-muted lg:hidden xl:block">{h.subtitle}</span>}
+  </span>
+  )}
+</a>

@@ -1,0 +1,15 @@
+---
+interface Props {
+  eyebrow: string;
+  title: string;
+  sub?: string;
+  center?: boolean;
+}
+const { eyebrow, title, sub, center = false } = Astro.props;
+---
+
+<div class:list={['reveal', center && 'mx-auto text-center']}>
+  <span class="eyebrow"><span class="opacity-60">//</span> {eyebrow}</span>
+  <h2 class:list={['section-title mt-4', center && 'mx-auto max-w-3xl']} set:html={title} />
+  {sub && <p class:list={['section-sub', center && 'mx-auto']}>{sub}</p>}
+</div>

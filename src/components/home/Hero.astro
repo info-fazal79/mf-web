@@ -1,0 +1,91 @@
+---
+import Icon from '@/components/Icon.astro';
+import HeroPhoto from '@/components/home/HeroPhoto.astro';
+import { getContent } from '@/lib/content';
+const c = await getContent();
+const { hero, general: site } = c;
+const stats = c.stats.items;
+---
+
+<section class="hero relative overflow-hidden pt-32 pb-20 sm:pt-40 sm:pb-28 lg:flex lg:min-h-[100svh] lg:items-center lg:pt-24 lg:pb-10">
+  <div class="bg-grid pointer-events-none absolute inset-0" aria-hidden="true"></div>
+  <div
+    class="pointer-events-none absolute top-24 left-1/2 h-[480px] w-[720px] -translate-x-1/2 rounded-full opacity-60 blur-3xl"
+    style="background: radial-gradient(closest-side, var(--glow), transparent)"
+    aria-hidden="true"
+  >
+  </div>
+
+  <div class="container-x relative grid w-full items-center gap-14 lg:grid-cols-[1.2fr_0.8fr] lg:gap-10">
+    <div>
+      {
+        hero.available && (
+          <span class="eyebrow">
+            <span class="relative flex h-2 w-2">
+              <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent opacity-60" />
+              <span class="relative inline-flex h-2 w-2 rounded-full bg-accent" />
+            </span>
+            Available for new projects
+          </span>
+        )
+      }
+
+      <h1 class="hero-title mt-6 text-4xl leading-[1.1] font-extrabold tracking-tight sm:text-5xl lg:mt-5 lg:text-6xl">
+        <span class="block text-xl font-medium text-muted sm:text-2xl">{hero.greeting}</span>
+        <span class="text-gradient">{hero.name}</span>
+      </h1>
+
+      <p class="mt-5 flex min-h-8 flex-wrap items-center gap-x-2 font-mono text-lg text-fg sm:text-xl lg:mt-4">
+        <span class="text-accent">&gt;</span>
+        <span data-typing={JSON.stringify(hero.roles)} class="caret">{hero.roles[0]}</span>
+      </p>
+      <ul class="sr-only">{hero.roles.map((r) => <li>{r}</li>)}</ul>
+
+      <p class="hero-intro mt-6 max-w-xl text-base leading-relaxed text-muted sm:text-lg lg:mt-5 lg:text-[17px]">{hero.intro}</p>
+
+      <div class="mt-8 flex flex-wrap gap-3 lg:mt-7">
+        {
+          site.cvUrl ? (
+            <a href={site.cvUrl} class="btn-primary px-6 py-3" download>
+              <Icon name="download" size={17} /> Download CV
+            </a>
+          ) : (
+            <span class="btn-primary cursor-not-allowed px-6 py-3 opacity-70" title="Upload your public CV from the admin panel">
+              <Icon name="download" size={17} /> Download CV
+            </span>
+          )
+        }
+        <button type="button" data-open="consult" class="btn-ghost px-6 py-3">
+          <Icon name="calendar" size={17} /> Book a Call
+        </button>
+      </div>
+
+      <dl class="hero-stats mt-12 grid max-w-lg grid-cols-3 gap-4 border-t border-line pt-8 lg:mt-8 lg:pt-6">
+        {
+          stats.map((s) => (
+            <div>
+              <dt class="sr-only">{s.label}</dt>
+              <dd class="text-3xl font-extrabold tracking-tight sm:text-4xl">
+                <span data-count={s.value}>{s.value}</span>
+                <span class="text-accent">{s.suffix}</span>
+              </dd>
+              <dd class="mt-1 text-xs leading-snug text-muted sm:text-sm">{s.label}</dd>
+            </div>
+          ))
+        }
+      </dl>
+    </div>
+
+    <HeroPhoto />
+  </div>
+</section>
+
+<style>
+  /* The photo column (size + alignment) lives in HeroPhoto.astro. */
+  /* Short laptop screens (e.g. 1366×768): tighten type a little more. */
+  @media (min-width: 1024px) and (max-height: 820px) {
+    .hero-title { font-size: 3.25rem; }
+    .hero-intro { font-size: 1rem; line-height: 1.65; }
+    .hero-stats { margin-top: 1.5rem; padding-top: 1.25rem; }
+  }
+</style>

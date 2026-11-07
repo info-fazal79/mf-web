@@ -1,0 +1,499 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* ---------- Design tokens ---------- */
+:root {
+  --bg: #f6faf7;
+  --bg-soft: #edf5ef;
+  --surface: #ffffff;
+  --surface-2: #f2f7f3;
+  --border: #dbe7de;
+  --text: #0c1a12;
+  --muted: #536b5c;
+  --accent: #059b5f;
+  --accent-strong: #047a4b;
+  --accent-soft: #d6f5e5;
+  --accent-contrast: #ffffff;
+  --grid-line: rgba(5, 155, 95, 0.09);
+  --glow: rgba(16, 185, 129, 0.22);
+  --shadow: 0 1px 2px rgba(12, 26, 18, 0.05), 0 8px 24px -12px rgba(12, 26, 18, 0.12);
+}
+
+[data-theme="dark"] {
+  --bg: #07100b;
+  --bg-soft: #0a1710;
+  --surface: #0d1b13;
+  --surface-2: #112218;
+  --border: #1c3326;
+  --text: #e7f5ec;
+  --muted: #8eab98;
+  --accent: #22d38a;
+  --accent-strong: #4ae3a2;
+  --accent-soft: rgba(34, 211, 138, 0.12);
+  --accent-contrast: #04140b;
+  --grid-line: rgba(34, 211, 138, 0.07);
+  --glow: rgba(34, 211, 138, 0.18);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 32px -16px rgba(0, 0, 0, 0.6);
+}
+
+/* ---------- Palette: Black & White (developer mode) ----------
+   Chosen in Admin → Settings → Theme. Sets data-palette="mono" on <html>.
+   Works with both the light and dark mode toggle. */
+:root[data-palette="mono"] {
+  --bg: #ffffff;
+  --bg-soft: #f5f5f5;
+  --surface: #ffffff;
+  --surface-2: #f3f3f3;
+  --border: #e0e0e0;
+  --text: #0a0a0a;
+  --muted: #666666;
+  --accent: #0a0a0a;
+  --accent-strong: #333333;
+  --accent-soft: rgba(0, 0, 0, 0.06);
+  --accent-contrast: #ffffff;
+  --grid-line: rgba(0, 0, 0, 0.06);
+  --glow: rgba(0, 0, 0, 0.18);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.05), 0 8px 24px -12px rgba(0, 0, 0, 0.14);
+}
+:root[data-palette="mono"][data-theme="dark"] {
+  --bg: #000000;
+  --bg-soft: #070707;
+  --surface: #0c0c0c;
+  --surface-2: #141414;
+  --border: #262626;
+  --text: #f2f2f2;
+  --muted: #8c8c8c;
+  --accent: #ffffff;
+  --accent-strong: #d4d4d4;
+  --accent-soft: rgba(255, 255, 255, 0.08);
+  --accent-contrast: #000000;
+  --grid-line: rgba(255, 255, 255, 0.055);
+  --glow: rgba(255, 255, 255, 0.12);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.6), 0 12px 32px -16px rgba(0, 0, 0, 0.8);
+}
+/* Photos, videos and brand colours (tool badges, WhatsApp, bKash…) keep their
+   real colours. Only theme elements that hard-code green are switched here. */
+:root[data-palette="mono"] .logo-dot {
+  background: var(--accent);
+}
+:root[data-palette="mono"] .cover-fallback {
+  background-image: linear-gradient(135deg, #3a3a3a 0%, #161616 55%, #000000 100%);
+}
+/* Developer look: monospace type everywhere (Bangla falls back to Hind Siliguri). */
+:root[data-palette="mono"] body,
+:root[data-palette="mono"] .font-sans {
+  font-family: "JetBrains Mono", "Hind Siliguri", ui-monospace, SFMono-Regular, monospace;
+  letter-spacing: -0.01em;
+}
+:root[data-palette="mono"] .text-gradient {
+  background-image: linear-gradient(120deg, var(--text) 0%, var(--text) 55%, var(--muted) 100%);
+}
+
+/* ---------- Palette: Ink & Indigo (developer pro) ----------
+   Neutral ink surfaces, Geist type, one restrained indigo accent, silver
+   headings and monochrome primary buttons (Linear / Vercel style). */
+:root[data-palette="ink"] {
+  --bg: #fcfcfd;
+  --bg-soft: #f6f6f8;
+  --surface: #ffffff;
+  --surface-2: #f4f4f6;
+  --border: #e4e4e9;
+  --text: #0e0e11;
+  --muted: #62626d;
+  --accent: #4b55d6;
+  --accent-strong: #3a43b8;
+  --accent-soft: rgba(75, 85, 214, 0.08);
+  --accent-contrast: #ffffff;
+  --grid-line: rgba(14, 14, 17, 0.035);
+  --glow: rgba(75, 85, 214, 0.1);
+  --shadow: 0 1px 2px rgba(14, 14, 17, 0.04), 0 10px 30px -18px rgba(14, 14, 17, 0.18);
+}
+:root[data-palette="ink"][data-theme="dark"] {
+  --bg: #09090b;
+  --bg-soft: #0c0c0f;
+  --surface: #111114;
+  --surface-2: #17171b;
+  --border: #232329;
+  --text: #ededf0;
+  --muted: #8c8c97;
+  --accent: #8b95ff;
+  --accent-strong: #aab2ff;
+  --accent-soft: rgba(139, 149, 255, 0.1);
+  --accent-contrast: #0b0b16;
+  --grid-line: rgba(255, 255, 255, 0.028);
+  --glow: rgba(139, 149, 255, 0.09);
+  --shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 16px 40px -24px rgba(0, 0, 0, 0.9);
+}
+:root:is([data-palette="ink"], [data-palette="forest"]) body,
+:root:is([data-palette="ink"], [data-palette="forest"]) .font-sans {
+  font-family: "Geist", "Hind Siliguri", ui-sans-serif, system-ui, sans-serif;
+  font-feature-settings: "ss01", "cv11";
+}
+:root:is([data-palette="ink"], [data-palette="forest"]) .font-mono,
+:root:is([data-palette="ink"], [data-palette="forest"]) code,
+:root:is([data-palette="ink"], [data-palette="forest"]) pre {
+  font-family: "Geist Mono", ui-monospace, SFMono-Regular, monospace;
+}
+/* Highlighted words: soft indigo → lavender instead of neon green → lime.
+   The hero name gets a silver gradient (the classic developer-site look). */
+:root[data-palette="ink"] .text-gradient {
+  background-image: linear-gradient(110deg, var(--accent) 0%, color-mix(in srgb, var(--accent-strong) 70%, #e9d5ff) 100%);
+}
+:root:is([data-palette="ink"], [data-palette="forest"]) .hero-title .text-gradient {
+  background-image: linear-gradient(180deg, var(--text) 30%, color-mix(in srgb, var(--text) 55%, var(--muted)) 100%);
+}
+/* Monochrome primary buttons; indigo stays for links, active states, icons. */
+:root[data-palette="ink"] .btn-primary {
+  background: var(--text);
+  color: var(--bg);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.12) inset, 0 8px 24px -14px rgba(0, 0, 0, 0.6);
+}
+:root[data-palette="ink"] .btn-primary:hover {
+  background: color-mix(in srgb, var(--text) 86%, var(--bg));
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.12) inset, 0 12px 28px -14px rgba(0, 0, 0, 0.7);
+}
+:root:is([data-palette="ink"], [data-palette="forest"]) .btn-ghost:hover {
+  border-color: color-mix(in srgb, var(--text) 30%, var(--border));
+  color: var(--text);
+}
+:root:is([data-palette="ink"], [data-palette="forest"]) .card-hover:hover {
+  border-color: color-mix(in srgb, var(--text) 18%, var(--border));
+}
+:root:is([data-palette="ink"], [data-palette="forest"]) .eyebrow {
+  color: var(--muted);
+}
+:root:is([data-palette="ink"], [data-palette="forest"]) .logo-dot {
+  background: var(--accent);
+}
+:root[data-palette="ink"] .cover-fallback {
+  background-image: linear-gradient(140deg, #2a2f6b 0%, #15172f 55%, #09090b 100%);
+}
+
+/* ---------- Palette: Forest Pro (professional green) ----------
+   Keeps the brand green but drops the "AI template" tells: no neon/lime
+   gradients, no glows, near-neutral graphite surfaces with only a hint of
+   green, Geist type, silver hero name, a calm jade accent and flat buttons.
+   Shares type, hovers and hero styling with Ink & Indigo (rules above). */
+:root[data-palette="forest"] {
+  --bg: #fafbfa;
+  --bg-soft: #f3f5f4;
+  --surface: #ffffff;
+  --surface-2: #f2f4f3;
+  --border: #e1e6e3;
+  --text: #0d1411;
+  --muted: #5d6b64;
+  --accent: #0f7f58;
+  --accent-strong: #0b6646;
+  --accent-soft: rgba(15, 127, 88, 0.08);
+  --accent-contrast: #ffffff;
+  --grid-line: rgba(13, 20, 17, 0.035);
+  --glow: rgba(15, 127, 88, 0.08);
+  --shadow: 0 1px 2px rgba(13, 20, 17, 0.04), 0 10px 30px -18px rgba(13, 20, 17, 0.18);
+}
+:root[data-palette="forest"][data-theme="dark"] {
+  --bg: #0a0c0b;
+  --bg-soft: #0d100f;
+  --surface: #121614;
+  --surface-2: #171c19;
+  --border: #232a26;
+  --text: #e9eeeb;
+  --muted: #8b9690;
+  --accent: #3ec48d;
+  --accent-strong: #6ad7a8;
+  --accent-soft: rgba(62, 196, 141, 0.1);
+  --accent-contrast: #03130c;
+  --grid-line: rgba(255, 255, 255, 0.028);
+  --glow: rgba(62, 196, 141, 0.07);
+  --shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 16px 40px -24px rgba(0, 0, 0, 0.9);
+}
+/* Highlighted words: one calm green (no lime, no rainbow). */
+:root[data-palette="forest"] .text-gradient {
+  background-image: linear-gradient(110deg, var(--accent) 0%, var(--accent-strong) 100%);
+}
+/* Flat green primary button: no glow, a fine inner highlight instead. */
+:root[data-palette="forest"] .btn-primary {
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.18) inset, 0 6px 18px -12px rgba(0, 0, 0, 0.55);
+}
+:root[data-palette="forest"] .btn-primary:hover {
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.18) inset, 0 10px 24px -12px rgba(0, 0, 0, 0.6);
+}
+:root[data-palette="forest"] .cover-fallback {
+  background-image: linear-gradient(140deg, #1f5a43 0%, #10291f 55%, #0a0c0b 100%);
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-bg-soft: var(--bg-soft);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--border);
+  --color-fg: var(--text);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-contrast: var(--accent-contrast);
+  --font-sans: "Inter", "Hind Siliguri", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  --shadow-card: var(--shadow);
+}
+
+/* ---------- Header bar in light mode ----------
+   A clearly visible bar (not blended into the page): a soft tint of the
+   theme's accent, a tinted hairline and a gentle shadow. Built from tokens,
+   so every palette gets its own tint. Dark mode keeps the glass header. */
+:root:not([data-theme="dark"]) #site-header,
+:root:not([data-theme="dark"]) #site-header.is-scrolled {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--accent) 16%, var(--surface)) 0%, color-mix(in srgb, var(--accent) 10%, var(--surface)) 100%);
+  backdrop-filter: blur(14px) saturate(1.4);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
+  border-bottom: 1px solid color-mix(in srgb, var(--accent) 22%, var(--border));
+  box-shadow: 0 8px 28px -20px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+/* ---------- Logo per light / dark mode (Admin → Home page → Header) ---------- */
+:root:not([data-theme="dark"]) .logo-dark-only,
+:root[data-theme="dark"] .logo-light-only {
+  display: none;
+}
+
+/* ---------- Base ---------- */
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+::selection {
+  background: var(--accent);
+  color: var(--accent-contrast);
+}
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+body.no-scroll {
+  overflow: hidden;
+}
+
+/* ---------- Utilities ---------- */
+@utility container-x {
+  width: 100%;
+  max-width: 1200px;
+  margin-inline: auto;
+  padding-inline: 1rem;
+  @media (min-width: 640px) {
+    padding-inline: 1.5rem;
+  }
+}
+
+@utility bg-grid {
+  background-image:
+    linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
+  background-size: 22px 22px;
+  mask-image: radial-gradient(ellipse 80% 70% at 50% 40%, #000 40%, transparent 100%);
+}
+
+@utility text-gradient {
+  background: linear-gradient(120deg, var(--accent) 0%, #34d399 50%, #a3e635 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@layer components {
+  .btn,
+  .btn-primary,
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold transition-all duration-200 select-none;
+  }
+  .btn-primary {
+    @apply bg-accent text-accent-contrast hover:bg-accent-strong;
+    box-shadow: 0 6px 20px -8px var(--glow);
+  }
+  .btn-primary:hover {
+    box-shadow: 0 10px 28px -8px var(--glow);
+    transform: translateY(-1px);
+  }
+  .btn-ghost {
+    @apply border border-line bg-surface text-fg hover:border-accent hover:text-accent;
+  }
+  .card {
+    @apply rounded-2xl border border-line bg-surface;
+    box-shadow: var(--shadow);
+  }
+  .card-hover {
+    @apply transition-all duration-300;
+  }
+  .card-hover:hover {
+    border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+    transform: translateY(-3px);
+  }
+  .eyebrow {
+    @apply inline-flex items-center gap-2 rounded-full border border-line bg-surface px-3 py-1 font-mono text-xs font-medium text-accent;
+  }
+  .section {
+    @apply py-20 sm:py-24;
+  }
+  .section-title {
+    @apply text-3xl font-bold tracking-tight sm:text-4xl;
+  }
+  .section-sub {
+    @apply mt-3 max-w-2xl text-base text-muted sm:text-lg;
+  }
+  .input {
+    @apply w-full rounded-xl border border-line bg-surface-2 px-3.5 py-2.5 text-sm text-fg placeholder:text-muted/70 transition focus:border-accent focus:outline-none;
+  }
+  .label {
+    @apply mb-1.5 block text-xs font-semibold tracking-wide text-muted uppercase;
+  }
+}
+
+/* ---------- Article typography ---------- */
+.prose {
+  font-size: 1.0625rem;
+  line-height: 1.8;
+  color: color-mix(in srgb, var(--text) 88%, var(--muted));
+  overflow-wrap: break-word;
+}
+.prose > * + * { margin-top: 1.25em; }
+.prose h2, .prose h3, .prose h4 {
+  position: relative;
+  color: var(--text);
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  line-height: 1.3;
+  scroll-margin-top: 6.5rem;
+}
+.prose h2 { margin-top: 2.2em; font-size: 1.6em; }
+.prose h3 { margin-top: 1.8em; font-size: 1.3em; }
+.prose h4 { margin-top: 1.5em; font-size: 1.1em; }
+.prose .anchor {
+  position: absolute;
+  left: -1.1em;
+  color: var(--accent);
+  opacity: 0;
+  text-decoration: none;
+  transition: opacity 0.2s;
+}
+.prose h2:hover .anchor, .prose h3:hover .anchor, .prose h4:hover .anchor { opacity: 1; }
+.prose a { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
+.prose a:hover { text-decoration-thickness: 2px; }
+.prose strong { color: var(--text); font-weight: 700; }
+.prose ul, .prose ol { padding-left: 1.4em; }
+.prose ul { list-style: disc; }
+.prose ol { list-style: decimal; }
+.prose li + li { margin-top: 0.4em; }
+.prose li::marker { color: var(--accent); }
+.prose blockquote {
+  border-left: 3px solid var(--accent);
+  background: var(--accent-soft);
+  border-radius: 0 0.75rem 0.75rem 0;
+  padding: 0.9em 1.2em;
+  color: var(--text);
+}
+.prose hr { border: 0; border-top: 1px dashed var(--border); margin: 2.5em 0; }
+.prose figure img { border-radius: 1rem; border: 1px solid var(--border); width: 100%; }
+.prose figcaption { margin-top: 0.6em; text-align: center; font-size: 0.85em; color: var(--muted); }
+.prose :not(pre) > code {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 0.4rem;
+  padding: 0.1em 0.4em;
+  color: var(--text);
+}
+.prose .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 0.75rem; }
+.prose table { width: 100%; border-collapse: collapse; font-size: 0.92em; }
+.prose th, .prose td { padding: 0.6em 0.9em; border-bottom: 1px solid var(--border); text-align: left; }
+.prose th { background: var(--surface-2); color: var(--text); font-weight: 600; }
+.prose tr:last-child td { border-bottom: 0; }
+
+/* Code blocks (Shiki dual theme) */
+.code-block {
+  position: relative;
+  border: 1px solid var(--border);
+  border-radius: 0.9rem;
+  overflow: hidden;
+}
+.code-block pre {
+  margin: 0;
+  padding: 1.1rem 1.2rem;
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  line-height: 1.7;
+}
+.shiki, .shiki span { color: var(--shiki-light); background-color: var(--shiki-light-bg); }
+[data-theme="dark"] .shiki, [data-theme="dark"] .shiki span { color: var(--shiki-dark); background-color: var(--shiki-dark-bg); }
+.code-lang, .code-copy {
+  position: absolute;
+  top: 0.5rem;
+  z-index: 1;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  border-radius: 0.4rem;
+  padding: 0.15rem 0.5rem;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+.code-lang { right: 4.6rem; }
+.code-copy { right: 0.5rem; cursor: pointer; }
+.code-copy:hover { color: var(--accent); border-color: var(--accent); }
+
+/* ---------- Motion ---------- */
+.reveal {
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+.reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+.caret::after {
+  content: "";
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  margin-left: 3px;
+  vertical-align: -0.12em;
+  background: var(--accent);
+  animation: blink 1s steps(1) infinite;
+}
+@keyframes blink {
+  50% { opacity: 0; }
+}
+@keyframes marquee {
+  to { transform: translateX(-50%); }
+}
+.marquee {
+  animation: marquee 40s linear infinite;
+}
+.marquee:hover {
+  animation-play-state: paused;
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+.float {
+  animation: float 6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .reveal { opacity: 1; transform: none; transition: none; }
+  .marquee, .float, .caret::after { animation: none; }
+}

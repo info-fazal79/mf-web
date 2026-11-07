@@ -1,0 +1,48 @@
+---
+import Icon from '@/components/Icon.astro';
+import { excerptOf, formatDate, type Post } from '@/lib/blog';
+import { readingMinutes } from '@/lib/markdown';
+
+interface Props {
+  post: Post;
+  large?: boolean;
+}
+const { post, large = false } = Astro.props;
+const minutes = readingMinutes(post.content);
+---
+
+<article
+  class:list={['card card-hover group relative flex overflow-hidden', large ? 'flex-col md:grid md:grid-cols-[1.15fr_1fr]' : 'flex-col']}
+  data-post
+  data-category={post.category?.slug ?? ''}
+  data-tags={post.tags.join('|').toLowerCase()}
+  data-search={`${post.title} ${post.excerpt ?? ''} ${post.tags.join(' ')}`.toLowerCase()}
+>
+  <div class:list={['relative overflow-hidden border-line bg-surface-2', large ? 'aspect-[16/10] border-b md:aspect-auto md:border-r md:border-b-0' : 'aspect-[16/9] border-b']}>
+    {
+      post.cover_url ? (
+        <img src={post.cover_url} alt="" loading="lazy" decoding="async" class="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+      ) : (
+        <div class="relative grid h-full place-items-center">
+          <div class="bg-grid absolute inset-0" />
+          <span class="relative font-mono text-sm text-accent">{post.category?.name ?? 'Article'}</span>
+        </div>
+      )
+    }
+    {post.featured && <span class="absolute top-3 left-3 rounded-md bg-accent px-2 py-0.5 text-[11px] font-bold text-accent-contrast">Featured</span>}
+  </div>
+  <div class:list={['flex flex-1 flex-col', large ? 'p-6 sm:p-8' : 'p-5']}>
+    <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
+      {post.category && <span class="font-mono text-accent">{post.category.name}</span>}
+      <span>{formatDate(post.published_at)}</span>
+      <span class="inline-flex items-center gap-1"><Icon name="clock" size={12} /> {minutes} min read</span>
+    </div>
+    <h3 class:list={['mt-3 font-bold tracking-tight', large ? 'text-2xl sm:text-3xl' : 'text-lg']}>
+      <a href={`/blog/${post.slug}`} class="after:absolute after:inset-0">{post.title}</a>
+    </h3>
+    <p class:list={['mt-2 leading-relaxed text-muted', large ? '' : 'line-clamp-3 text-sm']}>{excerptOf(post, large ? 240 : 140)}</p>
+    <span class="mt-auto inline-flex items-center gap-1.5 pt-5 text-sm font-semibold text-accent">
+      Read article <Icon name="arrowRight" size={15} class="transition group-hover:translate-x-1" />
+    </span>
+  </div>
+</article>

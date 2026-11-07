@@ -1,0 +1,117 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import PageHero from '@/components/PageHero.astro';
+import PostCard from '@/components/blog/PostCard.astro';
+import Icon from '@/components/Icon.astro';
+import { getBlog } from '@/lib/blog';
+
+const { posts, categories } = await getBlog();
+const featured = posts.find((p) => p.featured) ?? posts[0];
+const rest = posts.filter((p) => p !== featured);
+const usedCats = categories.filter((c) => posts.some((p) => p.category?.slug === c.slug));
+const tagCounts = new Map<string, number>();
+for (const p of posts) for (const t of p.tags) tagCounts.set(t, (tagCounts.get(t) ?? 0) + 1);
+const tags = [...tagCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 15);
+---
+
+<BaseLayout title="Blog" description="Tips, tricks and deep-dives on Excel, Google Sheets, automation and building with AI.">
+  <PageHero eyebrow="blog" title="Notes on <span class='text-gradient'>automation & data</span>" sub="Tips, tricks and deep-dives on Excel, Google Sheets, Apps Script and building with AI." />
+
+  <section class="pb-24">
+    <div class="container-x">
+      {
+        posts.length === 0 ? (
+          <div class="card mx-auto max-w-xl p-10 text-center">
+            <span class="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-accent-soft text-accent"><Icon name="pen" size={24} /></span>
+            <h2 class="mt-5 text-xl font-bold">First articles coming soon</h2>
+            <p class="mt-2 text-muted">Subscribe in the footer to get notified when new posts go live.</p>
+          </div>
+        ) : (
+          <>
+            <div class="mb-8 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div class="flex flex-wrap gap-2" role="tablist" aria-label="Filter by category">
+                <button type="button" data-cat="" class="cat-btn is-active">All <span>{posts.length}</span></button>
+                {usedCats.map((c) => (
+                  <button type="button" data-cat={c.slug} class="cat-btn">
+                    {c.name} <span>{posts.filter((p) => p.category?.slug === c.slug).length}</span>
+                  </button>
+                ))}
+              </div>
+              <label class="relative block lg:w-72">
+                <span class="sr-only">Search articles</span>
+                <Icon name="search" size={16} class="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-muted" />
+                <input data-search-input type="search" placeholder="Search articles…" class="input pl-10" />
+              </label>
+            </div>
+
+            {tags.length > 0 && (
+              <div class="mb-8 flex flex-wrap items-center gap-2">
+                <span class="mr-1 text-xs font-semibold tracking-wide text-muted uppercase">Tags</span>
+                {tags.map(([t]) => (
+                  <button type="button" data-tag={t.toLowerCase()} class="tag-btn">#{t}</button>
+                ))}
+              </div>
+            )}
+
+            <div data-featured class="mb-6">{featured && <PostCard post={featured} large />}</div>
+            <div data-grid class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {rest.map((p) => <PostCard post={p} />)}
+            </div>
+            <p data-empty class="hidden py-16 text-center text-muted">No articles match your filters.</p>
+          </>
+        )
+      }
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .cat-btn, .tag-btn {
+    border-radius: 0.6rem;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--muted);
+    font-size: 0.8rem;
+    font-weight: 600;
+    transition: all 0.2s;
+  }
+  .cat-btn { padding: 0.45rem 0.85rem; }
+  .cat-btn span { opacity: 0.6; margin-left: 0.2rem; }
+  .tag-btn { padding: 0.25rem 0.6rem; font-family: var(--font-mono); font-weight: 500; }
+  .cat-btn:hover, .tag-btn:hover { color: var(--text); border-color: var(--accent); }
+  .cat-btn.is-active, .tag-btn.is-active { background: var(--accent); color: var(--accent-contrast); border-color: var(--accent); }
+</style>
+
+<script>
+  const cards = [...document.querySelectorAll<HTMLElement>('[data-post]')];
+  const empty = document.querySelector<HTMLElement>('[data-empty]');
+  const input = document.querySelector<HTMLInputElement>('[data-search-input]');
+  const params = new URLSearchParams(location.search);
+  let cat = params.get('category') ?? '';
+  let tag = (params.get('tag') ?? '').toLowerCase();
+  let q = params.get('q') ?? '';
+  if (input) input.value = q;
+
+  function apply() {
+    let shown = 0;
+    for (const c of cards) {
+      const ok =
+        (!cat || c.dataset.category === cat) &&
+        (!tag || (c.dataset.tags ?? '').split('|').includes(tag)) &&
+        (!q || (c.dataset.search ?? '').includes(q.toLowerCase()));
+      c.style.display = ok ? '' : 'none';
+      if (ok) shown++;
+    }
+    empty?.classList.toggle('hidden', shown > 0);
+    document.querySelectorAll<HTMLElement>('.cat-btn').forEach((b) => b.classList.toggle('is-active', b.dataset.cat === cat));
+    document.querySelectorAll<HTMLElement>('.tag-btn').forEach((b) => b.classList.toggle('is-active', b.dataset.tag === tag));
+    const u = new URL(location.href);
+    for (const [k, v] of [['category', cat], ['tag', tag], ['q', q]] as const) v ? u.searchParams.set(k, v) : u.searchParams.delete(k);
+    history.replaceState(null, '', u);
+  }
+
+  document.querySelectorAll<HTMLElement>('.cat-btn').forEach((b) => b.addEventListener('click', () => { cat = b.dataset.cat ?? ''; apply(); }));
+  document.querySelectorAll<HTMLElement>('.tag-btn').forEach((b) => b.addEventListener('click', () => { tag = tag === b.dataset.tag ? '' : (b.dataset.tag ?? ''); apply(); }));
+  input?.addEventListener('input', () => { q = input.value.trim(); apply(); });
+  if (cat || tag || q) apply();
+</script>

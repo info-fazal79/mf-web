@@ -1,0 +1,69 @@
+---
+import Icon from '@/components/Icon.astro';
+import SectionHeader from '@/components/SectionHeader.astro';
+
+const hubs = [
+  {
+    title: 'E-books',
+    text: 'Free and premium guides on Excel, Google Sheets, automation and productivity, with a beautiful online reader.',
+    href: '/ebooks',
+    icon: 'book',
+    cta: 'Browse library',
+  },
+  {
+    title: 'Tutorials',
+    text: 'Step-by-step video playlists for Excel, Word and PowerPoint. Track your progress as you learn.',
+    href: '/tutorials',
+    icon: 'play',
+    cta: 'Start learning',
+  },
+  {
+    title: 'Projects',
+    text: 'Websites, Google Sheets systems, Office templates and apps, each with a live preview.',
+    href: '/projects',
+    icon: 'layers',
+    cta: 'Explore work',
+  },
+  {
+    title: 'Blog',
+    text: 'Tips, tricks and deep-dives on automation, data and building with AI.',
+    href: '/blog',
+    icon: 'pen',
+    cta: 'Read articles',
+  },
+];
+---
+
+<section class="section">
+  <div class="container-x">
+    <SectionHeader
+      eyebrow="resources"
+      title="Discover everything <span class='text-gradient'>in one place</span>"
+      sub="Learn, explore and grab ready-made resources, all built from real-world experience."
+      center
+    />
+    <div class="mt-12 grid gap-5 sm:grid-cols-2">
+      {
+        hubs.map((h, i) => (
+          <a
+            href={h.href}
+            class="card card-hover reveal group relative flex gap-5 overflow-hidden p-6 sm:p-7"
+            style={`transition-delay:${i * 70}ms`}
+          >
+            <span class="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-accent-soft text-accent transition group-hover:bg-accent group-hover:text-accent-contrast">
+              <Icon name={h.icon} size={24} />
+            </span>
+            <span>
+              <span class="block text-xl font-bold">{h.title}</span>
+              <span class="mt-2 block text-sm leading-relaxed text-muted">{h.text}</span>
+              <span class="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-accent">
+                {h.cta}
+                <Icon name="arrowRight" size={15} class="transition group-hover:translate-x-1" />
+              </span>
+            </span>
+          </a>
+        ))
+      }
+    </div>
+  </div>
+</section>

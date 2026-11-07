@@ -1,0 +1,34 @@
+---
+interface Props {
+  title: string;
+  cover: string | null;
+  author?: string;
+  class?: string;
+  eager?: boolean;
+}
+const { title, cover, author = '', class: cls = '', eager = false } = Astro.props;
+---
+
+<div class:list={['book relative aspect-[3/4] overflow-hidden rounded-r-xl rounded-l-sm', cls]}>
+  {
+    cover ? (
+      <img src={cover} alt={`${title} cover`} loading={eager ? 'eager' : 'lazy'} decoding="async" class="h-full w-full object-cover" />
+    ) : (
+      <div class="cover-fallback relative flex h-full flex-col justify-between bg-gradient-to-br from-emerald-700 via-emerald-900 to-[#04140b] p-5 text-white">
+        <div class="bg-grid absolute inset-0 opacity-40" />
+        <span class="relative font-mono text-[10px] tracking-widest opacity-70">MF · E-BOOK</span>
+        <span class="relative text-lg leading-tight font-extrabold">{title}</span>
+        <span class="relative text-xs opacity-80">{author}</span>
+      </div>
+    )
+  }
+  <span class="pointer-events-none absolute inset-y-0 left-0 w-3 bg-gradient-to-r from-black/35 to-transparent" aria-hidden="true"></span>
+</div>
+
+<style>
+  .book {
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.06) inset,
+      6px 10px 24px -8px rgba(0, 0, 0, 0.5);
+  }
+</style>

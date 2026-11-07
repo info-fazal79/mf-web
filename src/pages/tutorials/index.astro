@@ -1,0 +1,152 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import PageHero from '@/components/PageHero.astro';
+import Icon from '@/components/Icon.astro';
+import { fmtDuration, getTutorials, levelLabel, thumb, totalSeconds } from '@/lib/tutorials';
+
+const playlists = await getTutorials();
+const topics = [...new Set(playlists.map((p) => p.topic).filter(Boolean))] as string[];
+const totalLessons = playlists.reduce((a, p) => a + p.lessons.length, 0);
+const cover = (p: (typeof playlists)[number]) => p.cover_url || (p.lessons[0] ? thumb(p.lessons[0].youtube_id, 'maxres') : '');
+---
+
+<BaseLayout title="Tutorials" description="Free step-by-step video courses on Excel, Word, PowerPoint and Google Sheets. Track your progress as you learn.">
+  <PageHero eyebrow="learn" title="Free video <span class='text-gradient'>courses</span>" sub="Step-by-step playlists for Excel, Word, PowerPoint and Google Sheets. Your progress is saved in this browser automatically.">
+    {
+      playlists.length > 0 && (
+        <div class="mt-8 flex justify-center gap-8 text-sm">
+          <span><strong class="text-2xl font-extrabold text-fg">{playlists.length}</strong> <span class="text-muted">courses</span></span>
+          <span><strong class="text-2xl font-extrabold text-fg">{totalLessons}</strong> <span class="text-muted">lessons</span></span>
+          <span><strong class="text-2xl font-extrabold text-fg">{fmtDuration(playlists.reduce((a, p) => a + totalSeconds(p), 0), true) || '—'}</strong> <span class="text-muted">of video</span></span>
+        </div>
+      )
+    }
+  </PageHero>
+
+  <section class="pb-24">
+    <div class="container-x">
+      {
+        playlists.length === 0 ? (
+          <div class="card mx-auto max-w-xl p-10 text-center">
+            <span class="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-accent-soft text-accent"><Icon name="play" size={24} /></span>
+            <h2 class="mt-5 text-xl font-bold">Courses coming soon</h2>
+            <p class="mt-2 text-muted">Subscribe in the footer to get notified when the first playlist goes live.</p>
+          </div>
+        ) : (
+          <>
+            <div data-continue class="mb-10 hidden">
+              <h2 class="mb-4 text-lg font-bold">Continue learning</h2>
+              <div data-continue-list class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" />
+            </div>
+
+            {topics.length > 1 && (
+              <div class="mb-8 flex flex-wrap gap-2">
+                <button type="button" data-topic="" class="pill is-active">All</button>
+                {topics.map((t) => <button type="button" data-topic={t} class="pill">{t}</button>)}
+              </div>
+            )}
+
+            <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {playlists.map((p) => (
+                <article
+                  class="card card-hover group relative flex flex-col overflow-hidden"
+                  data-course={p.slug}
+                  data-topic={p.topic ?? ''}
+                  data-title={p.title}
+                  data-total={p.lessons.length}
+                  data-cover={cover(p)}
+                  data-first={p.lessons[0]?.youtube_id ?? ''}
+                >
+                  <div class="relative aspect-video overflow-hidden border-b border-line bg-surface-2">
+                    {cover(p) && <img src={cover(p)} alt="" loading="lazy" class="h-full w-full object-cover transition duration-500 group-hover:scale-105" />}
+                    <span class="absolute inset-0 grid place-items-center bg-black/0 transition group-hover:bg-black/30">
+                      <span class="grid h-14 w-14 scale-90 place-items-center rounded-full bg-accent text-accent-contrast opacity-0 shadow-lg transition group-hover:scale-100 group-hover:opacity-100"><Icon name="play" size={22} /></span>
+                    </span>
+                    <span class="absolute right-3 bottom-3 rounded-md bg-black/70 px-2 py-0.5 font-mono text-[11px] font-semibold text-white">{p.lessons.length} lessons</span>
+                  </div>
+                  <div class="flex flex-1 flex-col p-5">
+                    <div class="flex flex-wrap items-center gap-2 text-xs text-muted">
+                      {p.topic && <span class="font-mono text-accent">{p.topic}</span>}
+                      <span>· {levelLabel[p.level]}</span>
+                      <span>· {p.language}</span>
+                    </div>
+                    <h3 class="mt-2 text-lg font-bold"><a href={`/tutorials/${p.slug}`} class="after:absolute after:inset-0">{p.title}</a></h3>
+                    {p.description && <p class="mt-2 line-clamp-2 text-sm text-muted">{p.description}</p>}
+                    <div class="mt-auto pt-5">
+                      <div class="flex items-center justify-between text-xs text-muted">
+                        <span class="inline-flex items-center gap-1"><Icon name="clock" size={12} /> {fmtDuration(totalSeconds(p), true) || `${p.lessons.length} videos`}</span>
+                        <span data-pct class="font-semibold text-accent" />
+                      </div>
+                      <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-surface-2"><div data-bar class="h-full w-0 rounded-full bg-accent transition-all" /></div>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </>
+        )
+      }
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .pill { border-radius: 0.6rem; border: 1px solid var(--border); background: var(--surface); color: var(--muted); font-size: 0.8rem; font-weight: 600; padding: 0.45rem 0.85rem; transition: all 0.2s; }
+  .pill:hover { color: var(--text); border-color: var(--accent); }
+  .pill.is-active { background: var(--accent); color: var(--accent-contrast); border-color: var(--accent); }
+</style>
+
+<script>
+  import { readAll } from '@/lib/progress';
+
+  const all = readAll();
+  const cards = [...document.querySelectorAll<HTMLElement>('[data-course]')];
+  const started: { el: HTMLElement; updated: number }[] = [];
+  for (const c of cards) {
+    const p = all[c.dataset.course!];
+    const total = Number(c.dataset.total) || 0;
+    if (!p || !total) continue;
+    const pct = Math.round((Math.min(p.done.length, total) / total) * 100);
+    c.querySelector<HTMLElement>('[data-bar]')!.style.width = `${pct}%`;
+    c.querySelector<HTMLElement>('[data-pct]')!.textContent = pct === 100 ? 'Completed ✓' : pct === 0 ? 'Started' : `${pct}% done`;
+    if (pct < 100) started.push({ el: c, updated: p.updated });
+  }
+
+  // "Continue learning" strip
+  const wrap = document.querySelector<HTMLElement>('[data-continue]');
+  const list = document.querySelector<HTMLElement>('[data-continue-list]');
+  if (wrap && list && started.length) {
+    wrap.classList.remove('hidden');
+    for (const { el } of started.sort((a, b) => b.updated - a.updated).slice(0, 3)) {
+      const slug = el.dataset.course!;
+      const last = all[slug]?.last;
+      const a = document.createElement('a');
+      a.href = `/tutorials/${slug}${last ? `?v=${last}` : ''}`;
+      a.className = 'card card-hover flex items-center gap-4 p-3';
+      const img = document.createElement('img');
+      img.src = last ? `https://i.ytimg.com/vi/${last}/mqdefault.jpg` : el.dataset.cover ?? '';
+      img.alt = '';
+      img.className = 'h-16 w-28 shrink-0 rounded-lg object-cover';
+      const text = document.createElement('span');
+      text.className = 'min-w-0';
+      const t = document.createElement('span');
+      t.className = 'block truncate text-sm font-semibold';
+      t.textContent = el.dataset.title ?? '';
+      const s = document.createElement('span');
+      s.className = 'mt-1 block text-xs text-accent';
+      s.textContent = `${el.querySelector('[data-pct]')?.textContent ?? ''} · Resume →`;
+      text.append(t, s);
+      a.append(img, text);
+      list.append(a);
+    }
+  }
+
+  // Topic filter
+  document.querySelectorAll<HTMLElement>('.pill').forEach((b) =>
+    b.addEventListener('click', () => {
+      const t = b.dataset.topic ?? '';
+      cards.forEach((c) => (c.style.display = !t || c.dataset.topic === t ? '' : 'none'));
+      document.querySelectorAll('.pill').forEach((x) => x.classList.toggle('is-active', x === b));
+    }),
+  );
+</script>

@@ -1,0 +1,170 @@
+---
+import Logo from '@/components/Logo.astro';
+import Icon from '@/components/Icon.astro';
+import { getContent } from '@/lib/content';
+const nav = (await getContent()).nav.items;
+
+const path = Astro.url.pathname.replace(/\/$/, '') || '/';
+const isActive = (href: string) => (href === '/' ? path === '/' : path.startsWith(href));
+---
+
+<header id="site-header" class="fixed inset-x-0 top-0 z-40">
+  <div class="container-x">
+    <div
+      id="header-bar"
+      class="flex min-h-16 items-center justify-between gap-4 py-3"
+    >
+      <Logo />
+
+      <nav class="hidden lg:block" aria-label="Main">
+        <ul class="flex items-center gap-0.5 xl:gap-1">
+          {
+            nav.map((item) => (
+              <li>
+                <a
+                  href={item.href}
+                  class:list={[
+                    'relative rounded-lg px-2.5 py-2 text-sm font-medium whitespace-nowrap transition-colors xl:px-3',
+                    isActive(item.href) ? 'text-accent' : 'text-muted hover:text-fg',
+                  ]}
+                  aria-current={isActive(item.href) ? 'page' : undefined}
+                >
+                  {item.label}
+                  {isActive(item.href) && (
+                    <span class="absolute inset-x-3 -bottom-0.5 h-0.5 rounded-full bg-accent" />
+                  )}
+                </a>
+              </li>
+            ))
+          }
+        </ul>
+      </nav>
+
+      <div class="flex items-center gap-1.5">
+        <button
+          type="button"
+          data-theme-toggle
+          class="grid h-10 w-10 place-items-center rounded-xl text-muted transition hover:bg-surface-2 hover:text-fg"
+          aria-label="Toggle dark mode"
+        >
+          <Icon name="sun" class="hidden dark:block" />
+          <Icon name="moon" class="block dark:hidden" />
+        </button>
+        <button
+          type="button"
+          data-open="cart"
+          data-cart-btn
+          class="relative hidden h-10 w-10 place-items-center rounded-xl text-muted transition hover:bg-surface-2 hover:text-fg"
+          aria-label="Open cart"
+        >
+          <Icon name="cart" />
+          <span
+            data-cart-count
+            class="absolute top-1 right-1 hidden h-4 min-w-4 place-items-center rounded-full bg-accent px-1 text-[10px] font-bold text-accent-contrast"
+            >0</span
+          >
+        </button>
+        <a
+          href="/account"
+          class="grid h-10 w-10 place-items-center rounded-xl text-muted transition hover:bg-surface-2 hover:text-fg"
+          aria-label="My account"
+          title="My account"
+        >
+          <Icon name="user" />
+        </a>
+        <button type="button" data-open="consult" class="btn-primary ml-1 hidden whitespace-nowrap sm:inline-flex">
+          <Icon name="calendar" size={16} />
+          Get Consultation
+        </button>
+        <button
+          type="button"
+          data-mobile-toggle
+          class="grid h-10 w-10 place-items-center rounded-xl text-fg transition hover:bg-surface-2 lg:hidden"
+          aria-label="Open menu"
+          aria-expanded="false"
+          aria-controls="mobile-menu"
+        >
+          <Icon name="menu" />
+        </button>
+      </div>
+    </div>
+
+    <div
+      id="mobile-menu"
+      class="card mt-2 hidden origin-top p-3 lg:hidden"
+    >
+      <ul class="grid gap-1">
+        {
+          nav.map((item) => (
+            <li>
+              <a
+                href={item.href}
+                class:list={[
+                  'block rounded-xl px-4 py-3 text-sm font-medium',
+                  isActive(item.href) ? 'bg-accent-soft text-accent' : 'text-fg hover:bg-surface-2',
+                ]}
+              >
+                {item.label}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+      <button type="button" data-open="consult" class="btn-primary mt-3 w-full sm:hidden">
+        <Icon name="calendar" size={16} />
+        Get Consultation
+      </button>
+    </div>
+  </div>
+  <span id="scroll-progress" aria-hidden="true"></span>
+</header>
+
+<script is:inline>
+  // Cart button stays hidden until something is in the cart (CartPanel keeps it in sync after that).
+  (() => {
+    let n = 0;
+    try { n = JSON.parse(localStorage.getItem('cart:v1') || '[]').length; } catch {}
+    if (!n) return;
+    document.querySelectorAll('[data-cart-btn]').forEach((b) => { b.classList.remove('hidden'); b.classList.add('grid'); });
+    document.querySelectorAll('[data-cart-count]').forEach((b) => { b.textContent = String(n); b.classList.remove('hidden'); b.classList.add('grid'); });
+  })();
+</script>
+
+<style>
+  /* Top of page: transparent, roomy. Scrolled: full-width glass bar pinned to
+     the top, a little shorter, hairline bottom border + reading-progress line. */
+  #site-header {
+    border-bottom: 1px solid transparent;
+    transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+  }
+  #header-bar {
+    transition: padding 0.3s ease, min-height 0.3s ease;
+  }
+  #site-header.is-scrolled {
+    background: color-mix(in srgb, var(--bg) 72%, transparent);
+    backdrop-filter: blur(16px) saturate(1.5);
+    -webkit-backdrop-filter: blur(16px) saturate(1.5);
+    border-bottom-color: var(--border);
+    box-shadow: 0 10px 30px -22px rgba(0, 0, 0, 0.6);
+  }
+  #site-header.is-scrolled #header-bar {
+    min-height: 3.5rem;
+    padding-block: 0.4rem;
+  }
+  #scroll-progress {
+    position: absolute;
+    left: 0;
+    bottom: -1px;
+    height: 2px;
+    width: 100%;
+    transform-origin: left;
+    transform: scaleX(var(--progress, 0));
+    background: linear-gradient(90deg, var(--accent), var(--accent-strong));
+    box-shadow: 0 0 10px var(--glow);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  #site-header.is-scrolled #scroll-progress {
+    opacity: 1;
+  }
+</style>

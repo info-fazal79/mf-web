@@ -1,0 +1,51 @@
+---
+import BookCover from './BookCover.astro';
+import { accessLabel, effectivePrice, isFree, taka, type Ebook, type Rating } from '@/lib/ebooks';
+interface Props {
+  book: Ebook;
+  rating?: Rating;
+}
+const { book: b, rating } = Astro.props;
+const price = effectivePrice(b);
+const onSale = b.sale_price != null && b.sale_price < b.price;
+---
+
+<article
+  class="group relative flex flex-col"
+  data-book
+  data-category={b.category?.slug ?? ''}
+  data-free={isFree(b) ? '1' : '0'}
+  data-search={`${b.title} ${b.subtitle ?? ''} ${b.author_name} ${b.tags.join(' ')}`.toLowerCase()}
+  data-price={isFree(b) ? 0 : price}
+  data-date={b.published_at ?? ''}
+  data-rating={rating?.avg ?? 0}
+  data-order={b.sort_order}
+>
+  <div class="relative rounded-2xl border border-line bg-surface-2 p-6 transition duration-300 group-hover:-translate-y-1 group-hover:border-accent/50">
+    <div class="bg-grid pointer-events-none absolute inset-0 rounded-2xl opacity-60" aria-hidden="true"></div>
+    <BookCover title={b.title} cover={b.cover_url} author={b.author_name} class="relative mx-auto w-3/5 transition duration-500 group-hover:-rotate-2 group-hover:scale-[1.03]" />
+    <span class:list={['absolute top-3 left-3 rounded-md px-2 py-0.5 text-[11px] font-bold', isFree(b) ? 'bg-accent text-accent-contrast' : 'bg-yellow-400 text-black']}>
+      {isFree(b) ? 'FREE' : onSale ? 'SALE' : 'PREMIUM'}
+    </span>
+  </div>
+  <div class="mt-4 flex flex-1 flex-col px-1">
+    <div class="flex items-center gap-2 text-xs text-muted">
+      {b.category && <span class="font-mono text-accent">{b.category.name}</span>}
+      {rating && rating.count > 0 && <span>★ {rating.avg} ({rating.count})</span>}
+    </div>
+    <h3 class="mt-1.5 font-bold leading-snug"><a href={`/ebooks/${b.slug}`} class="after:absolute after:inset-0">{b.title}</a></h3>
+    <p class="mt-0.5 text-sm text-muted">{b.author_name}</p>
+    <p class="mt-auto pt-3 font-bold">
+      {
+        isFree(b) ? (
+          <span class="text-accent">{accessLabel[b.access_mode]}</span>
+        ) : (
+          <>
+            <span>{taka(price)}</span>
+            {onSale && <s class="ml-2 text-sm font-normal text-muted">{taka(b.price)}</s>}
+          </>
+        )
+      }
+    </p>
+  </div>
+</article>

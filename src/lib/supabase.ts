@@ -1,25 +1,9 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+const url = import.meta.env.PUBLIC_SUPABASE_URL as string | undefined;
+const anonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY as string | undefined;
 
-export const isSupabaseConfigured = (): boolean => {
-  return Boolean(
-    supabaseUrl &&
-    supabaseAnonKey &&
-    supabaseUrl.startsWith('http') &&
-    !supabaseUrl.includes('your-project-id')
-  );
-};
+/** Browser-safe Supabase client. `null` until the project keys are added to .env.local. */
+export const supabase: SupabaseClient | null = url && anonKey ? createClient(url, anonKey) : null;
 
-// If not configured, initialize with dummy URL so calling functions don't immediately throw during mount
-export const supabase = createClient(
-  isSupabaseConfigured() ? supabaseUrl : 'https://placeholder.supabase.co',
-  isSupabaseConfigured() ? supabaseAnonKey : 'placeholder-anon-key',
-  {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-    },
-  }
-);
+export const isSupabaseReady = supabase !== null;

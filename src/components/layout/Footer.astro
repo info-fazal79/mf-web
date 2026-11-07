@@ -1,0 +1,77 @@
+---
+import Logo from '@/components/Logo.astro';
+import Icon from '@/components/Icon.astro';
+import { getContent } from '@/lib/content';
+const c = await getContent();
+const { footer, general: site } = c;
+const nav = c.nav.items;
+const socials = c.socials.items;
+const year = new Date().getFullYear();
+---
+
+<footer class="relative mt-10 border-t border-line bg-bg-soft">
+  <div class="container-x grid gap-12 py-16 md:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1.4fr]">
+    <div>
+      <Logo />
+      <p class="mt-5 max-w-sm text-sm leading-relaxed text-muted">{footer.about}</p>
+      <ul class="mt-6 flex gap-2">
+        {
+          socials.map((s) => (
+            <li>
+              <a
+                href={s.href}
+                target="_blank"
+                rel="noopener"
+                aria-label={s.name}
+                class="grid h-10 w-10 place-items-center rounded-xl border border-line bg-surface text-muted transition hover:-translate-y-0.5 hover:border-accent hover:text-accent"
+              >
+                <Icon name={s.icon} size={17} />
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+
+    <div>
+      <h3 class="font-mono text-xs font-semibold tracking-widest text-accent uppercase">Quick Links</h3>
+      <ul class="mt-5 grid gap-2.5 text-sm">
+        {nav.map((n) => <li><a href={n.href} class="text-muted transition hover:text-fg">{n.label}</a></li>)}
+      </ul>
+    </div>
+
+    <div>
+      <h3 class="font-mono text-xs font-semibold tracking-widest text-accent uppercase">Specialization</h3>
+      <ul class="mt-5 grid gap-2.5 text-sm">
+        {footer.specializations.map((s) => <li class="text-muted">{s}</li>)}
+      </ul>
+    </div>
+
+    <div>
+      <h3 class="font-mono text-xs font-semibold tracking-widest text-accent uppercase">Newsletter</h3>
+      <p class="mt-5 text-sm text-muted">
+        New e-books, tutorials and automation tips, straight to your inbox. No spam.
+      </p>
+      <form data-newsletter class="mt-4 flex gap-2" novalidate>
+        <label for="nl-email" class="sr-only">Email address</label>
+        <input id="nl-email" name="email" type="email" required placeholder="you@example.com" class="input" />
+        <button type="submit" class="btn-primary shrink-0 px-4" aria-label="Subscribe">
+          <Icon name="send" size={16} />
+        </button>
+      </form>
+      <p data-newsletter-msg class="mt-2 hidden text-xs"></p>
+      <ul class="mt-6 grid gap-2 text-sm text-muted">
+        <li class="flex items-center gap-2"><Icon name="mail" size={16} class="text-accent" />{site.email}</li>
+        <li class="flex items-center gap-2"><Icon name="phone" size={16} class="text-accent" />{site.phone}</li>
+        <li class="flex items-center gap-2"><Icon name="pin" size={16} class="text-accent" />{site.location}</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="border-t border-line">
+    <div class="container-x flex flex-col items-center justify-between gap-2 py-6 text-xs text-muted sm:flex-row">
+      <p>© {year} {site.name}. All rights reserved.</p>
+      <p class="font-mono">Built with care · <span class="text-accent">v0.1</span></p>
+    </div>
+  </div>
+</footer>

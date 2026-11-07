@@ -1,0 +1,19 @@
+{
+  "name": "Muhammad Fazal",
+  "short_name": "MF",
+  "description": "E-books, video tutorials and office automation by Muhammad Fazal.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#07100b",
+  "theme_color": "#07100b",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "My library", "url": "/account", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Tutorials", "url": "/tutorials", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] }
+  ]
+}

@@ -1,0 +1,259 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import Icon from '@/components/Icon.astro';
+import ProjectCard from '@/components/projects/ProjectCard.astro';
+import { embedSrc, getProjects, previewLabel, yearOf, type Project } from '@/lib/projects';
+import { renderMarkdown } from '@/lib/markdown';
+
+export async function getStaticPaths() {
+  const { projects } = await getProjects();
+  return projects.map((project) => ({ params: { slug: project.slug }, props: { project } }));
+}
+
+const { project: p } = Astro.props as { project: Project };
+const { projects } = await getProjects();
+const { html } = p.content.trim() ? await renderMarkdown(p.content) : { html: '' };
+const src = embedSrc(p.preview_type, p.preview_url || p.live_url);
+const year = yearOf(p.project_date);
+const related = projects
+  .filter((x) => x.id !== p.id)
+  .map((x) => ({ x, s: (x.category?.slug === p.category?.slug ? 2 : 0) + x.tools.filter((t) => p.tools.includes(t)).length }))
+  .sort((a, b) => b.s - a.s)
+  .slice(0, 3)
+  .map((r) => r.x);
+const caseStudy = [
+  { k: 'The challenge', v: p.problem, icon: 'bolt' },
+  { k: 'The solution', v: p.solution, icon: 'code' },
+  { k: 'The results', v: p.results, icon: 'chart' },
+].filter((c) => c.v);
+const isPlayStore = (u: string | null) => !!u && u.includes('play.google.com');
+---
+
+<BaseLayout title={p.seo_title || p.title} description={p.seo_description || p.summary || `${p.title}: project by Muhammad Fazal.`} image={p.cover_url}>
+  <section class="relative overflow-hidden pt-32 pb-12 sm:pt-40" data-slug={p.slug}>
+    <div class="bg-grid pointer-events-none absolute inset-0" aria-hidden="true"></div>
+    <div class="container-x relative max-w-5xl">
+      <nav class="flex items-center gap-2 text-xs text-muted" aria-label="Breadcrumb">
+        <a href="/projects" class="hover:text-accent">Projects</a>
+        {p.category && (<><span>/</span><a href={`/projects?category=${p.category.slug}`} class="font-mono text-accent">{p.category.name}</a></>)}
+      </nav>
+      <h1 class="mt-4 text-3xl font-extrabold tracking-tight sm:text-5xl">{p.title}</h1>
+      {p.summary && <p class="mt-4 max-w-3xl text-lg text-muted">{p.summary}</p>}
+
+      <dl class="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
+        {p.client && <div class="card p-4"><dt class="text-xs text-muted">Client</dt><dd class="mt-1 font-semibold">{p.client}</dd></div>}
+        {year && <div class="card p-4"><dt class="text-xs text-muted">Year</dt><dd class="mt-1 font-semibold">{year}</dd></div>}
+        {p.category && <div class="card p-4"><dt class="text-xs text-muted">Type</dt><dd class="mt-1 font-semibold">{p.category.name}</dd></div>}
+        {p.tools.length > 0 && <div class="card p-4"><dt class="text-xs text-muted">Built with</dt><dd class="mt-1 truncate font-semibold" title={p.tools.join(', ')}>{p.tools.slice(0, 2).join(', ')}{p.tools.length > 2 ? '…' : ''}</dd></div>}
+      </dl>
+
+      <div class="mt-6 flex flex-wrap gap-3">
+        {p.live_url && (
+          <a href={p.live_url} target="_blank" rel="noopener" class="btn-primary">
+            <Icon name={isPlayStore(p.live_url) ? 'play' : 'globe'} size={16} /> {isPlayStore(p.live_url) ? 'Get it on Google Play' : 'Open live'}
+          </a>
+        )}
+        {p.repo_url && <a href={p.repo_url} target="_blank" rel="noopener" class="btn-ghost"><Icon name="github" size={16} /> Source</a>}
+        <button type="button" data-open="consult" class="btn-ghost"><Icon name="calendar" size={16} /> Want something similar?</button>
+      </div>
+    </div>
+  </section>
+
+  {
+    src && p.preview_type !== 'app' && (
+      <section class="pb-12">
+        <div class="container-x max-w-6xl">
+          <div class="card overflow-hidden" data-preview>
+            <div class="flex flex-wrap items-center gap-3 border-b border-line bg-surface-2 px-4 py-2.5">
+              <div class="flex gap-1.5">
+                <span class="h-3 w-3 rounded-full bg-red-400/70" />
+                <span class="h-3 w-3 rounded-full bg-yellow-400/70" />
+                <span class="h-3 w-3 rounded-full bg-accent/70" />
+              </div>
+              <span class="font-mono text-xs text-muted">{previewLabel[p.preview_type]}</span>
+              {p.preview_type === 'website' && (
+                <div class="ml-auto flex rounded-lg border border-line bg-surface p-0.5 text-xs" role="group" aria-label="Device">
+                  {[['desktop', '100%'], ['tablet', '768px'], ['mobile', '390px']].map(([d, w], i) => (
+                    <button type="button" data-device={w} class:list={['rounded-md px-2.5 py-1 capitalize', i === 0 && 'bg-accent font-semibold text-accent-contrast']}>{d}</button>
+                  ))}
+                </div>
+              )}
+              <a href={p.preview_url || p.live_url || src} target="_blank" rel="noopener" class:list={['text-xs text-muted hover:text-accent', p.preview_type !== 'website' && 'ml-auto']}>Open in new tab ↗</a>
+            </div>
+            <div class="flex justify-center bg-bg-soft">
+              <iframe
+                src={src}
+                title={`${p.title} preview`}
+                loading="lazy"
+                data-frame
+                class:list={['w-full border-0 bg-white transition-[width] duration-300', p.preview_type === 'video' ? 'aspect-video' : 'h-[75vh] min-h-[480px]']}
+                allow="fullscreen; autoplay; encrypted-media; picture-in-picture"
+                referrerpolicy="no-referrer-when-downgrade"
+                sandbox={p.preview_type === 'website' ? 'allow-scripts allow-same-origin allow-forms allow-popups' : undefined}
+              />
+            </div>
+          </div>
+          {p.preview_type === 'website' && <p class="mt-2 text-center text-xs text-muted">Some websites block previews. If it's blank, use "Open live".</p>}
+        </div>
+      </section>
+    )
+  }
+
+  {
+    !src && p.cover_url && p.gallery.length === 0 && (
+      <div class="container-x max-w-6xl pb-12">
+        <img src={p.cover_url} alt="" class="w-full rounded-3xl border border-line" />
+      </div>
+    )
+  }
+
+  {
+    p.gallery.length > 0 && (
+      <section class="pb-12">
+        <div class="container-x max-w-6xl">
+          <h2 class="mb-4 text-xl font-bold">{p.preview_type === 'app' ? 'Screenshots' : 'Gallery'}</h2>
+          <ul class:list={['grid gap-4', p.preview_type === 'app' ? 'grid-cols-2 sm:grid-cols-4 lg:grid-cols-5' : 'sm:grid-cols-2 lg:grid-cols-3']}>
+            {p.gallery.map((g, i) => (
+              <li>
+                <button type="button" data-lightbox={i} class="group block w-full overflow-hidden rounded-2xl border border-line bg-surface-2">
+                  <img src={g.url} alt={g.caption ?? ''} loading="lazy" class:list={['w-full object-cover transition duration-500 group-hover:scale-105', p.preview_type === 'app' ? 'aspect-[9/19]' : 'aspect-[16/10]']} />
+                </button>
+                {g.caption && <p class="mt-1.5 text-xs text-muted">{g.caption}</p>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+    )
+  }
+
+  <section class="pb-16">
+    <div class="container-x grid max-w-6xl gap-10 lg:grid-cols-[1fr_300px]">
+      <div class="min-w-0">
+        {
+          caseStudy.length > 0 && (
+            <div class="grid gap-4 md:grid-cols-3">
+              {caseStudy.map((c) => (
+                <div class="card p-5">
+                  <span class="grid h-10 w-10 place-items-center rounded-xl bg-accent-soft text-accent"><Icon name={c.icon} size={18} /></span>
+                  <h3 class="mt-3 font-bold">{c.k}</h3>
+                  <p class="mt-1.5 text-sm leading-relaxed whitespace-pre-line text-muted">{c.v}</p>
+                </div>
+              ))}
+            </div>
+          )
+        }
+        {html && <div class:list={['prose max-w-3xl', caseStudy.length && 'mt-10']} set:html={html} />}
+      </div>
+
+      <aside class="grid content-start gap-4">
+        {p.tools.length > 0 && (
+          <div class="card p-5">
+            <h3 class="text-xs font-semibold tracking-wide text-muted uppercase">Tools & tech</h3>
+            <ul class="mt-3 flex flex-wrap gap-2">{p.tools.map((t) => <li class="rounded-lg border border-line bg-surface-2 px-2.5 py-1 text-xs font-medium">{t}</li>)}</ul>
+          </div>
+        )}
+        {p.downloads_enabled && p.files.length > 0 && (
+          <div class="card p-5">
+            <h3 class="text-xs font-semibold tracking-wide text-muted uppercase">Downloads</h3>
+            <ul class="mt-3 grid gap-2">
+              {p.files.map((f) => (
+                <li>
+                  <a href={f.url} download class="flex items-center gap-3 rounded-xl border border-line px-3 py-2.5 text-sm transition hover:border-accent hover:text-accent">
+                    <Icon name="download" size={16} /> <span class="min-w-0 flex-1 truncate">{f.name || f.url.split('/').pop()}</span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {p.tags.length > 0 && (
+          <div class="card p-5">
+            <h3 class="text-xs font-semibold tracking-wide text-muted uppercase">Tags</h3>
+            <ul class="mt-3 flex flex-wrap gap-1.5">{p.tags.map((t) => <li class="font-mono text-xs text-muted">#{t}</li>)}</ul>
+          </div>
+        )}
+        <div class="card p-5 text-center">
+          <p class="font-semibold">Need a system like this?</p>
+          <p class="mt-1 text-sm text-muted">Let's talk about your workflow.</p>
+          <button type="button" data-open="consult" class="btn-primary mt-4 w-full">Get Consultation</button>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  {
+    related.length > 0 && (
+      <section class="section border-t border-line bg-bg-soft">
+        <div class="container-x">
+          <h2 class="section-title">More projects</h2>
+          <div class="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">{related.map((r) => <ProjectCard project={r} />)}</div>
+        </div>
+      </section>
+    )
+  }
+
+  <div data-lb class="fixed inset-0 z-[70] hidden place-items-center bg-black/90 p-4" role="dialog" aria-modal="true" aria-label="Image viewer">
+    <button type="button" data-lb-close class="absolute top-4 right-4 grid h-10 w-10 place-items-center rounded-xl bg-white/10 text-white hover:bg-white/20" aria-label="Close"><Icon name="close" /></button>
+    <button type="button" data-lb-prev class="absolute left-4 grid h-12 w-12 place-items-center rounded-xl bg-white/10 text-2xl text-white hover:bg-white/20" aria-label="Previous">‹</button>
+    <figure class="max-h-full max-w-5xl text-center">
+      <img data-lb-img alt="" class="mx-auto max-h-[82vh] rounded-xl object-contain" />
+      <figcaption data-lb-cap class="mt-3 text-sm text-white/80"></figcaption>
+    </figure>
+    <button type="button" data-lb-next class="absolute right-4 grid h-12 w-12 place-items-center rounded-xl bg-white/10 text-2xl text-white hover:bg-white/20" aria-label="Next">›</button>
+  </div>
+  <script type="application/json" data-gallery set:html={JSON.stringify(p.gallery)} />
+</BaseLayout>
+
+<script>
+  import { supabase } from '@/lib/supabase';
+
+  // Device switcher for website previews
+  const frame = document.querySelector<HTMLIFrameElement>('[data-frame]');
+  document.querySelectorAll<HTMLButtonElement>('[data-device]').forEach((b) =>
+    b.addEventListener('click', () => {
+      if (frame) frame.style.width = b.dataset.device!;
+      document.querySelectorAll('[data-device]').forEach((x) => x.classList.remove('bg-accent', 'font-semibold', 'text-accent-contrast'));
+      b.classList.add('bg-accent', 'font-semibold', 'text-accent-contrast');
+    }),
+  );
+
+  // Lightbox
+  const gallery: { url: string; caption?: string }[] = JSON.parse(document.querySelector('[data-gallery]')?.textContent || '[]');
+  const lb = document.querySelector<HTMLElement>('[data-lb]');
+  const img = lb?.querySelector<HTMLImageElement>('[data-lb-img]');
+  const cap = lb?.querySelector<HTMLElement>('[data-lb-cap]');
+  let i = 0;
+  const show = (n: number) => {
+    if (!lb || !img || !gallery.length) return;
+    i = (n + gallery.length) % gallery.length;
+    img.src = gallery[i].url;
+    if (cap) cap.textContent = gallery[i].caption ?? '';
+    lb.style.display = 'grid';
+    document.body.classList.add('no-scroll');
+  };
+  const close = () => {
+    if (lb) lb.style.display = 'none';
+    document.body.classList.remove('no-scroll');
+  };
+  document.querySelectorAll<HTMLElement>('[data-lightbox]').forEach((b) => b.addEventListener('click', () => show(Number(b.dataset.lightbox))));
+  lb?.querySelector('[data-lb-close]')?.addEventListener('click', close);
+  lb?.querySelector('[data-lb-prev]')?.addEventListener('click', () => show(i - 1));
+  lb?.querySelector('[data-lb-next]')?.addEventListener('click', () => show(i + 1));
+  lb?.addEventListener('click', (e) => e.target === lb && close());
+  addEventListener('keydown', (e) => {
+    if (lb?.style.display !== 'grid') return;
+    if (e.key === 'Escape') close();
+    if (e.key === 'ArrowLeft') show(i - 1);
+    if (e.key === 'ArrowRight') show(i + 1);
+  });
+
+  // One view per session
+  const slug = document.querySelector<HTMLElement>('[data-slug]')?.dataset.slug ?? '';
+  try {
+    if (supabase && slug && !sessionStorage.getItem(`pviewed:${slug}`)) {
+      sessionStorage.setItem(`pviewed:${slug}`, '1');
+      supabase.rpc('increment_project_views', { project_slug: slug }).then(() => {});
+    }
+  } catch {}
+</script>

@@ -1,0 +1,13 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import AccountApp from '@/components/islands/AccountApp';
+---
+
+<BaseLayout title="My account" description="Your e-book library, reading progress and account settings." noindex>
+  <section class="pt-32 pb-24 sm:pt-40">
+    <div class="container-x">
+      <h1 class="mb-8 text-3xl font-extrabold tracking-tight sm:text-4xl">My <span class="text-gradient">account</span></h1>
+      <AccountApp client:only="react" />
+    </div>
+  </section>
+</BaseLayout>

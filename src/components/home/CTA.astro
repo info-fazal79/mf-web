@@ -1,0 +1,36 @@
+---
+import Icon from '@/components/Icon.astro';
+import { getContent } from '@/lib/content';
+const site = (await getContent()).general;
+---
+
+<section class="section">
+  <div class="container-x">
+    <div class="card reveal relative overflow-hidden px-6 py-14 text-center sm:px-12 sm:py-20">
+      <div class="bg-grid pointer-events-none absolute inset-0" aria-hidden="true"></div>
+      <div
+        class="pointer-events-none absolute -top-32 left-1/2 h-72 w-[600px] -translate-x-1/2 rounded-full blur-3xl"
+        style="background: radial-gradient(closest-side, var(--glow), transparent)"
+        aria-hidden="true"
+      >
+      </div>
+      <div class="relative">
+        <span class="eyebrow"><span class="opacity-60">//</span> let's work together</span>
+        <h2 class="mx-auto mt-5 max-w-2xl text-3xl font-extrabold tracking-tight sm:text-5xl">
+          Ready to build something <span class="text-gradient">exceptional?</span>
+        </h2>
+        <p class="mx-auto mt-4 max-w-xl text-muted sm:text-lg">
+          Tell me about your workflow or project. Let's find the fastest way to automate it, visualise it or launch it.
+        </p>
+        <div class="mt-8 flex flex-wrap justify-center gap-3">
+          <button type="button" data-open="consult" class="btn-primary px-6 py-3">
+            <Icon name="calendar" size={17} /> Get Consultation
+          </button>
+          <a href={`https://wa.me/${site.whatsapp}`} target="_blank" rel="noopener" class="btn-ghost px-6 py-3">
+            <Icon name="whatsapp" size={17} /> Chat on WhatsApp
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

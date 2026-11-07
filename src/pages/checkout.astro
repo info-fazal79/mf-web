@@ -1,0 +1,15 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import CheckoutApp from '@/components/islands/CheckoutApp';
+import { getContent } from '@/lib/content';
+const c = await getContent();
+---
+
+<BaseLayout title="Checkout" noindex>
+  <section class="pt-32 pb-24 sm:pt-40">
+    <div class="container-x">
+      <h1 class="mb-8 text-3xl font-extrabold tracking-tight sm:text-4xl">Secure <span class="text-gradient">checkout</span></h1>
+      <CheckoutApp client:only="react" defaults={c.payments} whatsapp={c.general.whatsapp} />
+    </div>
+  </section>
+</BaseLayout>

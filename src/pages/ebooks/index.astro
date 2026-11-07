@@ -1,0 +1,111 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import PageHero from '@/components/PageHero.astro';
+import EbookCard from '@/components/ebooks/EbookCard.astro';
+import Icon from '@/components/Icon.astro';
+import { getEbooks, isFree } from '@/lib/ebooks';
+
+const { books, categories, ratings } = await getEbooks();
+const usedCats = categories.filter((c) => books.some((b) => b.category?.slug === c.slug));
+const freeCount = books.filter(isFree).length;
+---
+
+<BaseLayout title="E-books" description="Free and premium e-books on Excel, Google Sheets, MS Office, automation and AI productivity, with a beautiful online reader.">
+  <PageHero eyebrow="library" title="E-books that <span class='text-gradient'>actually teach</span>" sub="Practical guides on Excel, Google Sheets, MS Office, automation and AI. Read online with highlights, notes and text-to-speech." />
+
+  <section class="pb-24">
+    <div class="container-x">
+      {
+        books.length === 0 ? (
+          <div class="card mx-auto max-w-xl p-10 text-center">
+            <span class="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-accent-soft text-accent"><Icon name="book" size={24} /></span>
+            <h2 class="mt-5 text-xl font-bold">The library opens soon</h2>
+            <p class="mt-2 text-muted">Subscribe in the footer to get notified when the first e-book is released.</p>
+          </div>
+        ) : (
+          <>
+            <div class="mb-8 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div class="flex flex-wrap gap-2">
+                <button type="button" data-price-filter="" class="pill is-active">All <span>{books.length}</span></button>
+                <button type="button" data-price-filter="1" class="pill">Free <span>{freeCount}</span></button>
+                <button type="button" data-price-filter="0" class="pill">Premium <span>{books.length - freeCount}</span></button>
+                {usedCats.length > 1 && (
+                  <select data-cat class="input w-auto py-1.5 text-sm" aria-label="Category">
+                    <option value="">All categories</option>
+                    {usedCats.map((c) => <option value={c.slug}>{c.name}</option>)}
+                  </select>
+                )}
+              </div>
+              <div class="flex gap-2">
+                <label class="relative block flex-1 lg:w-64">
+                  <span class="sr-only">Search e-books</span>
+                  <Icon name="search" size={16} class="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-muted" />
+                  <input data-q type="search" placeholder="Search e-books…" class="input pl-10" />
+                </label>
+                <select data-sort class="input w-auto" aria-label="Sort">
+                  <option value="order">Featured</option>
+                  <option value="new">Newest</option>
+                  <option value="rating">Top rated</option>
+                  <option value="low">Price: low → high</option>
+                  <option value="high">Price: high → low</option>
+                </select>
+              </div>
+            </div>
+            <div data-grid class="grid grid-cols-2 gap-x-5 gap-y-10 sm:grid-cols-3 lg:grid-cols-4">
+              {books.map((b) => <EbookCard book={b} rating={ratings[b.id]} />)}
+            </div>
+            <p data-empty class="hidden py-16 text-center text-muted">No e-books match your filters.</p>
+          </>
+        )
+      }
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .pill { border-radius: 0.6rem; border: 1px solid var(--border); background: var(--surface); color: var(--muted); font-size: 0.8rem; font-weight: 600; padding: 0.45rem 0.85rem; transition: all 0.2s; }
+  .pill span { opacity: 0.6; margin-left: 0.2rem; }
+  .pill:hover { color: var(--text); border-color: var(--accent); }
+  .pill.is-active { background: var(--accent); color: var(--accent-contrast); border-color: var(--accent); }
+</style>
+
+<script>
+  const grid = document.querySelector<HTMLElement>('[data-grid]');
+  const cards = [...document.querySelectorAll<HTMLElement>('[data-book]')];
+  const q = document.querySelector<HTMLInputElement>('[data-q]');
+  const sort = document.querySelector<HTMLSelectElement>('[data-sort]');
+  const cat = document.querySelector<HTMLSelectElement>('[data-cat]');
+  let free = '';
+
+  function apply() {
+    const term = (q?.value ?? '').trim().toLowerCase();
+    let shown = 0;
+    for (const c of cards) {
+      const ok = (!free || c.dataset.free === free) && (!cat?.value || c.dataset.category === cat.value) && (!term || (c.dataset.search ?? '').includes(term));
+      c.style.display = ok ? '' : 'none';
+      if (ok) shown++;
+    }
+    const by = sort?.value ?? 'order';
+    const n = (c: HTMLElement, k: string) => Number(c.dataset[k]);
+    [...cards]
+      .sort((a, b) =>
+        by === 'new' ? (b.dataset.date ?? '').localeCompare(a.dataset.date ?? '') :
+        by === 'rating' ? n(b, 'rating') - n(a, 'rating') :
+        by === 'low' ? n(a, 'price') - n(b, 'price') :
+        by === 'high' ? n(b, 'price') - n(a, 'price') :
+        n(a, 'order') - n(b, 'order'),
+      )
+      .forEach((c) => grid?.appendChild(c));
+    document.querySelector('[data-empty]')?.classList.toggle('hidden', shown > 0);
+  }
+  document.querySelectorAll<HTMLElement>('[data-price-filter]').forEach((b) =>
+    b.addEventListener('click', () => {
+      free = b.dataset.priceFilter ?? '';
+      document.querySelectorAll('[data-price-filter]').forEach((x) => x.classList.toggle('is-active', x === b));
+      apply();
+    }),
+  );
+  q?.addEventListener('input', apply);
+  sort?.addEventListener('change', apply);
+  cat?.addEventListener('change', apply);
+</script>
