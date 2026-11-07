@@ -339,6 +339,7 @@ function Upload({ toast, defaultMax }: { toast: ToastFn; defaultMax: number }) {
   const [max, setMax] = useState(defaultMax);
   const [status, setStatus] = useState<'active' | 'inactive'>('active');
   const [progress, setProgress] = useState<{ done: number; total: number; added: number } | null>(null);
+  const [result, setResult] = useState<{ added: number; skipped: string[] } | null>(null);
   useEffect(() => setMax(defaultMax), [defaultMax]);
 
   const parsed = useMemo(() => {
@@ -348,8 +349,9 @@ function Upload({ toast, defaultMax }: { toast: ToastFn; defaultMax: number }) {
     let invalid = 0, dupes = 0;
     for (const t of tokens) {
       if (!CODE_RE.test(t)) { invalid++; continue; }
-      if (seen.has(t)) { dupes++; continue; }
-      seen.add(t);
+      const key = t.toLowerCase(); // ABC123 and abc123 count as the same code
+      if (seen.has(key)) { dupes++; continue; }
+      seen.add(key);
       valid.push(t);
     }
     return { valid, invalid, dupes };
@@ -362,24 +364,35 @@ function Upload({ toast, defaultMax }: { toast: ToastFn; defaultMax: number }) {
   async function upload() {
     const list = parsed.valid;
     if (!list.length) return;
-    const CHUNK = 500;
+    const CHUNK = 1000;
     let added = 0;
+    const skipped: string[] = [];
+    setResult(null);
     setProgress({ done: 0, total: list.length, added: 0 });
     for (let i = 0; i < list.length; i += CHUNK) {
-      const rows = list.slice(i, i + CHUNK).map((code) => ({ code, status, source: 'admin', max_uses: Math.max(1, max) }));
-      const { data, error } = await sb!.from('nusuk_codes').upsert(rows, { onConflict: 'code', ignoreDuplicates: true }).select('id');
-      if (error) { toast(errText(error), false); setProgress(null); return; }
-      added += data?.length ?? 0;
+      const chunk = list.slice(i, i + CHUNK);
+      // The database inserts only codes it doesn't have yet (case-insensitive) and returns those.
+      const { data, error } = await sb!.rpc('nusuk_admin_add_codes', { p_codes: chunk, p_max_uses: Math.max(1, max), p_status: status });
+      if (error) {
+        const missing = /nusuk_admin_add_codes/.test(error.message);
+        toast(missing ? 'Run update_01_no_duplicates.sql in Supabase first' : errText(error), false);
+        setProgress(null);
+        return;
+      }
+      const got = new Set(((data as { added: string[] })?.added ?? []).map((c) => c.toLowerCase()));
+      added += got.size;
+      for (const c of chunk) if (!got.has(c.toLowerCase())) skipped.push(c);
       setProgress({ done: Math.min(list.length, i + CHUNK), total: list.length, added });
     }
-    toast(`Added ${fmt(added)} new code(s). ${fmt(list.length - added)} already existed.`);
+    setResult({ added, skipped });
+    toast(`Added ${fmt(added)} new code(s). ${fmt(skipped.length)} duplicate(s) skipped.`);
     setText('');
   }
   const busy = progress !== null && progress.done < progress.total;
 
   return (
     <Card title="Bulk upload codes">
-      <p className="mb-3 text-sm text-emerald-900/75">Paste codes, one per line or separated by commas or spaces, or pick a .csv / .txt file. Each valid token (3–40 letters, digits, - or _) becomes a code. Codes that already exist are skipped. A CSV header word like "code" is fine to leave in: it gets added as a code too only if it looks like one, so remove it if needed.</p>
+      <p className="mb-3 text-sm text-emerald-900/75">Paste codes, one per line or separated by commas or spaces, or pick a .csv / .txt file. Each valid token (3–40 letters, digits, - or _) becomes a code. Only new codes are added: anything already in the database (ignoring upper/lower case) or repeated in your list is skipped. Remove a CSV header word like "code" first, or it may be added as a code.</p>
       <textarea value={text} onChange={(e) => setText(e.target.value)} rows={10} className="nk-input font-mono text-sm" placeholder={'ABC123\nXYZ789\nQWE456'} aria-label="Codes to upload" />
       <div className="mt-3 flex flex-wrap items-end gap-3">
         <label className="nk-btn nk-ghost cursor-pointer px-3.5 py-2 text-sm">
@@ -402,6 +415,18 @@ function Upload({ toast, defaultMax }: { toast: ToastFn; defaultMax: number }) {
         <div className="mt-3">
           <div className="h-2 overflow-hidden rounded-full bg-emerald-100"><div className="h-full bg-emerald-600 transition-all" style={{ width: `${(progress.done / progress.total) * 100}%` }} /></div>
           <p className="mt-1 text-xs text-emerald-900/70">{fmt(progress.done)} / {fmt(progress.total)} processed · {fmt(progress.added)} added</p>
+        </div>
+      )}
+      {result && (
+        <div className="mt-4 rounded-xl border border-[#e7e1cf] p-3.5 text-sm">
+          <p><b className="text-emerald-800">{fmt(result.added)} new code(s) added.</b>{' '}
+            {result.skipped.length > 0 ? <span className="text-gold-600">{fmt(result.skipped.length)} already in the database, skipped.</span> : 'No duplicates found.'}</p>
+          {result.skipped.length > 0 && (
+            <details className="mt-2">
+              <summary className="cursor-pointer text-emerald-900/75">Show skipped codes</summary>
+              <p className="mt-2 max-h-40 overflow-auto break-all font-mono text-xs">{result.skipped.join(', ')}</p>
+            </details>
+          )}
         </div>
       )}
     </Card>

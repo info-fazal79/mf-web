@@ -2,6 +2,7 @@
 -- Nusuk code sharing · install
 -- Paste this whole file into Supabase → SQL Editor → New query → Run.
 -- Safe to run more than once. Remove everything with uninstall.sql.
+-- AFTER this, also run update_01_no_duplicates.sql (case-insensitive duplicate block + bulk upload).
 -- Depends only on public.is_admin() from the main site (0001_core.sql).
 -- =====================================================================
 
@@ -191,8 +192,8 @@ grant execute on function public.nusuk_admin_stats() to authenticated;
 insert into public.nusuk_codes (code, status, source, max_uses, note)
 select 'SAMPLE' || lpad(g::text, 3, '0'), 'active', 'admin', 3, 'Sample code, replace with real ones'
 from generate_series(1, 20) g
-on conflict (code) do nothing;
+on conflict do nothing;
 
 insert into public.nusuk_codes (code, status, source, max_uses, submitter, note)
 values ('USERDEMO01', 'pending', 'user', 3, 'Demo visitor', 'Sample submission to try the review queue')
-on conflict (code) do nothing;
+on conflict do nothing;
