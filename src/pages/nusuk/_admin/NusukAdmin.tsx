@@ -20,6 +20,7 @@ type Code = {
   note: string | null;
   last_used_at: string | null;
   created_at: string;
+  featured_at?: string | null;
 };
 type Stats = {
   total: number; active: number; remaining: number; used_up: number; inactive: number;
@@ -170,7 +171,7 @@ function CodesPage({ toast, reviewMode = false }: { toast: ToastFn; reviewMode?:
   const [count, setCount] = useState(0);
   const [page, setPage] = useState(0);
   const [q, setQ] = useState('');
-  const [filter, setFilter] = useState<'all' | Status>(reviewMode ? 'pending' : 'all');
+  const [filter, setFilter] = useState<'all' | 'featured' | Status>(reviewMode ? 'pending' : 'all');
   const [sel, setSel] = useState<Set<number>>(new Set());
   const [edit, setEdit] = useState<Code | null>(null);
   const [loading, setLoading] = useState(false);
@@ -179,8 +180,11 @@ function CodesPage({ toast, reviewMode = false }: { toast: ToastFn; reviewMode?:
     setLoading(true);
     let qb = sb!.from('nusuk_codes').select('*', { count: 'exact' });
     if (reviewMode) qb = qb.eq('status', 'pending');
+    else if (filter === 'featured') qb = qb.not('featured_at', 'is', null);
     else if (filter !== 'all') qb = qb.eq('status', filter);
     if (q.trim()) qb = qb.ilike('code', `%${q.trim()}%`);
+    // Featured codes are listed first (newest featured on top), like visitors see them
+    if (!reviewMode) qb = qb.order('featured_at', { ascending: false, nullsFirst: false });
     const { data, count: c, error } = await qb.order(reviewMode ? 'created_at' : 'id', { ascending: reviewMode }).range(page * PAGE, page * PAGE + PAGE - 1);
     setLoading(false);
     if (error) return toast(errText(error), false);
@@ -218,6 +222,8 @@ function CodesPage({ toast, reviewMode = false }: { toast: ToastFn; reviewMode?:
             </>
           ) : (
             <>
+              <Btn kind="gold" onClick={() => bulk({ featured_at: new Date().toISOString(), status: 'active' })}>★ Feature {sel.size}</Btn>
+              <Btn kind="ghost" onClick={() => bulk({ featured_at: null })}>Unfeature</Btn>
               <Btn onClick={() => bulk({ status: 'active' })}>Activate {sel.size}</Btn>
               <Btn kind="ghost" onClick={() => bulk({ status: 'inactive' })}>Deactivate</Btn>
               <Btn kind="ghost" onClick={() => bulk({ uses: 0, last_used_at: null })}>Reset uses</Btn>
@@ -231,11 +237,15 @@ function CodesPage({ toast, reviewMode = false }: { toast: ToastFn; reviewMode?:
       {reviewMode && (
         <p className="mb-3 text-xs text-emerald-900/60">Approved codes go to the top: visitors see them first, before the uploaded codes.</p>
       )}
+      {!reviewMode && (
+        <p className="mb-3 text-xs text-emerald-900/60">☆ Feature pins a code above all others for visitors. The most recently featured code is shown first. Click ★ to unfeature.</p>
+      )}
       <div className="mb-3 flex flex-col gap-2 sm:flex-row">
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search code…" className="nk-input sm:max-w-xs" aria-label="Search code" />
         {!reviewMode && (
           <select value={filter} onChange={(e) => setFilter(e.target.value as typeof filter)} className="nk-input sm:max-w-[13rem]" aria-label="Filter by status">
             <option value="all">All statuses</option>
+            <option value="featured">★ Featured</option>
             <option value="active">Active</option>
             <option value="inactive">Inactive</option>
             <option value="pending">Pending review</option>
@@ -261,7 +271,7 @@ function CodesPage({ toast, reviewMode = false }: { toast: ToastFn; reviewMode?:
             {rows.map((r) => (
               <tr key={r.id} className="border-b border-[#f0ebdc] hover:bg-cream">
                 <td className="p-2"><input type="checkbox" checked={sel.has(r.id)} onChange={(e) => { const n = new Set(sel); e.target.checked ? n.add(r.id) : n.delete(r.id); setSel(n); }} aria-label={`Select ${r.code}`} /></td>
-                <td className="p-2 font-mono font-bold">{r.code}{r.note && <div className="max-w-[16rem] truncate font-sans text-xs font-normal text-emerald-900/60" title={r.note}>{r.note}</div>}</td>
+                <td className="p-2 font-mono font-bold">{r.code}{r.featured_at && <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 font-sans text-xs font-semibold text-amber-800" title={`Featured ${when(r.featured_at)}`}>★ featured</span>}{r.note && <div className="max-w-[16rem] truncate font-sans text-xs font-normal text-emerald-900/60" title={r.note}>{r.note}</div>}</td>
                 <td className="p-2"><span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${badge[r.status]}`}>{r.status}</span></td>
                 <td className="p-2 tabular-nums">{r.uses}</td>
                 <td className="p-2">{reviewMode ? r.submitter ?? '—' : r.source}</td>
@@ -274,6 +284,7 @@ function CodesPage({ toast, reviewMode = false }: { toast: ToastFn; reviewMode?:
                     </>
                   ) : (
                     <>
+                      <Btn kind="ghost" className={`px-2.5! py-1! ${r.featured_at ? 'text-amber-600' : ''}`} title={r.featured_at ? 'Unfeature' : 'Feature: show this code first'} aria-label={r.featured_at ? `Unfeature ${r.code}` : `Feature ${r.code}`} onClick={() => bulk(r.featured_at ? { featured_at: null } : { featured_at: new Date().toISOString(), status: 'active' }, [r.id])}>{r.featured_at ? '★' : '☆'}</Btn>{' '}
                       <Btn kind="ghost" className="px-2.5! py-1!" onClick={() => bulk({ status: r.status === 'active' ? 'inactive' : 'active' }, [r.id])}>{r.status === 'active' ? 'Disable' : 'Enable'}</Btn>{' '}
                       <Btn kind="ghost" className="px-2.5! py-1!" onClick={() => setEdit(r)}>Edit</Btn>{' '}
                       <Btn kind="ghost" className="px-2.5! py-1! text-red-700" onClick={() => bulk('delete', [r.id])} aria-label={`Delete ${r.code}`}>✕</Btn>
