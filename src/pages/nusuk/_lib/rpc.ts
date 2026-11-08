@@ -26,5 +26,7 @@ export type Boot = {
   code?: CodeRef | null;
 };
 export type Claim = { enabled: boolean; counted?: boolean; remaining?: number; code?: CodeRef | null };
+export type FeaturedItem = { code: string; since: string; ends: string };
+export type FeaturedList = { running: FeaturedItem[]; recent: FeaturedItem[]; total: number; now?: string };
 export type FeatureReq = { ok: boolean; reason?: 'closed' | 'missing' | 'bad_link' | 'not_found' | 'featured' | 'exists' | 'busy' };
 export type Submit = { ok: boolean; reason?: 'closed' | 'invalid' | 'exists' | 'busy'; status?: string };

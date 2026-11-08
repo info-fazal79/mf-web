@@ -93,11 +93,19 @@ const desc = c.subtitle;
           <ul id="nk-history-list" class="mt-2 grid gap-1 font-mono text-emerald-950"></ul>
         </details>
 
-        <button id="nk-ft-open" type="button" class="nk-ft-cta mx-auto mt-3.5 flex w-fit max-w-full items-center gap-2 rounded-full border border-gold-500 px-4 py-2 text-sm font-bold text-emerald-950">
-          <span class="nk-ft-star text-base leading-none text-emerald-900" aria-hidden="true">★</span>
-          <span>আপনার কোড সবার উপরে দেখাতে চান?</span>
-          <span class="shrink-0 rounded-full bg-emerald-900 px-2.5 py-0.5 text-xs text-gold-100">আবেদন ›</span>
-        </button>
+        <div class="mt-3.5 flex items-stretch gap-2">
+          <button id="nk-ft-open" type="button" class="nk-ft-cta flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full border border-gold-500 px-3 py-2 text-sm font-bold text-emerald-950">
+            <span class="nk-ft-star text-base leading-none text-emerald-900" aria-hidden="true">★</span>
+            <span class="hidden sm:inline">আপনার কোড সবার উপরে দেখাতে চান?</span>
+            <span class="whitespace-nowrap sm:hidden">কোড ফিচার করুন ›</span>
+            <span class="hidden shrink-0 rounded-full bg-emerald-900 px-2 py-0.5 text-xs text-gold-100 sm:inline">আবেদন ›</span>
+          </button>
+          <button id="nk-fl-open" type="button" class="flex shrink-0 items-center gap-1.5 rounded-full border border-emerald-700/40 bg-white px-3 py-2 text-sm font-bold text-emerald-900 transition hover:border-emerald-700 hover:bg-emerald-50">
+            <span class="relative flex h-2.5 w-2.5" aria-hidden="true"><span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-60"></span><span class="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500"></span></span>
+            <span class="whitespace-nowrap"><span class="hidden sm:inline">ফিচার করা কোড</span><span class="sm:hidden">ফিচার তালিকা</span></span>
+            <span id="nk-fl-count" class="hidden rounded-full bg-emerald-900 px-1.5 text-xs leading-5 text-gold-100"></span>
+          </button>
+        </div>
       </section>
 
       <!-- ===== Today's winner (Nusuk Manager → Today's winner) ===== -->
@@ -236,6 +244,38 @@ const desc = c.subtitle;
       </footer>
     </main>
 
+    <dialog id="nk-fl" class="m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-md overflow-y-auto rounded-[1.25rem] p-0 shadow-2xl backdrop:bg-emerald-950/60" aria-labelledby="nk-fl-title">
+      <div class="grid gap-3.5 p-5">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <h2 id="nk-fl-title" class="text-lg font-bold text-emerald-900">★ ফিচার করা কোড</h2>
+            <p class="text-sm text-emerald-900/70">যাদের কোড এখন সবার আগে দেখানো হচ্ছে</p>
+          </div>
+          <button type="button" id="nk-fl-close" class="grid h-9 w-9 shrink-0 place-items-center rounded-full text-xl text-emerald-900/60 hover:bg-emerald-50" aria-label="বন্ধ করুন">×</button>
+        </div>
+        <div class="grid grid-cols-2 gap-2 text-center">
+          <div class="rounded-xl bg-gold-100/70 px-2 py-2.5">
+            <div class="text-xs text-gold-600">এখন চলমান</div>
+            <div id="nk-fl-running" class="text-xl font-bold text-emerald-950">…</div>
+          </div>
+          <div class="rounded-xl bg-emerald-50 px-2 py-2.5">
+            <div class="text-xs text-emerald-800">এ পর্যন্ত ফিচার হয়েছে</div>
+            <div id="nk-fl-total" class="text-xl font-bold text-emerald-900">…</div>
+          </div>
+        </div>
+        <section>
+          <h3 class="mb-1.5 text-sm font-bold text-emerald-900">🟢 চলমান ফিচার</h3>
+          <ul id="nk-fl-list" class="grid gap-1.5"></ul>
+        </section>
+        <section id="nk-fl-recent-wrap" class="hidden">
+          <h3 class="mb-1.5 text-sm font-bold text-emerald-900">✓ সম্প্রতি সম্পন্ন</h3>
+          <ul id="nk-fl-recent" class="grid gap-1.5"></ul>
+        </section>
+        <p class="text-xs text-emerald-900/60">নিরাপত্তার জন্য কোডের মাঝের অংশ লুকানো। প্রতিটি কোডের পাশে দেখানো হচ্ছে তার ফিচারের আর কত সময় বাকি।</p>
+        <button type="button" id="nk-fl-apply" class="nk-ft-cta rounded-full border border-gold-500 px-4 py-2.5 text-sm font-bold text-emerald-950">★ আমার কোডও ফিচার করতে চাই</button>
+      </div>
+    </dialog>
+
     <dialog id="nk-ft" class="m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-md overflow-y-auto rounded-[1.25rem] p-0 shadow-2xl backdrop:bg-emerald-950/60" aria-labelledby="nk-ft-title">
       <div class="grid gap-3.5 p-5">
         <div class="flex items-start justify-between gap-3">
@@ -331,7 +371,7 @@ const desc = c.subtitle;
     </div>
 
     <script>
-      import { rpc, rpcReady, type Boot, type Claim, type CodeRef, type FeatureReq, type Submit } from './_lib/rpc';
+      import { rpc, rpcReady, type Boot, type Claim, type CodeRef, type FeatureReq, type FeaturedItem, type FeaturedList, type Submit } from './_lib/rpc';
       import { CODE_RE, countryName, flagUrl, parseToday, parseWinners, prizeLabel, type Winner } from './_lib/content';
 
       // Bangladesh flag (green field, red disc set toward the hoist). Inline SVG so it renders on every OS.
@@ -748,6 +788,92 @@ const desc = c.subtitle;
         btn.disabled = false;
       });
 
+      // ---- Featured list (proof) ----
+      const flDialog = $<HTMLDialogElement>('nk-fl');
+      const ago = (iso: string) => {
+        const m = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+        if (m < 60) return `${bn(m)} মিনিট আগে`;
+        const h = Math.round(m / 60);
+        return h < 24 ? `${bn(h)} ঘণ্টা আগে` : `${bn(Math.round(h / 24))} দিন আগে`;
+      };
+      // Server clock offset, so the countdown is right even if the phone's clock is off
+      let skew = 0;
+      const pad = (n: number) => String(n).padStart(2, '0');
+      const left = (iso: string) => {
+        const ms = Math.max(0, new Date(iso).getTime() - (Date.now() + skew));
+        const t = Math.floor(ms / 1000);
+        // h:mm:ss in Bangla digits, e.g. ৭:৫৯:০৩
+        return `${Math.floor(t / 3600)}:${pad(Math.floor((t % 3600) / 60))}:${pad(t % 60)}`.replace(/\d/g, (d) => '০১২৩৪৫৬৭৮৯'[+d]);
+      };
+      const flRow = (f: FeaturedItem, live: boolean) => {
+        const li = document.createElement('li');
+        li.className = `flex items-center gap-2 rounded-xl px-3 py-2 text-sm ${live ? 'bg-gold-100/60 ring-1 ring-gold-500/40' : 'bg-emerald-50/70'}`;
+        const code = document.createElement('span');
+        code.className = 'font-mono font-bold text-emerald-950';
+        code.textContent = f.code;
+        const tag = document.createElement('span');
+        if (live) {
+          tag.className = 'ml-auto shrink-0 rounded-full bg-emerald-900 px-2.5 py-0.5 font-mono text-xs font-bold tabular-nums text-gold-100';
+          tag.dataset.ends = f.ends;
+          tag.title = 'ফিচারের বাকি সময়';
+          tag.textContent = `⏳ ${left(f.ends)}`;
+        } else {
+          tag.className = 'ml-auto shrink-0 text-xs text-emerald-900/60';
+          tag.textContent = `✓ সম্পন্ন · ${ago(f.ends)}`;
+        }
+        li.append(code, tag);
+        return li;
+      };
+      let flCache: FeaturedList | null = null;
+      async function loadFeatured() {
+        if (!rpcReady) return null;
+        try {
+          flCache = await rpc<FeaturedList>('nusuk_featured_list');
+          if (flCache.now) skew = new Date(flCache.now).getTime() - Date.now();
+          const n = $('nk-fl-count');
+          n.textContent = bn(flCache.running.length);
+          n.classList.toggle('hidden', flCache.running.length === 0);
+        } catch { /* not installed yet */ }
+        return flCache;
+      }
+      function renderFeatured(d: FeaturedList | null) {
+        $('nk-fl-running').textContent = d ? bn(d.running.length) : '০';
+        $('nk-fl-total').textContent = d ? bn(d.total) : '০';
+        const list = $('nk-fl-list');
+        if (d?.running.length) list.replaceChildren(...d.running.map((f) => flRow(f, true)));
+        else {
+          const li = document.createElement('li');
+          li.className = 'rounded-xl bg-emerald-50 px-3 py-3 text-center text-sm text-emerald-900/70';
+          li.textContent = 'এই মুহূর্তে কোনো ফিচার চলছে না। আপনার কোড ফিচার করতে আবেদন করুন!';
+          list.replaceChildren(li);
+        }
+        $('nk-fl-recent').replaceChildren(...(d?.recent ?? []).map((f) => flRow(f, false)));
+        $('nk-fl-recent-wrap').classList.toggle('hidden', !d?.recent.length);
+      }
+      // Live countdown while the list is open; reload when a feature runs out
+      let tick: ReturnType<typeof setInterval> | undefined;
+      function startTick() {
+        clearInterval(tick);
+        tick = setInterval(async () => {
+          if (!flDialog.open) return clearInterval(tick);
+          let done = false;
+          document.querySelectorAll<HTMLElement>('#nk-fl-list [data-ends]').forEach((el) => {
+            el.textContent = `⏳ ${left(el.dataset.ends!)}`;
+            if (new Date(el.dataset.ends!).getTime() <= Date.now() + skew) done = true;
+          });
+          if (done) renderFeatured(await loadFeatured());
+        }, 1000);
+      }
+      $('nk-fl-open').addEventListener('click', async () => {
+        renderFeatured(flCache);
+        flDialog.showModal();
+        renderFeatured(await loadFeatured());
+        startTick();
+      });
+      $('nk-fl-close').addEventListener('click', () => flDialog.close());
+      flDialog.addEventListener('click', (e) => { if (e.target === flDialog) flDialog.close(); });
+      $('nk-fl-apply').addEventListener('click', () => { flDialog.close(); $('nk-ft-open').click(); });
+
       // ---- Feedback dialog ----
       const fbDialog = $<HTMLDialogElement>('nk-fb');
       const fbForm = $<HTMLFormElement>('nk-fb-form');
@@ -823,6 +949,7 @@ const desc = c.subtitle;
       renderMine();
       boot();
       ping();
+      loadFeatured();
       setInterval(ping, 45000);
       // Keep the remaining counter fresh while the tab is visible
       setInterval(() => { if (document.visibilityState === 'visible' && !busy) boot(true); }, 45000);
