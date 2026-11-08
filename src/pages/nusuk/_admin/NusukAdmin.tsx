@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
-import { CODE_RE, COUNTRY_CODES, PINNED_COUNT, contentFields, countryName, defaultContent, flagUrl, mergeContent, parseToday, parseWinners, prizeLabel, type NusukContent, type Prize, type TodayWinner, type Winner } from '../_lib/content';
+import { CODE_RE, COUNTRY_CODES, PINNED_COUNT, contentFields, countryName, defaultContent, flagUrl, mergeContent, parseToday, parseTopBar, parseWinners, defaultTopBarText, prizeLabel, type NusukContent, type Prize, type TodayWinner, type TopBar, type Winner } from '../_lib/content';
 
 /* =====================================================================
    Nusuk Manager: a standalone admin for /nusuk.
@@ -929,6 +929,61 @@ function TodayWinnerPage({ toast, settings, reload }: { toast: ToastFn; settings
   );
 }
 
+/* ---------------- Top notice ---------------- */
+function TopNoticePage({ toast, settings, reload }: { toast: ToastFn; settings: Settings; reload: () => void }) {
+  const fromSettings = (): TopBar => parseTopBar(settings.content) ?? { on: false, text: defaultTopBarText };
+  const [t, setT] = useState<TopBar>(fromSettings);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => setT(fromSettings()), [settings]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function write(next: TopBar) {
+    const text = next.text.trim();
+    const link = next.link?.trim() || undefined;
+    if (next.on && !text) return toast('Write the notice text first', false);
+    if (link && !/^https:\/\//.test(link)) return toast('Link must start with https://', false);
+    setBusy(true);
+    // Read the latest content first so other edits are not lost.
+    const { data, error: e1 } = await sb!.from('nusuk_settings').select('content').eq('id', 1).single();
+    if (e1) { setBusy(false); return toast(errText(e1), false); }
+    const content = { ...((data?.content as object) ?? {}), topbar: { on: next.on, text, link } };
+    const { error } = await sb!.from('nusuk_settings').update({ content, updated_at: new Date().toISOString() }).eq('id', 1);
+    setBusy(false);
+    if (error) return toast(errText(error), false);
+    toast(next.on ? 'Top notice is ON' : 'Top notice is OFF (text kept)');
+    reload();
+  }
+  const saved = parseTopBar(settings.content);
+
+  return (
+    <div className="grid gap-4">
+      <Card title="Top notice" actions={<Btn onClick={() => write(t)} disabled={busy}>{busy ? 'Saving…' : 'Save'}</Btn>}>
+        <p className="mb-4 text-sm text-emerald-900/75">A colored bar at the very top of /nusuk for short, temporary announcements. Switch it off when it's no longer needed; the text is kept so you can switch it back on later. Visitors who already have the page open see the change within a minute.</p>
+        <div className="grid gap-4">
+          <Toggle on={t.on} onChange={(v) => { const n = { ...t, on: v }; setT(n); write(n); }} label={t.on ? 'Notice is ON' : 'Notice is OFF'} hint="Turns the bar on or off right away (saves automatically)." />
+          <label className="grid gap-1 text-sm font-semibold">Notice text
+            <textarea rows={2} maxLength={200} className="nk-input font-normal" value={t.text} onChange={(e) => setT({ ...t, text: e.target.value })} />
+            <span className="flex justify-between text-xs font-normal text-emerald-900/60">
+              <button type="button" className="underline" onClick={() => setT({ ...t, text: defaultTopBarText })}>Use the "winner announcement" text</button>
+              <span>{t.text.length}/200</span>
+            </span>
+          </label>
+          <label className="grid gap-1 text-sm font-semibold">Link (optional)<input className="nk-input font-normal" value={t.link ?? ''} onChange={(e) => setT({ ...t, link: e.target.value })} placeholder="https://… (adds a small 'দেখুন →' button)" /></label>
+        </div>
+      </Card>
+      <Card title={`Preview${saved?.on ? ' · live now' : ''}`}>
+        <div className="nk-topbar overflow-hidden rounded-xl text-white">
+          <div className="flex items-center justify-center gap-2.5 px-4 py-2.5 text-center text-sm font-semibold leading-snug">
+            <span className="nk-topbar-dot shrink-0" aria-hidden />
+            <span>{t.text || 'Notice text'}</span>
+            {t.link?.trim() && <span className="shrink-0 rounded-full bg-white/20 px-2.5 py-0.5 text-xs font-bold">দেখুন →</span>}
+          </div>
+        </div>
+        {!t.on && <p className="mt-2 text-xs text-emerald-900/60">Hidden on the page while the notice is OFF.</p>}
+      </Card>
+    </div>
+  );
+}
+
 /* ---------------- Winners ---------------- */
 const blankWinner = (): Winner => ({ name: '', prize: 'umrah', date: new Date().toISOString().slice(0, 10), link: '' });
 function WinnersPage({ toast, settings, reload }: { toast: ToastFn; settings: Settings; reload: () => void }) {
@@ -981,13 +1036,14 @@ function WinnersPage({ toast, settings, reload }: { toast: ToastFn; settings: Se
 }
 
 /* ---------------- Shell ---------------- */
-type Route = 'dashboard' | 'codes' | 'review' | 'features' | 'upload' | 'today' | 'winners' | 'feedback' | 'settings';
+type Route = 'dashboard' | 'codes' | 'review' | 'features' | 'upload' | 'notice' | 'today' | 'winners' | 'feedback' | 'settings';
 const nav: { r: Route; label: string; icon: string }[] = [
   { r: 'dashboard', label: 'Dashboard', icon: 'M3 13h8V3H3zm10 8h8V11h-8zM3 21h8v-6H3zm10-18v6h8V3z' },
   { r: 'codes', label: 'Codes', icon: 'M4 6h16M4 12h16M4 18h10' },
   { r: 'review', label: 'Review', icon: 'M9 12l2 2 4-4M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z' },
   { r: 'features', label: 'Feature requests', icon: 'M12 2l3 6.5 7 .8-5.2 4.8 1.5 7L12 17.6 5.7 21.1l1.5-7L2 9.3l7-.8z' },
   { r: 'upload', label: 'Paste codes', icon: 'M12 16V4m0 0l-4 4m4-4l4 4M4 20h16' },
+  { r: 'notice', label: 'Top notice', icon: 'M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1zM15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13' },
   { r: 'today', label: "Today's winner", icon: 'M12 2l3 6.5 7 .8-5.2 4.8 1.5 7L12 17.6 5.7 21.1l1.5-7L2 9.3l7-.8z' },
   { r: 'feedback', label: 'Feedback', icon: 'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z' },
   { r: 'winners', label: 'Winners', icon: 'M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4' },
@@ -1082,6 +1138,7 @@ export default function NusukAdmin() {
               <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d={n.icon} /></svg>
               {n.label}
               {n.r === 'feedback' && unread > 0 && <span className="ml-auto rounded-full bg-red-600 px-1.5 text-[11px] font-bold leading-5 text-white">{unread}</span>}
+              {n.r === 'notice' && parseTopBar(settings?.content)?.on && <span className="ml-auto rounded-full bg-gold-400 px-1.5 text-[11px] font-bold leading-5 text-emerald-950">ON</span>}
               {n.r === 'review' && reviewWaiting > 0 && <span className="ml-auto rounded-full bg-red-600 px-1.5 text-[11px] font-bold leading-5 text-white">{reviewWaiting}</span>}
               {n.r === 'features' && featWaiting > 0 && <span className="ml-auto rounded-full bg-red-600 px-1.5 text-[11px] font-bold leading-5 text-white">{featWaiting}</span>}
             </a>
@@ -1106,6 +1163,7 @@ export default function NusukAdmin() {
         {route === 'codes' && <CodesPage key="codes" toast={toast} settings={settings} />}
         {route === 'review' && <CodesPage key="review" toast={toast} reviewMode settings={settings} />}
         {route === 'upload' && <Upload toast={toast} defaultMax={settings?.default_max_uses ?? 1} />}
+        {route === 'notice' && settings && <TopNoticePage toast={toast} settings={settings} reload={loadSettings} />}
         {route === 'today' && settings && <TodayWinnerPage toast={toast} settings={settings} reload={loadSettings} />}
         {route === 'feedback' && <FeedbackPage toast={toast} onChange={loadUnread} />}
         {route === 'features' && <FeatureRequestsPage toast={toast} onChange={loadUnread} />}

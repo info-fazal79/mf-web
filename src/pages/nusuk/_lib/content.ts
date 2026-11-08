@@ -99,6 +99,17 @@ export const parseToday = (c: unknown): TodayWinner | null => {
   return { ...w, prize: (['umrah', 'zamzam', 'other'] as const).includes(w.prize) ? w.prize : 'other' };
 };
 
+/** Temporary announcement bar at the very top of /nusuk, stored in nusuk_settings.content.topbar
+ *  and switched on/off from Nusuk Manager → Top notice. */
+export type TopBar = { on: boolean; text: string; link?: string };
+export const defaultTopBarText = '📢 আজকের উমরাহ বিজয়ী কিছুক্ষণের মধ্যেই ঘোষণা করা হবে, চোখ রাখুন!';
+export const parseTopBar = (c: unknown): TopBar | null => {
+  const t = c && typeof c === 'object' ? (c as Record<string, unknown>).topbar : null;
+  if (!t || typeof t !== 'object') return null;
+  const b = t as TopBar;
+  return { on: b.on === true, text: typeof b.text === 'string' ? b.text : '', link: typeof b.link === 'string' && /^https:\/\//.test(b.link) ? b.link : undefined };
+};
+
 /** ISO 3166-1 alpha-2 codes, most common Nusuk winner countries first. Names come from Intl.DisplayNames. */
 const PINNED = 'sa eg pk bd in id my tr ng dz ma jo ae iq ye sd gb us'.split(' ');
 const ALL =

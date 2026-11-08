@@ -35,6 +35,14 @@ const desc = c.subtitle;
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=JetBrains+Mono:wght@600;700&display=swap" />
   </head>
   <body class="min-h-screen font-sans antialiased">
+    <!-- ===== Temporary announcement bar (Nusuk Manager → Top notice) ===== -->
+    <div id="nk-topbar" class="nk-topbar hidden text-white" role="status" aria-live="polite">
+      <div class="mx-auto flex max-w-xl items-center justify-center gap-2.5 px-4 py-2.5 text-center text-sm font-semibold leading-snug sm:text-[15px]">
+        <span class="nk-topbar-dot shrink-0" aria-hidden="true"></span>
+        <span id="nk-topbar-text"></span>
+        <a id="nk-topbar-link" class="hidden shrink-0 rounded-full bg-white/20 px-2.5 py-0.5 text-xs font-bold hover:bg-white/30" target="_blank" rel="noopener">দেখুন →</a>
+      </div>
+    </div>
     <!-- ===== Hero: code box is the first thing on screen ===== -->
     <header class="nk-pattern text-white">
       <div class="mx-auto max-w-xl px-4 pt-4 pb-24 sm:pb-28">
@@ -372,7 +380,7 @@ const desc = c.subtitle;
 
     <script>
       import { rpc, rpcReady, type Boot, type Claim, type CodeRef, type FeatureReq, type FeaturedItem, type FeaturedList, type Submit } from './_lib/rpc';
-      import { CODE_RE, countryName, flagUrl, parseToday, parseWinners, prizeLabel, type Winner } from './_lib/content';
+      import { CODE_RE, countryName, flagUrl, parseToday, parseTopBar, parseWinners, prizeLabel, type Winner } from './_lib/content';
 
       // Bangladesh flag (green field, red disc set toward the hoist). Inline SVG so it renders on every OS.
       const BD_FLAG = '<svg viewBox="0 0 20 12" aria-hidden="true" class="h-full w-full"><rect width="20" height="12" fill="#006a4e"/><circle cx="9" cy="6" r="3.8" fill="#f42a41"/></svg>';
@@ -587,7 +595,19 @@ const desc = c.subtitle;
         a.classList.toggle('hidden', !ok);
       }
 
+      function renderTopBar(content: unknown) {
+        const t = parseTopBar(content);
+        const show = !!t && t.on && !!t.text.trim();
+        $('nk-topbar').classList.toggle('hidden', !show);
+        if (!show) return;
+        if ($('nk-topbar-text').textContent !== t.text) $('nk-topbar-text').textContent = t.text;
+        const a = $<HTMLAnchorElement>('nk-topbar-link');
+        if (t.link) a.href = t.link;
+        a.classList.toggle('hidden', !t.link);
+      }
+
       function applyContent(b: Boot) {
+        renderTopBar(b.content);
         renderToday(b.content);
         renderWinners(parseWinners(b.content));
         if (b.content) {
