@@ -1034,13 +1034,22 @@ export default function NusukAdmin() {
   // Unread feedback count for the sidebar badge
   const [unread, setUnread] = useState(0);
   const [featWaiting, setFeatWaiting] = useState(0);
+  const [reviewWaiting, setReviewWaiting] = useState(0);
   const loadUnread = useCallback(async () => {
     const { count, error } = await sb!.from('nusuk_feedback').select('id', { count: 'exact', head: true }).eq('status', 'new');
     setUnread(error ? 0 : count ?? 0);
     const fr = await sb!.from('nusuk_feature_requests').select('id', { count: 'exact', head: true }).eq('status', 'pending');
     setFeatWaiting(fr.error ? 0 : fr.count ?? 0);
+    const rv = await sb!.from('nusuk_codes').select('id', { count: 'exact', head: true }).eq('status', 'pending');
+    setReviewWaiting(rv.error ? 0 : rv.count ?? 0);
   }, []);
   useEffect(() => { if (isAdmin) loadUnread(); }, [isAdmin, loadUnread, route]);
+  // Keep the sidebar badges fresh (new submissions, approvals made on the Review page)
+  useEffect(() => {
+    if (!isAdmin) return;
+    const t = setInterval(() => { if (document.visibilityState === 'visible') loadUnread(); }, 20000);
+    return () => clearInterval(t);
+  }, [isAdmin, loadUnread]);
 
   if (!sb) return <Centered>Supabase is not configured. Add PUBLIC_SUPABASE_URL and PUBLIC_SUPABASE_ANON_KEY to .env.local.</Centered>;
   if (session === undefined) return <Centered>Loading…</Centered>;
@@ -1073,6 +1082,7 @@ export default function NusukAdmin() {
               <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d={n.icon} /></svg>
               {n.label}
               {n.r === 'feedback' && unread > 0 && <span className="ml-auto rounded-full bg-red-600 px-1.5 text-[11px] font-bold leading-5 text-white">{unread}</span>}
+              {n.r === 'review' && reviewWaiting > 0 && <span className="ml-auto rounded-full bg-red-600 px-1.5 text-[11px] font-bold leading-5 text-white">{reviewWaiting}</span>}
               {n.r === 'features' && featWaiting > 0 && <span className="ml-auto rounded-full bg-red-600 px-1.5 text-[11px] font-bold leading-5 text-white">{featWaiting}</span>}
             </a>
           ))}
