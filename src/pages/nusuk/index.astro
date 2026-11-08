@@ -265,6 +265,8 @@ const desc = c.subtitle;
       let used: Used[] = read(local, LS, []);
       let skipped: number[] = read(session, SS, []);
       const exclude = () => [...new Set([...used.map((u) => u.id), ...skipped])].slice(-800);
+      // Codes this device copied: only these lower this device's "remaining" count
+      const usedIds = () => used.map((u) => u.id).slice(-800);
 
       let current: CodeRef | null = null;
       let busy = false;
@@ -484,7 +486,7 @@ const desc = c.subtitle;
       async function boot(keepCode = false) {
         if (!rpcReady) { status.textContent = 'সার্ভার কনফিগার করা হয়নি'; return; }
         try {
-          const b = await rpc<Boot>('nusuk_bootstrap', { p_exclude: exclude() });
+          const b = await rpc<Boot>('nusuk_bootstrap', { p_exclude: exclude(), p_used: usedIds() });
           applyContent(b);
           if (!b.enabled) return closed(b);
           setRemaining(b.remaining);
@@ -527,7 +529,7 @@ const desc = c.subtitle;
         copyBtn.disabled = true;
         $('nk-copy-label').textContent = 'নতুন কোড আসছে…';
         try {
-          const r = await rpc<Claim>('nusuk_claim', { p_id: c.id, p_exclude: exclude() });
+          const r = await rpc<Claim>('nusuk_claim', { p_id: c.id, p_exclude: exclude(), p_used: usedIds() });
           if (!r.enabled) await boot();
           else { setRemaining(r.remaining); showCode(r.code); }
         } catch (e) {

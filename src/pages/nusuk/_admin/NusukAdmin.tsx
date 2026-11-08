@@ -125,11 +125,10 @@ function Dashboard({ toast, go }: { toast: ToastFn; go: (r: Route) => void }) {
   useEffect(() => { load(); }, [load]);
   const max = Math.max(1, ...(s?.daily ?? []).map((d) => d.copies));
   const tiles: [string, number | undefined, string][] = [
-    ['Codes available now', s?.remaining, 'Active and not used up'],
+    ['Active codes', s?.remaining, 'Each visitor sees this minus the codes they copied'],
     ['Total codes', s?.total, 'Active + inactive'],
     ['Total copies', s?.copies, 'All time'],
     ['Copies today', s?.today, 'Since midnight (server time)'],
-    ['Used up', s?.used_up, 'Reached their max uses'],
     ['Inactive', s?.inactive, 'Hidden from visitors'],
     ['Waiting for review', s?.pending, 'User submissions'],
   ];
@@ -171,7 +170,7 @@ function CodesPage({ toast, reviewMode = false }: { toast: ToastFn; reviewMode?:
   const [count, setCount] = useState(0);
   const [page, setPage] = useState(0);
   const [q, setQ] = useState('');
-  const [filter, setFilter] = useState<'all' | Status | 'available' | 'used_up'>(reviewMode ? 'pending' : 'all');
+  const [filter, setFilter] = useState<'all' | Status>(reviewMode ? 'pending' : 'all');
   const [sel, setSel] = useState<Set<number>>(new Set());
   const [edit, setEdit] = useState<Code | null>(null);
   const [loading, setLoading] = useState(false);
@@ -180,8 +179,6 @@ function CodesPage({ toast, reviewMode = false }: { toast: ToastFn; reviewMode?:
     setLoading(true);
     let qb = sb!.from('nusuk_codes').select('*', { count: 'exact' });
     if (reviewMode) qb = qb.eq('status', 'pending');
-    else if (filter === 'available') qb = qb.eq('available', true);
-    else if (filter === 'used_up') qb = qb.eq('status', 'active').eq('available', false);
     else if (filter !== 'all') qb = qb.eq('status', filter);
     if (q.trim()) qb = qb.ilike('code', `%${q.trim()}%`);
     const { data, count: c, error } = await qb.order(reviewMode ? 'created_at' : 'id', { ascending: reviewMode }).range(page * PAGE, page * PAGE + PAGE - 1);
@@ -236,8 +233,6 @@ function CodesPage({ toast, reviewMode = false }: { toast: ToastFn; reviewMode?:
         {!reviewMode && (
           <select value={filter} onChange={(e) => setFilter(e.target.value as typeof filter)} className="nk-input sm:max-w-[13rem]" aria-label="Filter by status">
             <option value="all">All statuses</option>
-            <option value="available">Available now</option>
-            <option value="used_up">Used up</option>
             <option value="active">Active</option>
             <option value="inactive">Inactive</option>
             <option value="pending">Pending review</option>
@@ -264,8 +259,8 @@ function CodesPage({ toast, reviewMode = false }: { toast: ToastFn; reviewMode?:
               <tr key={r.id} className="border-b border-[#f0ebdc] hover:bg-cream">
                 <td className="p-2"><input type="checkbox" checked={sel.has(r.id)} onChange={(e) => { const n = new Set(sel); e.target.checked ? n.add(r.id) : n.delete(r.id); setSel(n); }} aria-label={`Select ${r.code}`} /></td>
                 <td className="p-2 font-mono font-bold">{r.code}{r.note && <div className="max-w-[16rem] truncate font-sans text-xs font-normal text-emerald-900/60" title={r.note}>{r.note}</div>}</td>
-                <td className="p-2"><span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${badge[r.status]}`}>{r.status}</span>{r.status === 'active' && r.uses >= r.max_uses && <span className="ml-1 text-xs text-red-600">used up</span>}</td>
-                <td className="p-2 tabular-nums">{r.uses} / {r.max_uses}</td>
+                <td className="p-2"><span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${badge[r.status]}`}>{r.status}</span></td>
+                <td className="p-2 tabular-nums">{r.uses}</td>
                 <td className="p-2">{reviewMode ? r.submitter ?? '—' : r.source}</td>
                 <td className="p-2 text-xs">{when(reviewMode ? r.created_at : r.last_used_at)}</td>
                 <td className="p-2 text-right whitespace-nowrap">

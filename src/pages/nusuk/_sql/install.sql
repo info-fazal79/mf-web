@@ -2,7 +2,8 @@
 -- Nusuk code sharing · install
 -- Paste this whole file into Supabase → SQL Editor → New query → Run.
 -- Safe to run more than once. Remove everything with uninstall.sql.
--- AFTER this, also run update_01_no_duplicates.sql (case-insensitive duplicate block + bulk upload).
+-- AFTER this, also run update_01_no_duplicates.sql (case-insensitive duplicate block + bulk upload),
+-- update_02_feedback.sql and update_03_per_device.sql (per-device remaining count).
 -- Depends only on public.is_admin() from the main site (0001_core.sql).
 -- =====================================================================
 
