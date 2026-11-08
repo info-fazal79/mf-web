@@ -93,3 +93,4 @@ body { background: var(--color-cream); color: #10241b; }
 @keyframes nk-topbar-shift { from { background-position: 0% 0; } to { background-position: 100% 0; } }
 @keyframes nk-topbar-pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 224, 138, 0.7); } 100% { box-shadow: 0 0 0 0.6rem rgba(255, 224, 138, 0); } }
 @media (prefers-reduced-motion: reduce) { .nk-topbar, .nk-topbar-dot { animation: none; } }
+.nk-topbar-timer { border-radius: 0.5rem; background: rgba(0, 0, 0, 0.28); padding: 0.1rem 0.5rem; font-size: 0.95rem; font-weight: 700; letter-spacing: 0.03em; color: #ffe08a; font-variant-numeric: tabular-nums; }

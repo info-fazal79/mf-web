@@ -100,14 +100,34 @@ export const parseToday = (c: unknown): TodayWinner | null => {
 };
 
 /** Temporary announcement bar at the very top of /nusuk, stored in nusuk_settings.content.topbar
- *  and switched on/off from Nusuk Manager → Top notice. */
-export type TopBar = { on: boolean; text: string; link?: string };
+ *  and switched on/off from Nusuk Manager → Top notice.
+ *  `until` (ISO time, optional) adds a live countdown; when it passes, the bar shows `done_text` (if set) without the timer. */
+export type TopBar = { on: boolean; text: string; link?: string; until?: string; done_text?: string };
 export const defaultTopBarText = '📢 আজকের উমরাহ বিজয়ী কিছুক্ষণের মধ্যেই ঘোষণা করা হবে, চোখ রাখুন!';
+export const defaultTopBarDoneText = '🎉 আজকের উমরাহ বিজয়ী এখনই ঘোষণা হচ্ছে, পেজটি রিফ্রেশ করুন!';
+
+/** Countdown text, e.g. "০১:০৫:০৯" or "২ দিন ০১:০৫:০৯" (Bangla digits). */
+export function countdownText(ms: number) {
+  const s = Math.max(0, Math.floor(ms / 1000));
+  const d = Math.floor(s / 86400);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const hms = `${pad(Math.floor((s % 86400) / 3600))}:${pad(Math.floor((s % 3600) / 60))}:${pad(s % 60)}`;
+  const t = d ? `${d} দিন ${hms}` : hms;
+  return t.replace(/\d/g, (x) => '০১২৩৪৫৬৭৮৯'[+x]);
+}
+
 export const parseTopBar = (c: unknown): TopBar | null => {
   const t = c && typeof c === 'object' ? (c as Record<string, unknown>).topbar : null;
   if (!t || typeof t !== 'object') return null;
   const b = t as TopBar;
-  return { on: b.on === true, text: typeof b.text === 'string' ? b.text : '', link: typeof b.link === 'string' && /^https:\/\//.test(b.link) ? b.link : undefined };
+  const until = typeof b.until === 'string' && !Number.isNaN(Date.parse(b.until)) ? b.until : undefined;
+  return {
+    on: b.on === true,
+    text: typeof b.text === 'string' ? b.text : '',
+    link: typeof b.link === 'string' && /^https:\/\//.test(b.link) ? b.link : undefined,
+    until,
+    done_text: typeof b.done_text === 'string' && b.done_text.trim() ? b.done_text : undefined,
+  };
 };
 
 /** ISO 3166-1 alpha-2 codes, most common Nusuk winner countries first. Names come from Intl.DisplayNames. */

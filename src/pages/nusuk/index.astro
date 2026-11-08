@@ -37,9 +37,10 @@ const desc = c.subtitle;
   <body class="min-h-screen font-sans antialiased">
     <!-- ===== Temporary announcement bar (Nusuk Manager → Top notice) ===== -->
     <div id="nk-topbar" class="nk-topbar hidden text-white" role="status" aria-live="polite">
-      <div class="mx-auto flex max-w-xl items-center justify-center gap-2.5 px-4 py-2.5 text-center text-sm font-semibold leading-snug sm:text-[15px]">
+      <div class="mx-auto flex max-w-xl flex-wrap items-center justify-center gap-x-2.5 gap-y-1 px-4 py-2.5 text-center text-sm font-semibold leading-snug sm:text-[15px]">
         <span class="nk-topbar-dot shrink-0" aria-hidden="true"></span>
         <span id="nk-topbar-text"></span>
+        <span id="nk-topbar-timer" class="nk-topbar-timer hidden shrink-0" aria-label="বাকি সময়"></span>
         <a id="nk-topbar-link" class="hidden shrink-0 rounded-full bg-white/20 px-2.5 py-0.5 text-xs font-bold hover:bg-white/30" target="_blank" rel="noopener">দেখুন →</a>
       </div>
     </div>
@@ -380,7 +381,7 @@ const desc = c.subtitle;
 
     <script>
       import { rpc, rpcReady, type Boot, type Claim, type CodeRef, type FeatureReq, type FeaturedItem, type FeaturedList, type Submit } from './_lib/rpc';
-      import { CODE_RE, countryName, flagUrl, parseToday, parseTopBar, parseWinners, prizeLabel, type Winner } from './_lib/content';
+      import { CODE_RE, countdownText, countryName, flagUrl, parseToday, parseTopBar, parseWinners, prizeLabel, type Winner } from './_lib/content';
 
       // Bangladesh flag (green field, red disc set toward the hoist). Inline SVG so it renders on every OS.
       const BD_FLAG = '<svg viewBox="0 0 20 12" aria-hidden="true" class="h-full w-full"><rect width="20" height="12" fill="#006a4e"/><circle cx="9" cy="6" r="3.8" fill="#f42a41"/></svg>';
@@ -595,12 +596,32 @@ const desc = c.subtitle;
         a.classList.toggle('hidden', !ok);
       }
 
+      // Top notice bar with an optional live countdown (ticks every second, client clock)
+      let topBar: ReturnType<typeof parseTopBar> = null;
+      let topTimer: ReturnType<typeof setInterval> | undefined;
+      function tickTopBar() {
+        const t = topBar;
+        if (!t) return;
+        const end = t.until ? Date.parse(t.until) : NaN;
+        const left = end - Date.now();
+        const counting = left > 0;
+        const done = !Number.isNaN(end) && !counting;
+        const text = done && t.done_text ? t.done_text : t.text;
+        if ($('nk-topbar-text').textContent !== text) $('nk-topbar-text').textContent = text;
+        const timer = $('nk-topbar-timer');
+        timer.classList.toggle('hidden', !counting);
+        if (counting) timer.textContent = countdownText(left);
+        if (!counting) { clearInterval(topTimer); topTimer = undefined; }
+      }
       function renderTopBar(content: unknown) {
         const t = parseTopBar(content);
         const show = !!t && t.on && !!t.text.trim();
         $('nk-topbar').classList.toggle('hidden', !show);
+        topBar = show ? t : null;
+        clearInterval(topTimer); topTimer = undefined;
         if (!show) return;
-        if ($('nk-topbar-text').textContent !== t.text) $('nk-topbar-text').textContent = t.text;
+        tickTopBar();
+        if (t.until && Date.parse(t.until) > Date.now()) topTimer = setInterval(tickTopBar, 1000);
         const a = $<HTMLAnchorElement>('nk-topbar-link');
         if (t.link) a.href = t.link;
         a.classList.toggle('hidden', !t.link);

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
-import { CODE_RE, COUNTRY_CODES, PINNED_COUNT, contentFields, countryName, defaultContent, flagUrl, mergeContent, parseToday, parseTopBar, parseWinners, defaultTopBarText, prizeLabel, type NusukContent, type Prize, type TodayWinner, type TopBar, type Winner } from '../_lib/content';
+import { CODE_RE, COUNTRY_CODES, PINNED_COUNT, contentFields, countryName, defaultContent, flagUrl, mergeContent, parseToday, parseTopBar, parseWinners, defaultTopBarText, defaultTopBarDoneText, countdownText, prizeLabel, type NusukContent, type Prize, type TodayWinner, type TopBar, type Winner } from '../_lib/content';
 
 /* =====================================================================
    Nusuk Manager: a standalone admin for /nusuk.
@@ -930,6 +930,21 @@ function TodayWinnerPage({ toast, settings, reload }: { toast: ToastFn; settings
 }
 
 /* ---------------- Top notice ---------------- */
+// <input type="datetime-local"> works in this computer's local time; the database keeps an absolute ISO time.
+const isoToLocalInput = (iso?: string) => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(+d)) return '';
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+};
+const localInputToIso = (v: string) => (v && !Number.isNaN(Date.parse(v)) ? new Date(v).toISOString() : undefined);
+function useNow(ms = 1000) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => { const t = setInterval(() => setNow(Date.now()), ms); return () => clearInterval(t); }, [ms]);
+  return now;
+}
+
 function TopNoticePage({ toast, settings, reload }: { toast: ToastFn; settings: Settings; reload: () => void }) {
   const fromSettings = (): TopBar => parseTopBar(settings.content) ?? { on: false, text: defaultTopBarText };
   const [t, setT] = useState<TopBar>(fromSettings);
@@ -939,13 +954,15 @@ function TopNoticePage({ toast, settings, reload }: { toast: ToastFn; settings: 
   async function write(next: TopBar) {
     const text = next.text.trim();
     const link = next.link?.trim() || undefined;
+    const until = next.until || undefined;
+    const done_text = next.done_text?.trim() || undefined;
     if (next.on && !text) return toast('Write the notice text first', false);
     if (link && !/^https:\/\//.test(link)) return toast('Link must start with https://', false);
     setBusy(true);
     // Read the latest content first so other edits are not lost.
     const { data, error: e1 } = await sb!.from('nusuk_settings').select('content').eq('id', 1).single();
     if (e1) { setBusy(false); return toast(errText(e1), false); }
-    const content = { ...((data?.content as object) ?? {}), topbar: { on: next.on, text, link } };
+    const content = { ...((data?.content as object) ?? {}), topbar: { on: next.on, text, link, until, done_text } };
     const { error } = await sb!.from('nusuk_settings').update({ content, updated_at: new Date().toISOString() }).eq('id', 1);
     setBusy(false);
     if (error) return toast(errText(error), false);
@@ -953,11 +970,16 @@ function TopNoticePage({ toast, settings, reload }: { toast: ToastFn; settings: 
     reload();
   }
   const saved = parseTopBar(settings.content);
+  const now = useNow();
+  const end = t.until ? Date.parse(t.until) : NaN;
+  const left = end - now;
+  const ended = !Number.isNaN(end) && left <= 0;
+  const quick = (mins: number) => setT({ ...t, until: new Date(Date.now() + mins * 60000).toISOString() });
 
   return (
     <div className="grid gap-4">
       <Card title="Top notice" actions={<Btn onClick={() => write(t)} disabled={busy}>{busy ? 'Saving…' : 'Save'}</Btn>}>
-        <p className="mb-4 text-sm text-emerald-900/75">A colored bar at the very top of /nusuk for short, temporary announcements. Switch it off when it's no longer needed; the text is kept so you can switch it back on later. Visitors who already have the page open see the change within a minute.</p>
+        <p className="mb-4 text-sm text-emerald-900/75">A colored bar at the very top of /nusuk for short, temporary announcements, with an optional live countdown. Click Save after changing the text or time. Switch it off when it's no longer needed; the text is kept so you can switch it back on later. Visitors who already have the page open see the change within a minute.</p>
         <div className="grid gap-4">
           <Toggle on={t.on} onChange={(v) => { const n = { ...t, on: v }; setT(n); write(n); }} label={t.on ? 'Notice is ON' : 'Notice is OFF'} hint="Turns the bar on or off right away (saves automatically)." />
           <label className="grid gap-1 text-sm font-semibold">Notice text
@@ -967,14 +989,30 @@ function TopNoticePage({ toast, settings, reload }: { toast: ToastFn; settings: 
               <span>{t.text.length}/200</span>
             </span>
           </label>
+          <div className="grid gap-2 rounded-xl border border-[#e7e1cf] bg-cream p-3">
+            <label className="grid gap-1 text-sm font-semibold">Countdown to (optional)
+              <input type="datetime-local" className="nk-input font-normal" value={isoToLocalInput(t.until)} onChange={(e) => setT({ ...t, until: localInputToIso(e.target.value) })} />
+            </label>
+            <div className="flex flex-wrap items-center gap-1.5 text-xs">
+              <span className="font-semibold text-emerald-900/70">Quick:</span>
+              {[15, 30, 60, 120].map((m) => <Btn key={m} kind="ghost" className="px-2! py-1! text-xs!" onClick={() => quick(m)}>+{m < 60 ? `${m} min` : `${m / 60} h`}</Btn>)}
+              {t.until && <Btn kind="ghost" className="px-2! py-1! text-xs! text-red-700" onClick={() => setT({ ...t, until: undefined })}>No countdown</Btn>}
+            </div>
+            <p className="text-xs text-emerald-900/60">Time is in this computer's time zone. Visitors in any country see the correct time left.{t.until && (ended ? ' This time has already passed.' : ` Time left: ${countdownText(left)}`)}</p>
+            <label className="grid gap-1 text-sm font-semibold">Text after the countdown ends (optional)
+              <input className="nk-input font-normal" maxLength={200} value={t.done_text ?? ''} onChange={(e) => setT({ ...t, done_text: e.target.value })} placeholder="Leave empty to keep the same text, without the timer" />
+              <button type="button" className="justify-self-start text-xs font-normal underline text-emerald-900/60" onClick={() => setT({ ...t, done_text: defaultTopBarDoneText })}>Use "announcing now" text</button>
+            </label>
+          </div>
           <label className="grid gap-1 text-sm font-semibold">Link (optional)<input className="nk-input font-normal" value={t.link ?? ''} onChange={(e) => setT({ ...t, link: e.target.value })} placeholder="https://… (adds a small 'দেখুন →' button)" /></label>
         </div>
       </Card>
       <Card title={`Preview${saved?.on ? ' · live now' : ''}`}>
         <div className="nk-topbar overflow-hidden rounded-xl text-white">
-          <div className="flex items-center justify-center gap-2.5 px-4 py-2.5 text-center text-sm font-semibold leading-snug">
+          <div className="flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1 px-4 py-2.5 text-center text-sm font-semibold leading-snug">
             <span className="nk-topbar-dot shrink-0" aria-hidden />
-            <span>{t.text || 'Notice text'}</span>
+            <span>{(ended && t.done_text?.trim()) || t.text || 'Notice text'}</span>
+            {t.until && !ended && <span className="nk-topbar-timer shrink-0">{countdownText(left)}</span>}
             {t.link?.trim() && <span className="shrink-0 rounded-full bg-white/20 px-2.5 py-0.5 text-xs font-bold">দেখুন →</span>}
           </div>
         </div>
