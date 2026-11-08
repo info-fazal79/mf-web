@@ -890,7 +890,11 @@ type Feedback = {
   id: number; kind: 'complaint' | 'suggestion' | 'opinion'; name: string; phone: string | null; address: string | null;
   message: string; status: 'new' | 'read' | 'resolved'; created_at: string;
   allow_public?: boolean; on_slider?: boolean; // update 13
+  slider_text?: string | null; slider_name?: string | null; // update 15
 };
+/** Join short lines into paragraphs: a blank line stays a paragraph break, single line breaks become spaces. */
+const toParagraphs = (t: string) =>
+  t.replace(/\r/g, '').split(/\n\s*\n/).map((p) => p.split('\n').map((l) => l.trim()).filter(Boolean).join(' ')).filter(Boolean).join('\n\n');
 const kindLabel: Record<Feedback['kind'], [string, string]> = {
   complaint: ['Complaint · অভিযোগ', 'bg-red-100 text-red-700'],
   suggestion: ['Suggestion · পরামর্শ', 'bg-emerald-100 text-emerald-900'],
@@ -925,6 +929,28 @@ function FeedbackPage({ toast, onChange }: { toast: ToastFn; onChange: () => voi
     if (error) return toast(errText(error), false);
     setRows((r) => (filter === 'all' || (filter === 'open' && status !== 'resolved') ? r.map((x) => (x.id === id ? { ...x, status } : x)) : r.filter((x) => x.id !== id)));
     onChange();
+  }
+  const [editing, setEditing] = useState<number | null>(null);
+  const [draft, setDraft] = useState({ text: '', name: '' });
+  const [saving, setSaving] = useState(false);
+  function startEdit(f: Feedback) {
+    setEditing(f.id);
+    setDraft({ text: f.slider_text ?? f.message, name: f.slider_name ?? f.name });
+  }
+  async function saveEdit(f: Feedback) {
+    const text = draft.text.trim();
+    const name = draft.name.trim();
+    if (!text) return toast('Message cannot be empty', false);
+    if (!name) return toast('Name cannot be empty', false);
+    // Store only what differs from the original, so "reset" is just clearing it
+    const patch = { slider_text: text === f.message.trim() ? null : text, slider_name: name === f.name.trim() ? null : name };
+    setSaving(true);
+    const { error } = await sb!.from('nusuk_feedback').update(patch).eq('id', f.id);
+    setSaving(false);
+    if (error) return toast(/slider_text|slider_name/.test(error.message) ? 'Run src/pages/nusuk/_sql/update_15_slider_edit.sql in Supabase first' : errText(error), false);
+    setRows((r) => r.map((x) => (x.id === f.id ? { ...x, ...patch } : x)));
+    setEditing(null);
+    toast(f.on_slider ? 'Saved. The slider shows the new text.' : 'Saved');
   }
   async function setSlider(f: Feedback, on: boolean) {
     const { error } = await sb!.from('nusuk_feedback').update({ on_slider: on }).eq('id', f.id);
@@ -977,6 +1003,33 @@ function FeedbackPage({ toast, onChange }: { toast: ToastFn; onChange: () => voi
               {f.address && <span>📍 {f.address}</span>}
             </div>
             <p className="mt-2 whitespace-pre-line break-words text-sm leading-relaxed">{f.message}</p>
+            {editing !== f.id && (f.slider_text || f.slider_name) && (
+              <div className="mt-3 rounded-lg border-l-4 border-gold-500 bg-cream px-3 py-2 text-sm">
+                <div className="mb-1 text-xs font-bold text-gold-600">Slider version (edited)</div>
+                <p className="whitespace-pre-line break-words leading-relaxed">{f.slider_text ?? f.message}</p>
+                <div className="mt-1 text-xs font-semibold text-emerald-900/70">— {f.slider_name ?? f.name}</div>
+              </div>
+            )}
+            {editing === f.id && (
+              <div className="mt-3 grid gap-2 rounded-xl border border-emerald-600/30 bg-emerald-50/50 p-3">
+                <div className="text-xs font-bold text-emerald-900">Edit how this looks on the slider · the original above stays unchanged</div>
+                <label className="grid gap-1 text-xs font-semibold">Name shown
+                  <input className="nk-input py-1.5! text-sm font-normal" maxLength={120} value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
+                </label>
+                <label className="grid gap-1 text-xs font-semibold">Message shown
+                  <textarea rows={5} maxLength={3000} className="nk-input text-sm font-normal leading-relaxed" value={draft.text} onChange={(e) => setDraft({ ...draft, text: e.target.value })} />
+                </label>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Btn kind="gold" className="px-2.5! py-1!" onClick={() => setDraft({ ...draft, text: toParagraphs(draft.text) })}>¶ Join lines into a paragraph</Btn>
+                  <Btn kind="ghost" className="px-2.5! py-1!" onClick={() => setDraft({ text: f.message, name: f.name })}>Reset to original</Btn>
+                  <span className="ml-auto flex gap-2">
+                    <Btn kind="ghost" className="px-2.5! py-1!" onClick={() => setEditing(null)}>Cancel</Btn>
+                    <Btn className="px-2.5! py-1!" disabled={saving} onClick={() => saveEdit(f)}>{saving ? 'Saving…' : 'Save'}</Btn>
+                  </span>
+                </div>
+                <p className="text-xs text-emerald-900/60">The slider shows up to 500 characters. {draft.text.trim().length > 500 ? `This is ${draft.text.trim().length}, so the end will be cut.` : ''}</p>
+              </div>
+            )}
             <div className="mt-3 flex flex-wrap gap-2">
               {f.status === 'new' && <Btn kind="ghost" className="px-2.5! py-1!" onClick={() => setStatus(f.id, 'read')}>Mark read</Btn>}
               {f.status !== 'resolved'
@@ -985,6 +1038,7 @@ function FeedbackPage({ toast, onChange }: { toast: ToastFn; onChange: () => voi
               {f.on_slider
                 ? <Btn kind="ghost" className="px-2.5! py-1!" onClick={() => setSlider(f, false)}>Remove from slider</Btn>
                 : <Btn kind="gold" className="px-2.5! py-1!" title="Show this message (name + message, never phone or address) on /nusuk" onClick={() => setSlider(f, true)}>★ Show on slider</Btn>}
+              {editing !== f.id && <Btn kind="ghost" className="px-2.5! py-1!" onClick={() => startEdit(f)}>✎ Edit for slider</Btn>}
               <Btn kind="ghost" className="px-2.5! py-1! text-red-700" onClick={() => remove(f.id)}>Delete</Btn>
             </div>
           </article>
