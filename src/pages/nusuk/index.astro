@@ -190,6 +190,16 @@ const desc = c.subtitle;
       </section>
 
       <footer class="mt-10 text-center text-xs leading-relaxed text-emerald-900/70">
+        <div id="nk-visitors" class="mb-4 hidden flex-wrap items-center justify-center gap-2 text-sm" aria-live="polite">
+          <span class="nk-card inline-flex items-center gap-2 rounded-full! px-4 py-2 font-semibold text-emerald-900">
+            <svg viewBox="0 0 24 24" class="h-4 w-4 text-emerald-700" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" /></svg>
+            মোট ভিজিটর <b id="nk-v-total" class="tabular-nums text-emerald-800">০</b>
+          </span>
+          <span class="nk-card inline-flex items-center gap-2 rounded-full! px-4 py-2 font-semibold text-emerald-900">
+            <span class="relative flex h-2.5 w-2.5" aria-hidden="true"><span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-60"></span><span class="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500"></span></span>
+            এখন অ্যাক্টিভ <b id="nk-v-active" class="tabular-nums text-emerald-800">০</b>
+          </span>
+        </div>
         <p class="nk-pre" data-k="disclaimer">{c.disclaimer}</p>
         <p class="mt-3">© {new Date().getFullYear()} <a href="/" class="font-semibold text-emerald-800 hover:underline">Muhammad Fazal</a>. সর্বস্বত্ব সংরক্ষিত।</p>
       </footer>
@@ -640,9 +650,39 @@ const desc = c.subtitle;
         btn.disabled = false;
       });
 
+      // ---- Visitor counter: total visitors + online now (random browser id, no personal data) ----
+      const DEV = 'nusuk:device:v1';
+      function deviceId() {
+        let id = '';
+        try { id = local?.getItem(DEV) ?? ''; } catch {}
+        if (!/^[0-9a-f-]{36}$/i.test(id)) {
+          id = typeof crypto !== 'undefined' && 'randomUUID' in crypto
+            ? crypto.randomUUID()
+            : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (ch) => {
+                const r = (Math.random() * 16) | 0;
+                return (ch === 'x' ? r : (r & 3) | 8).toString(16);
+              });
+          try { local?.setItem(DEV, id); } catch {}
+        }
+        return id;
+      }
+      const device = deviceId();
+      async function ping() {
+        if (!rpcReady || document.visibilityState !== 'visible') return;
+        try {
+          const v = await rpc<{ total: number; active: number }>('nusuk_ping', { p_device: device });
+          $('nk-v-total').textContent = bn(v.total);
+          $('nk-v-active').textContent = bn(Math.max(1, v.active));
+          $('nk-visitors').classList.replace('hidden', 'flex');
+        } catch { /* counter not installed yet: stay hidden */ }
+      }
+      document.addEventListener('visibilitychange', ping);
+
       // ---- Start ----
       renderMine();
       boot();
+      ping();
+      setInterval(ping, 45000);
       // Keep the remaining counter fresh while the tab is visible
       setInterval(() => { if (document.visibilityState === 'visible' && !busy) boot(true); }, 45000);
     </script>

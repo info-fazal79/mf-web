@@ -14,6 +14,8 @@ drop function if exists public.nusuk_bootstrap(bigint[], bigint[]);
 drop function if exists public.nusuk_bootstrap(bigint[]);
 drop function if exists public.nusuk_remaining_for(bigint[]);
 drop function if exists public.nusuk_pick(bigint[]);
+drop function if exists public.nusuk_ping(uuid);
+drop table if exists public.nusuk_visitors;
 drop table if exists public.nusuk_daily;
 drop table if exists public.nusuk_codes;
 drop function if exists public.nusuk_codes_mark_approved();
