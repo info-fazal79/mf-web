@@ -928,7 +928,7 @@ function FeedbackPage({ toast, onChange }: { toast: ToastFn; onChange: () => voi
   }
   async function setSlider(f: Feedback, on: boolean) {
     const { error } = await sb!.from('nusuk_feedback').update({ on_slider: on }).eq('id', f.id);
-    if (error) return toast(/on_slider/.test(error.message) ? 'Run src/pages/nusuk/_sql/update_13_feedback_slider.sql in Supabase first' : errText(error), false);
+    if (error) return toast(/on_slider|slider_consent/.test(error.message) ? 'Run update_13 and update_14 (src/pages/nusuk/_sql) in Supabase first' : errText(error), false);
     setRows((r) => (filter === 'slider' && !on ? r.filter((x) => x.id !== f.id) : r.map((x) => (x.id === f.id ? { ...x, on_slider: on } : x))));
     toast(on ? 'Added to the slider on /nusuk' : 'Removed from the slider');
   }
@@ -968,7 +968,7 @@ function FeedbackPage({ toast, onChange }: { toast: ToastFn; onChange: () => voi
               {f.status === 'new' && <span className="rounded-full bg-gold-500 px-2 py-0.5 text-xs font-bold text-emerald-950">NEW</span>}
               {f.status === 'resolved' && <span className="rounded-full bg-gray-200 px-2 py-0.5 text-xs font-bold text-gray-700">Resolved</span>}
               {f.on_slider && <span className="rounded-full bg-emerald-800 px-2 py-0.5 text-xs font-bold text-white">★ On slider</span>}
-              {f.allow_public === false && <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600" title="The visitor did not allow showing this message publicly">Private</span>}
+              {f.allow_public && <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-800" title="The visitor ticked: my name and message may be shown on the page">✓ Public OK</span>}
               <span className="ml-auto text-xs text-emerald-900/60">{when(f.created_at)}</span>
             </div>
             <div className="mt-2 font-semibold">{f.name}</div>
@@ -984,7 +984,7 @@ function FeedbackPage({ toast, onChange }: { toast: ToastFn; onChange: () => voi
                 : <Btn kind="ghost" className="px-2.5! py-1!" onClick={() => setStatus(f.id, 'read')}>Reopen</Btn>}
               {f.on_slider
                 ? <Btn kind="ghost" className="px-2.5! py-1!" onClick={() => setSlider(f, false)}>Remove from slider</Btn>
-                : <Btn kind="gold" className="px-2.5! py-1!" disabled={!f.allow_public} title={f.allow_public ? 'Show this message on /nusuk' : 'The visitor did not allow showing this publicly'} onClick={() => setSlider(f, true)}>★ Show on slider</Btn>}
+                : <Btn kind="gold" className="px-2.5! py-1!" title="Show this message (name + message, never phone or address) on /nusuk" onClick={() => setSlider(f, true)}>★ Show on slider</Btn>}
               <Btn kind="ghost" className="px-2.5! py-1! text-red-700" onClick={() => remove(f.id)}>Delete</Btn>
             </div>
           </article>
