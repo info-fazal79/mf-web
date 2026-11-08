@@ -81,7 +81,10 @@ function boostOf(r: Code, s: Settings | null): Boost {
     const leftMs = new Date(r.featured_at).getTime() + fh * 3600e3 - Date.now();
     if (r.status === 'active' && leftMs > 0 && got < fq) {
       const h = Math.floor(leftMs / 3600e3), m = Math.floor((leftMs % 3600e3) / 60e3);
-      return { tier: 1, text: `★ featured ${got}/${fq} · ${h}h ${m}m left`, cls: 'bg-amber-100 text-amber-800' };
+      // Paced like nusuk_pick (update 09): next copy is due at featured_at + got × (time limit ÷ quota)
+      const nextMs = new Date(r.featured_at).getTime() + (got * fh * 3600e3) / fq - Date.now();
+      const next = nextMs > 0 ? ` · next in ${Math.ceil(nextMs / 60e3)}m` : ' · showing now';
+      return { tier: 1, text: `★ featured ${got}/${fq} · ${h}h ${m}m left${next}`, cls: 'bg-amber-100 text-amber-800' };
     }
     return { tier: 3, text: `★ feature ended${got >= fq ? ` (${got}/${fq})` : ' (time up)'}`, cls: 'bg-gray-100 text-gray-600' };
   }
@@ -260,7 +263,7 @@ function CodesPage({ toast, reviewMode = false, settings = null }: { toast: Toas
         <p className="mb-3 text-xs text-emerald-900/60">Approved codes go to the top until they get {settings?.approved_quota ?? 2} copies, then they join the normal pool.</p>
       )}
       {!reviewMode && (
-        <p className="mb-3 text-xs text-emerald-900/60">☆ Feature puts a code in the top tier until it gets {settings?.feature_quota ?? 10} copies or {settings?.feature_hours ?? 12} hours pass, then it drops back to normal. Approved submissions stay on top for {settings?.approved_quota ?? 2} copies. Change these in Settings → Priority & balance.</p>
+        <p className="mb-3 text-xs text-emerald-900/60">☆ Feature gives a code {settings?.feature_quota ?? 10} top-priority copies spread evenly over {settings?.feature_hours ?? 12} hours, then it drops back to normal. Approved submissions stay on top for {settings?.approved_quota ?? 2} copies. Change these in Settings → Priority & balance.</p>
       )}
       <div className="mb-3 flex flex-col gap-2 sm:flex-row">
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search code…" className="nk-input sm:max-w-xs" aria-label="Search code" />
@@ -603,11 +606,11 @@ function SettingsPage({ toast, settings, reload }: { toast: ToastFn; settings: S
                 <span className="text-xs font-normal text-emerald-900/60">A featured code stays on top until this many visitors copy it.</span>
               </label>
               <label className="grid gap-1 text-sm font-semibold">Featured: time limit (hours)
-                <select className="nk-input" value={[6, 10, 12, 20, 24, 48, 72].includes(s.feature_hours ?? 12) ? s.feature_hours : 'custom'} onChange={(e) => e.target.value !== 'custom' && setS({ ...s, feature_hours: +e.target.value })}>
-                  {[6, 10, 12, 20, 24, 48, 72].map((h) => <option key={h} value={h}>{h} hours</option>)}
-                  {![6, 10, 12, 20, 24, 48, 72].includes(s.feature_hours ?? 12) && <option value="custom">{s.feature_hours} hours</option>}
+                <select className="nk-input" value={[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].includes(s.feature_hours ?? 12) ? s.feature_hours : 'custom'} onChange={(e) => e.target.value !== 'custom' && setS({ ...s, feature_hours: +e.target.value })}>
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((h) => <option key={h} value={h}>{h} {h === 1 ? 'hour' : 'hours'}</option>)}
+                  {![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].includes(s.feature_hours ?? 12) && <option value="custom">{s.feature_hours} hours</option>}
                 </select>
-                <span className="text-xs font-normal text-emerald-900/60">Even if it hasn't reached its copies, the feature ends after this time.</span>
+                <span className="text-xs font-normal text-emerald-900/60">The copies are spread evenly over this time (e.g. 20 copies in 1 hour ≈ one every 3 minutes). The feature ends when the time is up.</span>
               </label>
               <label className="grid gap-1 text-sm font-semibold">New approved submission: copies on top
                 <input type="number" min={0} className="nk-input" value={s.approved_quota} onChange={(e) => setS({ ...s, approved_quota: +e.target.value })} />
