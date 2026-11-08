@@ -228,6 +228,9 @@ function CodesPage({ toast, reviewMode = false }: { toast: ToastFn; reviewMode?:
         </>
       }
     >
+      {reviewMode && (
+        <p className="mb-3 text-xs text-emerald-900/60">Approved codes go to the top: visitors see them first, before the uploaded codes.</p>
+      )}
       <div className="mb-3 flex flex-col gap-2 sm:flex-row">
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search code…" className="nk-input sm:max-w-xs" aria-label="Search code" />
         {!reviewMode && (
