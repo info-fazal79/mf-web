@@ -7,7 +7,14 @@ import Icon from '@/components/Icon.astro';
 import { getContent } from '@/lib/content';
 
 // Same social links as the main site footer (edited in the main admin)
-const socials = (await getContent()).socials.items;
+const siteSocials = (await getContent()).socials.items;
+// Website link sits in the middle of the social icons
+const mid = Math.ceil(siteSocials.length / 2);
+const socials = [
+  ...siteSocials.slice(0, mid),
+  { name: 'Website · muhammadfazal.com', href: 'https://muhammadfazal.com', icon: 'globe' },
+  ...siteSocials.slice(mid),
+];
 
 const tabs = [
   { id: 't1', title: c.tab1_title, body: c.tab1_body, tk: 'tab1_title', bk: 'tab1_body' },
@@ -72,14 +79,18 @@ const desc = c.subtitle;
       <section class="nk-card p-5 sm:p-6" aria-labelledby="nk-code-h">
         <div id="nk-notice" class="mb-4 hidden rounded-xl bg-gold-100 px-3.5 py-2.5 text-sm text-emerald-950"></div>
 
-        <div class="grid grid-cols-2 gap-3 text-center">
-          <div class="rounded-xl bg-emerald-50 px-2 py-2.5">
-            <div class="text-xs text-emerald-800">অবশিষ্ট কোড</div>
-            <div class="text-xl font-bold text-emerald-900" id="nk-remaining" aria-live="polite">…</div>
+        <div class="grid grid-cols-3 gap-2 text-center sm:gap-3">
+          <div class="rounded-xl border border-[#e7e1cf] bg-cream px-1.5 py-2.5">
+            <div class="text-xs text-emerald-900/70">মোট কোড</div>
+            <div class="text-lg font-bold tabular-nums text-emerald-950 sm:text-xl" id="nk-total">…</div>
           </div>
-          <div class="rounded-xl bg-gold-100/70 px-2 py-2.5">
-            <div class="text-xs text-gold-600">আপনি ব্যবহার করেছেন</div>
-            <div class="text-xl font-bold text-emerald-950" id="nk-mine">০</div>
+          <div class="rounded-xl bg-gold-100/70 px-1.5 py-2.5">
+            <div class="text-xs text-gold-600"><span class="sm:hidden">ব্যবহৃত</span><span class="hidden sm:inline">আপনি ব্যবহার করেছেন</span></div>
+            <div class="text-lg font-bold tabular-nums text-emerald-950 sm:text-xl" id="nk-mine">০</div>
+          </div>
+          <div class="rounded-xl bg-emerald-50 px-1.5 py-2.5">
+            <div class="text-xs text-emerald-800">অবশিষ্ট কোড</div>
+            <div class="text-lg font-bold tabular-nums text-emerald-900 sm:text-xl" id="nk-remaining" aria-live="polite">…</div>
           </div>
         </div>
 
@@ -253,21 +264,24 @@ const desc = c.subtitle;
         <div id="nk-rv-dots" class="mt-4 flex flex-wrap justify-center gap-1.5"></div>
       </section>
 
-      <footer class="mt-10 text-center text-xs leading-relaxed text-emerald-900/70">
+    </main>
+
+    <footer class="nk-pattern nk-footer text-center text-xs leading-relaxed text-emerald-100/80">
+      <div class="mx-auto max-w-xl px-4 pt-9 pb-8">
         <div id="nk-visitors" class="mb-4 hidden flex-wrap items-center justify-center gap-2 text-sm" aria-live="polite">
-          <span class="nk-card inline-flex items-center gap-2 rounded-full! px-4 py-2 font-semibold text-emerald-900">
-            <svg viewBox="0 0 24 24" class="h-4 w-4 text-emerald-700" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" /></svg>
-            মোট ভিজিটর <b id="nk-v-total" class="tabular-nums text-emerald-800">০</b>
+          <span class="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 font-semibold text-white ring-1 ring-white/15 backdrop-blur-sm">
+            <svg viewBox="0 0 24 24" class="h-4 w-4 text-gold-400" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" /></svg>
+            মোট ভিজিটর <b id="nk-v-total" class="tabular-nums text-gold-100">০</b>
           </span>
-          <span class="nk-card inline-flex items-center gap-2 rounded-full! px-4 py-2 font-semibold text-emerald-900">
-            <span class="relative flex h-2.5 w-2.5" aria-hidden="true"><span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-60"></span><span class="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500"></span></span>
-            এখন অ্যাক্টিভ <b id="nk-v-active" class="tabular-nums text-emerald-800">০</b>
+          <span class="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 font-semibold text-white ring-1 ring-white/15 backdrop-blur-sm">
+            <span class="relative flex h-2.5 w-2.5" aria-hidden="true"><span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-300 opacity-60"></span><span class="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-300"></span></span>
+            এখন অ্যাক্টিভ <b id="nk-v-active" class="tabular-nums text-gold-100">০</b>
           </span>
         </div>
-        <p class="nk-pre" data-k="disclaimer">{c.disclaimer}</p>
+        <p class="nk-pre mx-auto max-w-md" data-k="disclaimer">{c.disclaimer}</p>
         {socials.length > 0 && (
-          <div class="mt-5">
-            <p class="text-sm font-semibold text-emerald-900">আমার সাথে যুক্ত থাকুন</p>
+          <div class="mt-6 border-t border-white/10 pt-5">
+            <p class="text-sm font-semibold text-white">আমার সাথে যুক্ত থাকুন</p>
             <ul class="mt-2.5 flex flex-wrap justify-center gap-2.5">
               {socials.map((s) => (
                 <li>
@@ -276,7 +290,7 @@ const desc = c.subtitle;
                     {...(s.href.startsWith('mailto:') ? {} : { target: '_blank', rel: 'noopener' })}
                     aria-label={s.name}
                     title={s.name}
-                    class="grid h-11 w-11 place-items-center rounded-full border border-[#e7e1cf] bg-white text-emerald-800 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-700 hover:bg-emerald-800 hover:text-white"
+                    class="grid h-11 w-11 place-items-center rounded-full border border-white/20 bg-white/10 text-gold-100 transition hover:-translate-y-0.5 hover:border-gold-400 hover:bg-gold-400 hover:text-emerald-950"
                   >
                     <Icon name={s.icon} size={18} />
                   </a>
@@ -285,9 +299,9 @@ const desc = c.subtitle;
             </ul>
           </div>
         )}
-        <p class="mt-5">© {new Date().getFullYear()} <a href="/" class="font-semibold text-emerald-800 hover:underline">Muhammad Fazal</a>. সর্বস্বত্ব সংরক্ষিত।</p>
-      </footer>
-    </main>
+        <p class="mt-5 text-emerald-100/60">© {new Date().getFullYear()} <a href="/" class="font-semibold text-gold-100 hover:underline">Muhammad Fazal</a>. সর্বস্বত্ব সংরক্ষিত।</p>
+      </div>
+    </footer>
 
     <dialog id="nk-vd" class="m-auto w-[calc(100%-1.5rem)] max-w-3xl overflow-hidden rounded-[1.25rem] bg-emerald-950 p-0 text-white shadow-2xl backdrop:bg-black/75" aria-label="টিউটোরিয়াল ভিডিও">
       <div class="flex items-center justify-between gap-3 px-4 py-2">
@@ -477,8 +491,14 @@ const desc = c.subtitle;
       const skipBtn = $<HTMLButtonElement>('nk-skip');
       const status = $('nk-status');
 
+      // Total = what is still left for this device + what this device already copied
+      let lastRemaining: number | null = null;
+      function renderTotal() {
+        $('nk-total').textContent = lastRemaining === null ? '…' : bn(lastRemaining + used.length);
+      }
       function renderMine() {
         $('nk-mine').textContent = bn(used.length);
+        renderTotal();
       }
 
       function showCode(c: CodeRef | null | undefined) {
@@ -502,7 +522,10 @@ const desc = c.subtitle;
       }
 
       function setRemaining(n: number | undefined) {
-        if (typeof n === 'number') $('nk-remaining').textContent = bn(n);
+        if (typeof n !== 'number') return;
+        lastRemaining = n;
+        $('nk-remaining').textContent = bn(n);
+        renderTotal();
       }
 
       // ---- Winners ----
@@ -724,6 +747,7 @@ const desc = c.subtitle;
         codeEl.textContent = '— — —';
         copyBtn.disabled = skipBtn.disabled = true;
         $('nk-remaining').textContent = '০';
+        $('nk-total').textContent = '০';
         status.textContent = b.notice ? '' : 'কার্যক্রম সাময়িকভাবে বন্ধ আছে';
       }
 
