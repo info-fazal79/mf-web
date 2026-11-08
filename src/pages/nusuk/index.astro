@@ -208,6 +208,21 @@ const desc = c.subtitle;
           <p id="nk-f-msg" class="hidden rounded-xl px-3.5 py-2.5 text-sm" role="alert"></p>
         </form>
         <p id="nk-sub-closed" class="mt-4 hidden rounded-xl bg-gold-100 px-3.5 py-2.5 text-sm">এই মুহূর্তে নতুন কোড জমা নেওয়া বন্ধ আছে।</p>
+
+        <!-- Is my code listed? -->
+        <div class="mt-6 border-t border-dashed border-emerald-900/15 pt-5">
+          <h3 class="flex items-center gap-2 font-bold text-emerald-900">
+            <svg viewBox="0 0 24 24" class="h-5 w-5 text-emerald-700" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+            আপনার কোড কি তালিকায় আছে?
+          </h3>
+          <p class="mt-0.5 text-sm text-emerald-900/70">কোডটি লিখে খুঁজুন, জানিয়ে দেব এটি আমাদের তালিকায় আছে কিনা।</p>
+          <form id="nk-chk" class="mt-3 flex gap-2" novalidate role="search">
+            <label for="nk-chk-code" class="sr-only">আপনার রেফারেল কোড</label>
+            <input id="nk-chk-code" name="code" maxlength="40" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" class="nk-input min-w-0 flex-1 font-mono tracking-wider" placeholder="NG-xxxxxxxx" />
+            <button type="submit" class="nk-btn nk-gold shrink-0 px-4 text-sm sm:px-5">খুঁজুন</button>
+          </form>
+          <div id="nk-chk-res" class="mt-3 hidden" aria-live="polite"></div>
+        </div>
       </section>
 
       <!-- ===== Feedback ===== -->
@@ -402,7 +417,7 @@ const desc = c.subtitle;
     </div>
 
     <script>
-      import { rpc, rpcReady, type Boot, type Claim, type CodeRef, type FeatureReq, type FeaturedItem, type FeaturedList, type Submit } from './_lib/rpc';
+      import { rpc, rpcReady, type Boot, type Claim, type CodeCheck, type CodeRef, type FeatureReq, type FeaturedItem, type FeaturedList, type Submit } from './_lib/rpc';
       import { CODE_RE, countdownText, countryName, defaultVideoLabel, flagUrl, parseToday, parseTopBar, parseVideo, subscribeUrl, parseWinners, prizeLabel, type Winner } from './_lib/content';
 
       // Bangladesh flag (green field, red disc set toward the hoist). Inline SVG so it renders on every OS.
@@ -804,6 +819,53 @@ const desc = c.subtitle;
           say('জমা দেওয়া যায়নি। ইন্টারনেট সংযোগ দেখে আবার চেষ্টা করুন।', false);
         }
         btn.disabled = false;
+      });
+
+      // ---- Is my code listed? ----
+      const chkForm = $<HTMLFormElement>('nk-chk');
+      const chkRes = $('nk-chk-res');
+      const esc = (t: string) => t.replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]!);
+      function chkShow(tone: 'ok' | 'wait' | 'warn' | 'no', icon: string, title: string, body: string, code?: string) {
+        const tones = {
+          ok: 'border-emerald-600/30 bg-emerald-50 text-emerald-950',
+          wait: 'border-gold-500/40 bg-gold-100/70 text-emerald-950',
+          warn: 'border-orange-400/40 bg-orange-50 text-orange-950',
+          no: 'border-red-300/60 bg-red-50 text-red-950',
+        };
+        chkRes.className = `mt-3 flex gap-3 rounded-xl border px-3.5 py-3 text-sm ${tones[tone]}`;
+        chkRes.innerHTML = `<span class="text-xl leading-none" aria-hidden="true">${icon}</span><div class="min-w-0 flex-1"><b class="block">${title}</b><span class="mt-0.5 block opacity-85">${body}</span>${
+          code ? `<button type="button" id="nk-chk-submit" class="nk-btn nk-green mt-2.5 px-3.5 py-2 text-sm">এই কোডটি এখনই জমা দিন ›</button>` : ''}</div>`;
+        if (code) $('nk-chk-submit').addEventListener('click', () => {
+          const inp = $<HTMLInputElement>('nk-f-code');
+          inp.value = code;
+          inp.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          inp.focus({ preventScroll: true });
+        });
+      }
+      chkForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const code = $<HTMLInputElement>('nk-chk-code').value.replace(/\s/g, '');
+        if (!code) return chkShow('warn', '✍️', 'কোড লিখুন', 'নুসুক অ্যাপ থেকে আপনার রেফারেল কোড কপি করে এখানে পেস্ট করুন।');
+        if (!CODE_RE.test(code)) return chkShow('warn', '⚠️', 'কোডটি সঠিক নয়', 'নুসুকের কোড NG- দিয়ে শুরু হয়, তারপর ৮টি অক্ষর বা সংখ্যা। যেমন: NG-y3JkB7lU');
+        const btn = chkForm.querySelector('button')!;
+        btn.disabled = true;
+        btn.textContent = 'খুঁজছি…';
+        try {
+          const r = await rpc<CodeCheck>('nusuk_check_code', { p_code: code });
+          const c = `<span class="font-mono font-semibold">${esc(code)}</span>`;
+          const caseNote = r.found && r.exact_case === false ? ' (তালিকায় ছোট-বড় হাতের অক্ষর একটু আলাদা আছে, অ্যাপের কোডের সাথে মিলিয়ে নিন।)' : '';
+          if (!r.ok) chkShow('warn', '⚠️', r.reason === 'closed' ? 'এখন খোঁজা যাচ্ছে না' : 'কোডটি সঠিক নয়', r.reason === 'closed' ? 'কার্যক্রম সাময়িকভাবে বন্ধ আছে, পরে আবার চেষ্টা করুন।' : 'কোডটি আবার দেখে লিখুন।');
+          else if (!r.found) chkShow('no', '❌', 'তালিকায় পাওয়া যায়নি', `${c} কোডটি আমাদের তালিকায় নেই। জমা দিলে যাচাইয়ের পর সবাই দেখতে পাবে।`, $('nk-form').classList.contains('hidden') ? undefined : code);
+          else if (r.status === 'active') chkShow('ok', '✅', r.featured ? 'তালিকায় আছে, এখন ফিচার করা হচ্ছে ★' : 'হ্যাঁ, তালিকায় আছে!', `${c} কোডটি সবাইকে দেখানো হচ্ছে। অন্যরা কপি করে ব্যবহার করছেন।${caseNote}`);
+          else if (r.status === 'pending') chkShow('wait', '⏳', 'জমা হয়েছে, যাচাইয়ের অপেক্ষায়', `${c} কোডটি আমরা পেয়েছি। যাচাই শেষ হলেই সবাইকে দেখানো হবে।${caseNote}`);
+          else if (r.status === 'inactive') chkShow('wait', '⏸️', 'তালিকায় আছে, তবে এখন বন্ধ', `${c} কোডটি তালিকায় আছে, কিন্তু সাময়িকভাবে দেখানো হচ্ছে না।${caseNote}`);
+          else chkShow('no', '🚫', 'অনুমোদন পায়নি', `${c} কোডটি যাচাইয়ে অনুমোদন পায়নি। কোডটি ঠিক আছে কিনা নুসুক অ্যাপে দেখে নিন।`);
+        } catch (err) {
+          console.error(err);
+          chkShow('warn', '📶', 'খোঁজা যায়নি', 'ইন্টারনেট সংযোগ দেখে আবার চেষ্টা করুন।');
+        }
+        btn.disabled = false;
+        btn.textContent = 'খুঁজুন';
       });
 
       // ---- Feature request dialog ----
