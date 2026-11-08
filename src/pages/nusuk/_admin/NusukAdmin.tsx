@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
-import { CODE_RE, COUNTRY_CODES, PINNED_COUNT, contentFields, countryName, defaultContent, flagUrl, mergeContent, parseToday, parseTopBar, parseWinners, defaultTopBarText, defaultTopBarDoneText, countdownText, prizeLabel, type NusukContent, type Prize, type TodayWinner, type TopBar, type Winner } from '../_lib/content';
+import { CODE_RE, COUNTRY_CODES, PINNED_COUNT, contentFields, countryName, defaultContent, flagUrl, mergeContent, parseToday, parseTopBar, parseVideo, parseWinners, youtubeId, subscribeUrl, defaultVideoLabel, defaultTopBarText, defaultTopBarDoneText, countdownText, prizeLabel, type NusukContent, type Prize, type TodayWinner, type TopBar, type VideoMode, type Winner } from '../_lib/content';
 
 /* =====================================================================
    Nusuk Manager: a standalone admin for /nusuk.
@@ -929,6 +929,81 @@ function TodayWinnerPage({ toast, settings, reload }: { toast: ToastFn; settings
   );
 }
 
+/* ---------------- Video ---------------- */
+function VideoPage({ toast, settings, reload }: { toast: ToastFn; settings: Settings; reload: () => void }) {
+  type Form = { url: string; label: string; mode: VideoMode; channel: string };
+  const fromSettings = (): Form => {
+    const raw = ((settings.content as Record<string, unknown> | null)?.video ?? {}) as Partial<Form>;
+    return { url: raw.url ?? '', label: raw.label ?? '', mode: raw.mode === 'youtube' ? 'youtube' : 'popup', channel: raw.channel ?? '' };
+  };
+  const [f, setF] = useState<Form>(fromSettings);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => setF(fromSettings()), [settings]); // eslint-disable-line react-hooks/exhaustive-deps
+  const id = f.url.trim() ? youtubeId(f.url) : null;
+  const live = parseVideo(settings.content);
+
+  async function write(value: Form | null) {
+    if (value) {
+      if (!youtubeId(value.url)) return toast('Paste a YouTube video link (youtube.com/watch?v=… or youtu.be/…)', false);
+      if (value.channel.trim() && !subscribeUrl(value.channel)) return toast('Channel link must be a youtube.com link', false);
+    }
+    setBusy(true);
+    const { data, error: e1 } = await sb!.from('nusuk_settings').select('content').eq('id', 1).single();
+    if (e1) { setBusy(false); return toast(errText(e1), false); }
+    const video = value ? { url: value.url.trim(), label: value.label.trim() || undefined, mode: value.mode, channel: value.channel.trim() || undefined } : null;
+    const content = { ...((data?.content as object) ?? {}), video };
+    const { error } = await sb!.from('nusuk_settings').update({ content, updated_at: new Date().toISOString() }).eq('id', 1);
+    setBusy(false);
+    if (error) return toast(errText(error), false);
+    toast(value ? 'Video saved' : 'Video button removed');
+    reload();
+  }
+
+  return (
+    <div className="grid gap-4 lg:grid-cols-[1fr_22rem]">
+      <Card title="Tutorial video" actions={<>{live && <Btn kind="ghost" disabled={busy} onClick={() => confirm('Remove the video button from the page?') && write(null)}>Remove</Btn>}<Btn onClick={() => write(f)} disabled={busy}>{busy ? 'Saving…' : 'Save'}</Btn></>}>
+        <p className="mb-4 text-sm text-emerald-900/75">A video button under the code box on /nusuk. Paste your YouTube link and Save. With no link, the button is hidden.</p>
+        <div className="grid gap-4">
+          <label className="grid gap-1 text-sm font-semibold">YouTube video link
+            <input className="nk-input font-normal" value={f.url} onChange={(e) => setF({ ...f, url: e.target.value })} placeholder="https://youtu.be/… or https://www.youtube.com/watch?v=…" />
+            {f.url.trim() && <span className={`text-xs font-normal ${id ? 'text-emerald-700' : 'text-red-700'}`}>{id ? `✓ Video found (${id})` : 'Not a YouTube video link'}</span>}
+          </label>
+          <label className="grid gap-1 text-sm font-semibold">Button text
+            <input className="nk-input font-normal" maxLength={60} value={f.label} onChange={(e) => setF({ ...f, label: e.target.value })} placeholder={defaultVideoLabel} />
+            <span className="text-xs font-normal text-emerald-900/60">Leave empty to use: {defaultVideoLabel}</span>
+          </label>
+          <fieldset className="grid gap-2">
+            <legend className="mb-1 text-sm font-semibold">When a visitor clicks the button</legend>
+            <label className="flex items-start gap-2 rounded-xl border border-[#e7e1cf] p-3 text-sm has-[:checked]:border-emerald-600 has-[:checked]:bg-emerald-50">
+              <input type="radio" name="vmode" className="mt-1" checked={f.mode === 'popup'} onChange={() => setF({ ...f, mode: 'popup' })} />
+              <span><b>Play in a popup on the page</b><span className="block text-xs text-emerald-900/70">Stays on your site. Full screen works, and the popup has "YouTube-এ দেখুন" and Subscribe buttons.</span></span>
+            </label>
+            <label className="flex items-start gap-2 rounded-xl border border-[#e7e1cf] p-3 text-sm has-[:checked]:border-emerald-600 has-[:checked]:bg-emerald-50">
+              <input type="radio" name="vmode" className="mt-1" checked={f.mode === 'youtube'} onChange={() => setF({ ...f, mode: 'youtube' })} />
+              <span><b>Open directly on YouTube</b><span className="block text-xs text-emerald-900/70">Opens the video in the YouTube app or a new tab. More views and subscribers on your channel, but the visitor leaves the page.</span></span>
+            </label>
+          </fieldset>
+          <label className="grid gap-1 text-sm font-semibold">YouTube channel link (optional)
+            <input className="nk-input font-normal" value={f.channel} onChange={(e) => setF({ ...f, channel: e.target.value })} placeholder="https://www.youtube.com/@yourchannel" />
+            <span className="text-xs font-normal text-emerald-900/60">Adds a red "চ্যানেল সাবস্ক্রাইব করুন" button in the popup. YouTube asks the visitor to confirm the subscription.</span>
+          </label>
+        </div>
+      </Card>
+      <Card title={`Preview${live ? ' · live now' : ''}`}>
+        <div className="nk-video-btn flex items-center gap-3 rounded-xl px-3.5 py-2.5">
+          <span className="nk-video-play" aria-hidden><svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="currentColor"><path d="M8 5v14l11-7z" /></svg></span>
+          <span className="min-w-0 flex-1 text-left">
+            <span className="block truncate text-[15px] font-bold leading-tight">{f.label.trim() || defaultVideoLabel}</span>
+            <span className="block truncate text-xs opacity-70">নুসুক কী, কোড কীভাবে ব্যবহার করবেন, ধাপে ধাপে</span>
+          </span>
+          <span className="shrink-0 rounded-full bg-[#ff0000] px-2 py-0.5 text-[11px] font-bold text-white">ভিডিও ›</span>
+        </div>
+        {id && <img src={`https://i.ytimg.com/vi/${id}/hqdefault.jpg`} alt="Video thumbnail" className="mt-3 aspect-video w-full rounded-xl object-cover" />}
+      </Card>
+    </div>
+  );
+}
+
 /* ---------------- Top notice ---------------- */
 // <input type="datetime-local"> works in this computer's local time; the database keeps an absolute ISO time.
 const isoToLocalInput = (iso?: string) => {
@@ -1074,7 +1149,7 @@ function WinnersPage({ toast, settings, reload }: { toast: ToastFn; settings: Se
 }
 
 /* ---------------- Shell ---------------- */
-type Route = 'dashboard' | 'codes' | 'review' | 'features' | 'upload' | 'notice' | 'today' | 'winners' | 'feedback' | 'settings';
+type Route = 'dashboard' | 'codes' | 'review' | 'features' | 'upload' | 'notice' | 'video' | 'today' | 'winners' | 'feedback' | 'settings';
 const nav: { r: Route; label: string; icon: string }[] = [
   { r: 'dashboard', label: 'Dashboard', icon: 'M3 13h8V3H3zm10 8h8V11h-8zM3 21h8v-6H3zm10-18v6h8V3z' },
   { r: 'codes', label: 'Codes', icon: 'M4 6h16M4 12h16M4 18h10' },
@@ -1082,6 +1157,7 @@ const nav: { r: Route; label: string; icon: string }[] = [
   { r: 'features', label: 'Feature requests', icon: 'M12 2l3 6.5 7 .8-5.2 4.8 1.5 7L12 17.6 5.7 21.1l1.5-7L2 9.3l7-.8z' },
   { r: 'upload', label: 'Paste codes', icon: 'M12 16V4m0 0l-4 4m4-4l4 4M4 20h16' },
   { r: 'notice', label: 'Top notice', icon: 'M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1zM15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13' },
+  { r: 'video', label: 'Video', icon: 'M2.5 7.5a2.5 2.5 0 0 1 2.5-2.5h14a2.5 2.5 0 0 1 2.5 2.5v9a2.5 2.5 0 0 1-2.5 2.5H5a2.5 2.5 0 0 1-2.5-2.5zM10 9.5v5l4.5-2.5z' },
   { r: 'today', label: "Today's winner", icon: 'M12 2l3 6.5 7 .8-5.2 4.8 1.5 7L12 17.6 5.7 21.1l1.5-7L2 9.3l7-.8z' },
   { r: 'feedback', label: 'Feedback', icon: 'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z' },
   { r: 'winners', label: 'Winners', icon: 'M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4' },
@@ -1201,6 +1277,7 @@ export default function NusukAdmin() {
         {route === 'codes' && <CodesPage key="codes" toast={toast} settings={settings} />}
         {route === 'review' && <CodesPage key="review" toast={toast} reviewMode settings={settings} />}
         {route === 'upload' && <Upload toast={toast} defaultMax={settings?.default_max_uses ?? 1} />}
+        {route === 'video' && settings && <VideoPage toast={toast} settings={settings} reload={loadSettings} />}
         {route === 'notice' && settings && <TopNoticePage toast={toast} settings={settings} reload={loadSettings} />}
         {route === 'today' && settings && <TodayWinnerPage toast={toast} settings={settings} reload={loadSettings} />}
         {route === 'feedback' && <FeedbackPage toast={toast} onChange={loadUnread} />}

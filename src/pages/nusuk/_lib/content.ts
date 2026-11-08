@@ -130,6 +130,55 @@ export const parseTopBar = (c: unknown): TopBar | null => {
   };
 };
 
+/** Tutorial video button under the code box, stored in nusuk_settings.content.video
+ *  and edited from Nusuk Manager → Video. mode 'popup' plays it on the page; 'youtube' opens YouTube. */
+export type VideoMode = 'popup' | 'youtube';
+export type Video = { url: string; label?: string; mode: VideoMode; channel?: string };
+export const defaultVideoLabel = 'কীভাবে কাজ করে? ভিডিও দেখুন';
+
+/** YouTube video id from any common link: watch?v=, youtu.be/, shorts/, embed/, live/. */
+export function youtubeId(url: string): string | null {
+  try {
+    const u = new URL(url.trim());
+    const host = u.hostname.replace(/^(www|m|music)\./, '');
+    let id: string | null = null;
+    if (host === 'youtu.be') id = u.pathname.slice(1).split('/')[0];
+    else if (host === 'youtube.com' || host === 'youtube-nocookie.com') {
+      id = u.searchParams.get('v') ?? u.pathname.match(/^\/(?:shorts|embed|live|v)\/([^/?#]+)/)?.[1] ?? null;
+    }
+    return id && /^[A-Za-z0-9_-]{11}$/.test(id) ? id : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Channel link → subscribe link (YouTube shows the "Subscribe?" prompt). */
+export const subscribeUrl = (channel: string) => {
+  try {
+    const u = new URL(channel.trim());
+    if (!/(^|\.)youtube\.com$/.test(u.hostname)) return null;
+    u.searchParams.set('sub_confirmation', '1');
+    return u.toString();
+  } catch {
+    return null;
+  }
+};
+
+export const parseVideo = (c: unknown): (Video & { id: string }) | null => {
+  const v = c && typeof c === 'object' ? (c as Record<string, unknown>).video : null;
+  if (!v || typeof v !== 'object') return null;
+  const x = v as Video;
+  const id = typeof x.url === 'string' ? youtubeId(x.url) : null;
+  if (!id) return null;
+  return {
+    id,
+    url: x.url,
+    label: typeof x.label === 'string' && x.label.trim() ? x.label.trim() : undefined,
+    mode: x.mode === 'youtube' ? 'youtube' : 'popup',
+    channel: typeof x.channel === 'string' && subscribeUrl(x.channel) ? x.channel : undefined,
+  };
+};
+
 /** ISO 3166-1 alpha-2 codes, most common Nusuk winner countries first. Names come from Intl.DisplayNames. */
 const PINNED = 'sa eg pk bd in id my tr ng dz ma jo ae iq ye sd gb us'.split(' ');
 const ALL =

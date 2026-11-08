@@ -97,10 +97,15 @@ const desc = c.subtitle;
           <span id="nk-status" class="text-emerald-800/80" role="status"></span>
         </div>
 
-        <details id="nk-history" class="mt-4 hidden rounded-xl bg-emerald-50/70 px-3.5 py-2.5 text-sm">
-          <summary class="cursor-pointer font-semibold text-emerald-900">আপনার কপি করা কোড</summary>
-          <ul id="nk-history-list" class="mt-2 grid gap-1 font-mono text-emerald-950"></ul>
-        </details>
+        <!-- Tutorial video (Nusuk Manager → Video). Hidden until a YouTube link is set. -->
+        <a id="nk-video-open" href="#" target="_blank" rel="noopener" class="nk-video-btn mt-4 hidden items-center gap-3 rounded-xl px-3.5 py-2.5">
+          <span class="nk-video-play" aria-hidden="true"><svg viewBox="0 0 24 24" class="h-3.5 w-3.5" fill="currentColor"><path d="M8 5v14l11-7z" /></svg></span>
+          <span class="min-w-0 flex-1 text-left">
+            <span id="nk-video-label" class="block text-[15px] font-bold leading-tight">কীভাবে কাজ করে? ভিডিও দেখুন</span>
+            <span class="block truncate text-xs text-[#7a0f0f]/70">নুসুক কী, কোড কীভাবে ব্যবহার করবেন, ধাপে ধাপে</span>
+          </span>
+          <span class="hidden shrink-0 rounded-full bg-[#ff0000] px-2 py-0.5 text-[11px] font-bold text-white sm:inline">ভিডিও ›</span>
+        </a>
 
         <div class="mt-3.5 flex items-stretch gap-2">
           <button id="nk-ft-open" type="button" class="nk-ft-cta flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full border border-gold-500 px-3 py-2 text-sm font-bold text-emerald-950">
@@ -253,6 +258,23 @@ const desc = c.subtitle;
       </footer>
     </main>
 
+    <dialog id="nk-vd" class="m-auto w-[calc(100%-1.5rem)] max-w-3xl overflow-hidden rounded-[1.25rem] bg-emerald-950 p-0 text-white shadow-2xl backdrop:bg-black/75" aria-label="টিউটোরিয়াল ভিডিও">
+      <div class="flex items-center justify-between gap-3 px-4 py-2">
+        <span class="text-sm font-bold">▶ টিউটোরিয়াল ভিডিও</span>
+        <button type="button" id="nk-vd-close" class="grid h-9 w-9 shrink-0 place-items-center rounded-full text-2xl text-white/70 hover:bg-white/10" aria-label="বন্ধ করুন">×</button>
+      </div>
+      <div class="aspect-video w-full bg-black">
+        <iframe id="nk-vd-frame" class="h-full w-full" src="about:blank" title="টিউটোরিয়াল ভিডিও" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+      </div>
+      <div class="flex flex-wrap items-center justify-center gap-2 px-4 py-3">
+        <a id="nk-vd-yt" href="#" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-sm font-bold text-emerald-950 hover:bg-gold-100">
+          <span class="nk-video-play" style="width:1.5rem;height:1.05rem" aria-hidden="true"><svg viewBox="0 0 24 24" class="h-3 w-3" fill="currentColor"><path d="M8 5v14l11-7z" /></svg></span>
+          YouTube-এ দেখুন
+        </a>
+        <a id="nk-vd-sub" href="#" target="_blank" rel="noopener" class="hidden items-center gap-1.5 rounded-full bg-[#ff0000] px-3.5 py-2 text-sm font-bold text-white hover:bg-[#d90000]">🔔 চ্যানেল সাবস্ক্রাইব করুন</a>
+      </div>
+    </dialog>
+
     <dialog id="nk-fl" class="m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-md overflow-y-auto rounded-[1.25rem] p-0 shadow-2xl backdrop:bg-emerald-950/60" aria-labelledby="nk-fl-title">
       <div class="grid gap-3.5 p-5">
         <div class="flex items-start justify-between gap-3">
@@ -381,7 +403,7 @@ const desc = c.subtitle;
 
     <script>
       import { rpc, rpcReady, type Boot, type Claim, type CodeRef, type FeatureReq, type FeaturedItem, type FeaturedList, type Submit } from './_lib/rpc';
-      import { CODE_RE, countdownText, countryName, flagUrl, parseToday, parseTopBar, parseWinners, prizeLabel, type Winner } from './_lib/content';
+      import { CODE_RE, countdownText, countryName, defaultVideoLabel, flagUrl, parseToday, parseTopBar, parseVideo, subscribeUrl, parseWinners, prizeLabel, type Winner } from './_lib/content';
 
       // Bangladesh flag (green field, red disc set toward the hoist). Inline SVG so it renders on every OS.
       const BD_FLAG = '<svg viewBox="0 0 20 12" aria-hidden="true" class="h-full w-full"><rect width="20" height="12" fill="#006a4e"/><circle cx="9" cy="6" r="3.8" fill="#f42a41"/></svg>';
@@ -422,15 +444,6 @@ const desc = c.subtitle;
 
       function renderMine() {
         $('nk-mine').textContent = bn(used.length);
-        const list = $('nk-history-list');
-        list.replaceChildren(
-          ...used.slice(-10).reverse().map((u) => {
-            const li = document.createElement('li');
-            li.textContent = u.code;
-            return li;
-          }),
-        );
-        $('nk-history').classList.toggle('hidden', used.length === 0);
       }
 
       function showCode(c: CodeRef | null | undefined) {
@@ -627,8 +640,22 @@ const desc = c.subtitle;
         a.classList.toggle('hidden', !t.link);
       }
 
+      // ---- Tutorial video: popup player, or straight to YouTube ----
+      let video: ReturnType<typeof parseVideo> = null;
+      function renderVideo(content: unknown) {
+        video = parseVideo(content);
+        const a = $<HTMLAnchorElement>('nk-video-open');
+        a.classList.toggle('hidden', !video);
+        a.classList.toggle('flex', !!video);
+        if (!video) return;
+        a.href = `https://www.youtube.com/watch?v=${video.id}`;
+        const label = video.label ?? defaultVideoLabel;
+        if ($('nk-video-label').textContent !== label) $('nk-video-label').textContent = label;
+      }
+
       function applyContent(b: Boot) {
         renderTopBar(b.content);
+        renderVideo(b.content);
         renderToday(b.content);
         renderWinners(parseWinners(b.content));
         if (b.content) {
@@ -914,6 +941,25 @@ const desc = c.subtitle;
       $('nk-fl-close').addEventListener('click', () => flDialog.close());
       flDialog.addEventListener('click', (e) => { if (e.target === flDialog) flDialog.close(); });
       $('nk-fl-apply').addEventListener('click', () => { flDialog.close(); $('nk-ft-open').click(); });
+
+      // ---- Video dialog ----
+      const vdDialog = $<HTMLDialogElement>('nk-vd');
+      const vdFrame = $<HTMLIFrameElement>('nk-vd-frame');
+      $('nk-video-open').addEventListener('click', (e) => {
+        if (!video || video.mode === 'youtube') return; // plain link: opens YouTube in a new tab
+        e.preventDefault();
+        vdFrame.src = `https://www.youtube.com/embed/${video.id}?autoplay=1&rel=0&playsinline=1`;
+        $<HTMLAnchorElement>('nk-vd-yt').href = `https://www.youtube.com/watch?v=${video.id}`;
+        const sub = video.channel ? subscribeUrl(video.channel) : null;
+        const subA = $<HTMLAnchorElement>('nk-vd-sub');
+        if (sub) subA.href = sub;
+        subA.classList.toggle('hidden', !sub);
+        subA.classList.toggle('inline-flex', !!sub);
+        vdDialog.showModal();
+      });
+      $('nk-vd-close').addEventListener('click', () => vdDialog.close());
+      vdDialog.addEventListener('click', (e) => { if (e.target === vdDialog) vdDialog.close(); });
+      vdDialog.addEventListener('close', () => { vdFrame.src = 'about:blank'; }); // stop playback on close
 
       // ---- Feedback dialog ----
       const fbDialog = $<HTMLDialogElement>('nk-fb');
