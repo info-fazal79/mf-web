@@ -141,50 +141,285 @@ function Logo() {
 }
 
 /* ---------------- Dashboard ---------------- */
-function Dashboard({ toast, go }: { toast: ToastFn; go: (r: Route) => void }) {
-  const [s, setS] = useState<Stats | null>(null);
-  const load = useCallback(async () => {
-    const { data, error } = await sb!.rpc('nusuk_admin_stats');
-    if (error) toast(errText(error), false);
-    else setS(data as Stats);
-  }, [toast]);
-  useEffect(() => { load(); }, [load]);
-  const max = Math.max(1, ...(s?.daily ?? []).map((d) => d.copies));
-  const tiles: [string, number | undefined, string][] = [
-    ['Active codes', s?.remaining, 'Each visitor sees this minus the codes they copied'],
-    ['Total codes', s?.total, 'Active + inactive'],
-    ['Total copies', s?.copies, 'All time'],
-    ['Copies today', s?.today, 'Since midnight (server time)'],
-    ['Inactive', s?.inactive, 'Hidden from visitors'],
-    ['Waiting for review', s?.pending, 'User submissions'],
-  ];
+type Pt = { t: string; n: number };
+type Day = { day: string; new: number; unique: number | null; copies: number; submitted: number; approved: number };
+type CodeRow = { code: string; uses: number; source: 'admin' | 'user'; featured: boolean };
+type Dash = {
+  today: string; tracked_from: string;
+  visitors: { total: number; active_now: number; unique_today: number; unique_yday: number; new_today: number; new_yday: number; peak_today: number; peak_today_at: string | null; peak_ever: number };
+  copies: { total: number; today: number; yday: number; last_hour: number };
+  daily: Day[]; active_log: Pt[]; hourly: Pt[];
+  codes: { active: number; inactive: number; never_used: number; avg_uses: number; from_admin: number; from_users: number; buckets: { label: string; n: number }[]; top: CodeRow[]; bottom: CodeRow[] };
+  review: { pending: number; submitted: number; approved: number; rejected: number; submitted_today: number; approved_today: number };
+  featured: { running: number; ever: number; today: number; req_pending: number; req_approved: number; req_rejected: number; req_today: number };
+  feedback: { new: number; total: number; today: number };
+};
+
+// Chart colors (validated: emerald + dark gold pass CVD, normal-vision and 3:1 contrast on white)
+const C1 = '#0a7a59';
+const C2 = '#a8841f';
+const dhakaTime = (iso: string, withDay = false) =>
+  new Date(iso).toLocaleString('en-GB', { timeZone: 'Asia/Dhaka', hour: '2-digit', minute: '2-digit', ...(withDay ? { day: 'numeric', month: 'short' } : {}) });
+const shortDay = (d: string) => new Date(`${d}T00:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+
+/** Change vs yesterday, e.g. "+12% vs yesterday". */
+function Delta({ now, before }: { now: number; before: number }) {
+  if (!before) return <span className="text-emerald-900/55">Yesterday: {fmt(before)}</span>;
+  const p = Math.round(((now - before) / before) * 100);
+  return <span className={p >= 0 ? 'text-emerald-700' : 'text-red-700'}>{p >= 0 ? '▲' : '▼'} {Math.abs(p)}% <span className="text-emerald-900/55">vs yesterday ({fmt(before)})</span></span>;
+}
+
+function Stat({ label, value, sub, hero = false }: { label: string; value: ReactNode; sub?: ReactNode; hero?: boolean }) {
   return (
-    <div className="grid gap-4">
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {tiles.map(([label, v, hint], i) => (
-          <div key={label} className={`nk-card p-4 ${i === 0 ? 'col-span-2 bg-emerald-900! text-white lg:col-span-1' : ''}`}>
-            <div className={`text-xs font-semibold ${i === 0 ? 'text-gold-100' : 'text-emerald-900/70'}`}>{label}</div>
-            <div className="mt-1 text-2xl font-bold">{s ? fmt(v) : '…'}</div>
-            <div className={`text-xs ${i === 0 ? 'text-emerald-100/70' : 'text-emerald-900/55'}`}>{hint}</div>
-          </div>
-        ))}
-        <button type="button" onClick={() => go('review')} className="nk-card p-4 text-left hover:bg-gold-100/40">
-          <div className="text-xs font-semibold text-emerald-900/70">Quick links</div>
-          <div className="mt-1 font-bold text-emerald-800">Review submissions →</div>
-          <div className="text-xs text-emerald-900/55">or upload codes from the Upload tab</div>
-        </button>
-      </div>
-      <Card title="Copies, last 14 days" actions={<Btn kind="ghost" onClick={load}>Refresh</Btn>}>
-        <div className="flex h-44 items-end gap-1.5" role="img" aria-label="Daily copies bar chart">
-          {(s?.daily ?? []).map((d) => (
-            <div key={d.day} className="group flex h-full flex-1 flex-col items-center justify-end gap-1">
-              <span className="text-[10px] font-semibold text-emerald-900 opacity-0 group-hover:opacity-100">{d.copies}</span>
-              <div className="w-full rounded-t-md bg-emerald-600" style={{ height: `${Math.max(2, (d.copies / max) * 100)}%` }} title={`${d.day}: ${d.copies}`} />
-              <span className="text-[10px] text-emerald-900/60">{d.day.slice(8, 10)}</span>
+    <div className={`nk-card p-4 ${hero ? 'bg-emerald-900! text-white' : ''}`}>
+      <div className={`text-xs font-semibold ${hero ? 'text-gold-100' : 'text-emerald-900/70'}`}>{label}</div>
+      <div className="mt-1 text-2xl font-bold tabular-nums">{value}</div>
+      {sub && <div className={`mt-0.5 text-xs ${hero ? 'text-emerald-100/75' : 'text-emerald-900/60'}`}>{sub}</div>}
+    </div>
+  );
+}
+
+/** Vertical bars: one series, or two either stacked (parts of a whole) or grouped side by side. Hover tooltip per bar. */
+function Bars({ rows, series, label, grouped = false }: { rows: { key: string; tick: string; tip: string; values: (number | null)[] }[]; series: { name: string; color: string }[]; label: string; grouped?: boolean }) {
+  const [hover, setHover] = useState<number | null>(null);
+  const max = Math.max(1, ...rows.map((r) => (grouped ? Math.max(0, ...r.values.map((v) => v ?? 0)) : r.values.reduce<number>((a, v) => a + (v ?? 0), 0))));
+  const every = Math.ceil(rows.length / 10);
+  return (
+    <div>
+      {series.length > 1 && (
+        <div className="mb-2 flex flex-wrap gap-3 text-xs text-emerald-900/75">
+          {series.map((s) => <span key={s.name} className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm" style={{ background: s.color }} />{s.name}</span>)}
+        </div>
+      )}
+      <div className="relative">
+        <div className="flex h-40 items-end gap-[2px]" role="img" aria-label={label} onMouseLeave={() => setHover(null)}>
+          {rows.map((r, i) => (
+            <div key={r.key} className="flex h-full flex-1 cursor-default flex-col justify-end" onMouseEnter={() => setHover(i)} onFocus={() => setHover(i)} tabIndex={-1}>
+              <div className={`flex gap-[2px] ${grouped ? 'items-end' : 'flex-col-reverse'} ${hover === null || hover === i ? 'opacity-100' : 'opacity-60'}`}>
+                {r.values.map((v, j) => (v ? <div key={j} className={grouped ? 'flex-1 rounded-t-[4px]' : 'w-full last:rounded-t-[4px]'} style={{ height: `${(v / max) * 152}px`, minHeight: 2, background: series[j].color }} /> : grouped ? <div key={j} className="flex-1" /> : null))}
+                {!r.values.some(Boolean) && <div className="h-[2px] w-full bg-emerald-900/10" />}
+              </div>
             </div>
           ))}
         </div>
+        {hover !== null && rows[hover] && (
+          <div className="pointer-events-none absolute -top-2 z-10 -translate-x-1/2 -translate-y-full rounded-lg bg-emerald-950 px-2.5 py-1.5 text-xs whitespace-nowrap text-white shadow-lg"
+            style={{ left: `${((hover + 0.5) / rows.length) * 100}%` }}>
+            <div className="font-semibold">{rows[hover].tip}</div>
+            {series.map((s, j) => (
+              <div key={s.name} className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-sm" style={{ background: s.color }} />{s.name}: <b className="tabular-nums">{rows[hover].values[j] === null ? '—' : fmt(rows[hover].values[j]!)}</b></div>
+            ))}
+          </div>
+        )}
+      </div>
+      <div className="mt-1 flex gap-[2px] text-[10px] text-emerald-900/55">
+        {rows.map((r, i) => <span key={r.key} className="flex-1 text-center">{i % every === 0 || i === rows.length - 1 ? r.tick : ''}</span>)}
+      </div>
+    </div>
+  );
+}
+
+/** Area line with a crosshair tooltip. */
+function Line({ pts, label, unit, color = C1 }: { pts: Pt[]; label: string; unit: string; color?: string }) {
+  const [hover, setHover] = useState<number | null>(null);
+  if (pts.length < 2) return <p className="rounded-xl bg-emerald-50 p-6 text-center text-sm text-emerald-900/70">Not enough data yet. The graph fills in as visitors come (one point every 10 minutes).</p>;
+  const W = 600, H = 160, max = Math.max(1, ...pts.map((p) => p.n));
+  const t0 = Date.parse(pts[0].t), t1 = Date.parse(pts[pts.length - 1].t);
+  const x = (p: Pt) => ((Date.parse(p.t) - t0) / Math.max(1, t1 - t0)) * W;
+  const y = (p: Pt) => H - (p.n / max) * (H - 8);
+  const d = pts.map((p, i) => `${i ? 'L' : 'M'}${x(p).toFixed(1)},${y(p).toFixed(1)}`).join('');
+  const onMove = (e: React.MouseEvent<SVGSVGElement>) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    const tx = t0 + ((e.clientX - r.left) / r.width) * (t1 - t0);
+    let best = 0;
+    pts.forEach((p, i) => { if (Math.abs(Date.parse(p.t) - tx) < Math.abs(Date.parse(pts[best].t) - tx)) best = i; });
+    setHover(best);
+  };
+  const h = hover !== null ? pts[hover] : null;
+  return (
+    <div>
+      <div className="flex gap-2">
+        <div className="flex h-40 shrink-0 flex-col justify-between text-right text-[10px] text-emerald-900/55 tabular-nums"><span>{fmt(max)}</span><span>{fmt(Math.round(max / 2))}</span><span>0</span></div>
+        <div className="relative min-w-0 flex-1">
+          <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="block h-40 w-full overflow-visible" role="img" aria-label={label} onMouseMove={onMove} onMouseLeave={() => setHover(null)}>
+            {[0, 0.5, 1].map((f) => <line key={f} x1={0} x2={W} y1={H - f * (H - 8)} y2={H - f * (H - 8)} stroke="#053d2d" strokeOpacity={0.08} vectorEffect="non-scaling-stroke" />)}
+            <path d={`${d}L${W},${H}L0,${H}Z`} fill={color} fillOpacity={0.12} />
+            <path d={d} fill="none" stroke={color} strokeWidth={2} vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
+            {h && <line x1={x(h)} x2={x(h)} y1={0} y2={H} stroke="#053d2d" strokeOpacity={0.35} strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />}
+          </svg>
+          {h && (
+            <div className="pointer-events-none absolute top-0 z-10 -translate-x-1/2 -translate-y-full rounded-lg bg-emerald-950 px-2.5 py-1.5 text-xs whitespace-nowrap text-white shadow-lg" style={{ left: `${(x(h) / W) * 100}%` }}>
+              <div className="font-semibold">{dhakaTime(h.t, true)}</div>
+              <div><b className="tabular-nums">{fmt(h.n)}</b> {unit}</div>
+            </div>
+          )}
+          <div className="mt-1 flex justify-between text-[10px] text-emerald-900/55"><span>{dhakaTime(pts[0].t, true)}</span><span>{dhakaTime(pts[pts.length - 1].t, true)}</span></div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CodeList({ rows, empty }: { rows: CodeRow[]; empty: string }) {
+  if (!rows.length) return <p className="text-sm text-emerald-900/60">{empty}</p>;
+  const max = Math.max(1, ...rows.map((r) => r.uses));
+  return (
+    <ol className="grid gap-1.5">
+      {rows.map((r, i) => (
+        <li key={r.code} className="grid grid-cols-[1.5rem_1fr_auto] items-center gap-2 text-sm">
+          <span className="text-xs text-emerald-900/50 tabular-nums">{i + 1}</span>
+          <span className="min-w-0">
+            <span className="flex items-center gap-1.5 font-mono font-semibold text-emerald-950">{r.code}{r.featured && <span title="Featured" className="text-gold-600">★</span>}{r.source === 'user' && <span className="rounded bg-emerald-50 px-1 font-sans text-[10px] text-emerald-800">user</span>}</span>
+            <span className="mt-0.5 block h-1.5 rounded-full bg-emerald-50"><span className="block h-1.5 rounded-full" style={{ width: `${Math.max(2, (r.uses / max) * 100)}%`, background: C1 }} /></span>
+          </span>
+          <span className="font-bold tabular-nums text-emerald-950">{fmt(r.uses)}</span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+function Dashboard({ toast, go }: { toast: ToastFn; go: (r: Route) => void }) {
+  const [d, setD] = useState<Dash | null>(null);
+  const [old, setOld] = useState<Stats | null>(null);
+  const [missing, setMissing] = useState(false);
+  const [range, setRange] = useState<'24h' | '7d'>('24h');
+  const [at, setAt] = useState<Date | null>(null);
+  const load = useCallback(async () => {
+    const { data, error } = await sb!.rpc('nusuk_admin_dashboard');
+    if (!error) { setD(data as Dash); setMissing(false); setAt(new Date()); return; }
+    // update_11 not run yet: fall back to the basic numbers
+    setMissing(true);
+    const r = await sb!.rpc('nusuk_admin_stats');
+    if (r.error) toast(errText(r.error), false); else setOld(r.data as Stats);
+  }, [toast]);
+  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    const t = setInterval(() => { if (document.visibilityState === 'visible') load(); }, 60000);
+    return () => clearInterval(t);
+  }, [load]);
+
+  if (missing) {
+    return (
+      <Card title="Dashboard" actions={<Btn kind="ghost" onClick={load}>Refresh</Btn>}>
+        <p className="mb-4 rounded-xl bg-gold-100 p-3 text-sm">Run <code className="font-mono">src/pages/nusuk/_sql/update_11_dashboard.sql</code> in Supabase → SQL Editor for the detailed dashboard, then click Refresh.</p>
+        {old && <div className="grid grid-cols-2 gap-3 lg:grid-cols-4"><Stat label="Active codes" value={fmt(old.active)} /><Stat label="Total copies" value={fmt(old.copies)} /><Stat label="Copies today" value={fmt(old.today)} /><Stat label="Waiting for review" value={fmt(old.pending)} /></div>}
       </Card>
+    );
+  }
+  if (!d) return <Card title="Dashboard"><p className="text-sm text-emerald-900/60">Loading…</p></Card>;
+
+  const v = d.visitors;
+  const returning = Math.max(0, v.unique_today - v.new_today);
+  const perVisitor = v.unique_today ? (d.copies.today / v.unique_today).toFixed(1) : '—';
+  const cutoff = Date.now() - (range === '24h' ? 24 : 168) * 3600e3;
+  const activePts = d.active_log.filter((p) => Date.parse(p.t) >= cutoff);
+  const days14 = d.daily.slice(-14);
+  const tracked = d.tracked_from;
+
+  return (
+    <div className="grid gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs text-emerald-900/60">All times in Bangladesh time. Updates every minute{at ? ` · last ${at.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}` : ''}.</p>
+        <Btn kind="ghost" onClick={load}>Refresh</Btn>
+      </div>
+
+      {/* Visitors */}
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Stat hero label="Active right now" value={<span className="inline-flex items-center gap-2"><span className="relative flex h-2.5 w-2.5"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-300 opacity-70" /><span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-300" /></span>{fmt(v.active_now)}</span>}
+          sub={`Peak today ${fmt(v.peak_today)}${v.peak_today_at ? ` at ${dhakaTime(v.peak_today_at)}` : ''} · best ever ${fmt(v.peak_ever)}`} />
+        <Stat label="Visitors today" value={fmt(v.unique_today)} sub={<Delta now={v.unique_today} before={v.unique_yday} />} />
+        <Stat label="New visitors today" value={fmt(v.new_today)} sub={<Delta now={v.new_today} before={v.new_yday} />} />
+        <Stat label="Returning today" value={fmt(returning)} sub="Came before, back again today" />
+        <Stat label="All-time visitors" value={fmt(v.total)} sub="Different browsers that opened /nusuk" />
+        <Stat label="Copies today" value={fmt(d.copies.today)} sub={<Delta now={d.copies.today} before={d.copies.yday} />} />
+        <Stat label="Copies, last hour" value={fmt(d.copies.last_hour)} sub={`${perVisitor} copies per visitor today`} />
+        <Stat label="All-time copies" value={fmt(d.copies.total)} sub={`Avg ${d.codes.avg_uses} per active code`} />
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-2">
+        <Card title="Active users" actions={<div className="flex rounded-full border border-[#e7e1cf] p-0.5 text-xs font-semibold">{(['24h', '7d'] as const).map((r) => <button key={r} type="button" onClick={() => setRange(r)} className={`rounded-full px-3 py-1 ${range === r ? 'bg-emerald-900 text-white' : 'text-emerald-900'}`}>{r === '24h' ? '24 hours' : '7 days'}</button>)}</div>}>
+          <p className="-mt-2 mb-3 text-xs text-emerald-900/60">Highest number of people on the page at the same time, every 10 minutes.</p>
+          <Line pts={activePts} label="Active users" unit="active" />
+        </Card>
+        <Card title="Copies per hour (48 h)">
+          <p className="-mt-2 mb-3 text-xs text-emerald-900/60">How many codes were copied in each hour.</p>
+          <Line pts={d.hourly} label="Copies per hour" unit="copies" />
+        </Card>
+      </div>
+
+      <Card title="Visitors per day (30 days)">
+        <p className="-mt-2 mb-3 text-xs text-emerald-900/60">New = first visit ever. Returning = came before. Returning visitors are counted from {shortDay(tracked)}; earlier days show new visitors only.</p>
+        <Bars label="Visitors per day" series={[{ name: 'New', color: C1 }, { name: 'Returning', color: C2 }]}
+          rows={d.daily.map((x) => ({ key: x.day, tick: shortDay(x.day), tip: shortDay(x.day), values: [x.new, x.unique === null ? null : Math.max(0, x.unique - x.new)] }))} />
+      </Card>
+
+      <div className="grid gap-4 xl:grid-cols-2">
+        <Card title="Copies per day (30 days)">
+          <Bars label="Copies per day" series={[{ name: 'Copies', color: C1 }]} rows={d.daily.map((x) => ({ key: x.day, tick: shortDay(x.day), tip: shortDay(x.day), values: [x.copies] }))} />
+        </Card>
+        <Card title="Submissions (14 days)" actions={<Btn kind="ghost" onClick={() => go('review')}>Review →</Btn>}>
+          <Bars grouped label="Submitted and approved codes per day" series={[{ name: 'Submitted', color: C2 }, { name: 'Approved', color: C1 }]}
+            rows={days14.map((x) => ({ key: x.day, tick: shortDay(x.day), tip: shortDay(x.day), values: [x.submitted, x.approved] }))} />
+        </Card>
+      </div>
+
+      {/* Codes, review, featured */}
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Card title="Codes">
+          <dl className="grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
+            <dt className="text-emerald-900/70">Active</dt><dd className="text-right font-bold tabular-nums">{fmt(d.codes.active)}</dd>
+            <dt className="text-emerald-900/70">Inactive</dt><dd className="text-right font-bold tabular-nums">{fmt(d.codes.inactive)}</dd>
+            <dt className="text-emerald-900/70">Uploaded by you</dt><dd className="text-right font-bold tabular-nums">{fmt(d.codes.from_admin)}</dd>
+            <dt className="text-emerald-900/70">From visitors (approved)</dt><dd className="text-right font-bold tabular-nums">{fmt(d.codes.from_users)}</dd>
+            <dt className="text-emerald-900/70">Never copied yet</dt><dd className="text-right font-bold tabular-nums">{fmt(d.codes.never_used)}</dd>
+          </dl>
+          <h3 className="mt-4 mb-2 text-xs font-bold text-emerald-900/70">Active codes by number of copies</h3>
+          <div className="grid gap-1.5">
+            {d.codes.buckets.map((b) => {
+              const max = Math.max(1, ...d.codes.buckets.map((x) => x.n));
+              return (
+                <div key={b.label} className="grid grid-cols-[3.5rem_1fr_3.5rem] items-center gap-2 text-xs">
+                  <span className="text-emerald-900/70">{b.label}</span>
+                  <span className="h-2.5 rounded-full bg-emerald-50"><span className="block h-2.5 rounded-full" style={{ width: `${b.n ? Math.max(2, (b.n / max) * 100) : 0}%`, background: C1 }} /></span>
+                  <span className="text-right font-semibold tabular-nums">{fmt(b.n)}</span>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+        <Card title="Review" actions={d.review.pending ? <Btn onClick={() => go('review')}>{fmt(d.review.pending)} waiting →</Btn> : undefined}>
+          <dl className="grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
+            <dt className="text-emerald-900/70">Submitted by visitors</dt><dd className="text-right font-bold tabular-nums">{fmt(d.review.submitted)}</dd>
+            <dt className="text-emerald-900/70">Approved (added)</dt><dd className="text-right font-bold tabular-nums">{fmt(d.review.approved)}</dd>
+            <dt className="text-emerald-900/70">Rejected</dt><dd className="text-right font-bold tabular-nums">{fmt(d.review.rejected)}</dd>
+            <dt className="text-emerald-900/70">Waiting</dt><dd className="text-right font-bold tabular-nums">{fmt(d.review.pending)}</dd>
+            <dt className="text-emerald-900/70">Submitted today</dt><dd className="text-right font-bold tabular-nums">{fmt(d.review.submitted_today)}</dd>
+            <dt className="text-emerald-900/70">Approved today</dt><dd className="text-right font-bold tabular-nums">{fmt(d.review.approved_today)}</dd>
+          </dl>
+        </Card>
+        <Card title="Featured" actions={d.featured.req_pending ? <Btn onClick={() => go('features')}>{fmt(d.featured.req_pending)} requests →</Btn> : undefined}>
+          <dl className="grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
+            <dt className="text-emerald-900/70">Featured right now</dt><dd className="text-right font-bold tabular-nums">{fmt(d.featured.running)}</dd>
+            <dt className="text-emerald-900/70">Featured today</dt><dd className="text-right font-bold tabular-nums">{fmt(d.featured.today)}</dd>
+            <dt className="text-emerald-900/70">Featured, all time</dt><dd className="text-right font-bold tabular-nums">{fmt(d.featured.ever)}</dd>
+            <dt className="text-emerald-900/70">Requests today</dt><dd className="text-right font-bold tabular-nums">{fmt(d.featured.req_today)}</dd>
+            <dt className="text-emerald-900/70">Requests approved</dt><dd className="text-right font-bold tabular-nums">{fmt(d.featured.req_approved)}</dd>
+            <dt className="text-emerald-900/70">Requests rejected</dt><dd className="text-right font-bold tabular-nums">{fmt(d.featured.req_rejected)}</dd>
+          </dl>
+          <div className="mt-4 border-t border-[#e7e1cf] pt-3">
+            <button type="button" onClick={() => go('feedback')} className="flex w-full items-center justify-between text-sm">
+              <span className="text-emerald-900/70">Feedback: {fmt(d.feedback.total)} total, {fmt(d.feedback.today)} today</span>
+              {d.feedback.new > 0 && <span className="rounded-full bg-red-600 px-2 text-xs font-bold leading-5 text-white">{d.feedback.new} new</span>}
+            </button>
+          </div>
+        </Card>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card title="Most copied codes (top 10)"><CodeList rows={d.codes.top} empty="No copies yet." /></Card>
+        <Card title="Least copied codes (bottom 10)"><CodeList rows={d.codes.bottom} empty="No active codes." /></Card>
+      </div>
     </div>
   );
 }
