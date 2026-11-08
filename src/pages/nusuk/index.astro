@@ -3,6 +3,11 @@
 // Everything for this feature lives in src/pages/nusuk/. Delete the folder to remove it.
 import './_lib/nusuk.css';
 import { defaultContent as c } from './_lib/content';
+import Icon from '@/components/Icon.astro';
+import { getContent } from '@/lib/content';
+
+// Same social links as the main site footer (edited in the main admin)
+const socials = (await getContent()).socials.items;
 
 const tabs = [
   { id: 't1', title: c.tab1_title, body: c.tab1_body, tk: 'tab1_title', bk: 'tab1_body' },
@@ -201,7 +206,27 @@ const desc = c.subtitle;
           </span>
         </div>
         <p class="nk-pre" data-k="disclaimer">{c.disclaimer}</p>
-        <p class="mt-3">© {new Date().getFullYear()} <a href="/" class="font-semibold text-emerald-800 hover:underline">Muhammad Fazal</a>. সর্বস্বত্ব সংরক্ষিত।</p>
+        {socials.length > 0 && (
+          <div class="mt-5">
+            <p class="text-sm font-semibold text-emerald-900">আমার সাথে যুক্ত থাকুন</p>
+            <ul class="mt-2.5 flex flex-wrap justify-center gap-2.5">
+              {socials.map((s) => (
+                <li>
+                  <a
+                    href={s.href}
+                    {...(s.href.startsWith('mailto:') ? {} : { target: '_blank', rel: 'noopener' })}
+                    aria-label={s.name}
+                    title={s.name}
+                    class="grid h-11 w-11 place-items-center rounded-full border border-[#e7e1cf] bg-white text-emerald-800 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-700 hover:bg-emerald-800 hover:text-white"
+                  >
+                    <Icon name={s.icon} size={18} />
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        <p class="mt-5">© {new Date().getFullYear()} <a href="/" class="font-semibold text-emerald-800 hover:underline">Muhammad Fazal</a>. সর্বস্বত্ব সংরক্ষিত।</p>
       </footer>
     </main>
 
