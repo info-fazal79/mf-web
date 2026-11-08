@@ -30,4 +30,5 @@ export type FeaturedItem = { code: string; since: string; ends: string };
 export type FeaturedList = { running: FeaturedItem[]; recent: FeaturedItem[]; total: number; now?: string };
 export type FeatureReq = { ok: boolean; reason?: 'closed' | 'missing' | 'bad_link' | 'not_found' | 'featured' | 'exists' | 'busy' };
 export type CodeCheck = { ok: boolean; reason?: 'closed' | 'invalid'; found?: boolean; status?: 'active' | 'inactive' | 'pending' | 'rejected'; exact_case?: boolean; featured?: boolean };
+export type SliderItem = { kind: 'complaint' | 'suggestion' | 'opinion'; name: string; message: string; at: string };
 export type Submit = { ok: boolean; reason?: 'closed' | 'invalid' | 'exists' | 'busy'; status?: string };

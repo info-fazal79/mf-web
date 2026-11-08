@@ -237,6 +237,22 @@ const desc = c.subtitle;
         </button>
       </section>
 
+      <!-- ===== Visitor feedback slider (Nusuk Manager → Feedback → ★ Show on slider) ===== -->
+      <section id="nk-rv" class="nk-card mt-4 hidden p-5 sm:p-6" aria-roledescription="carousel" aria-labelledby="nk-rv-h">
+        <div class="mb-4 flex items-center justify-between gap-3">
+          <div>
+            <h2 id="nk-rv-h" class="font-bold text-emerald-900">ভিজিটরদের মতামত</h2>
+            <p class="text-sm text-emerald-900/70">যারা এই পেজ ব্যবহার করছেন, তাদের কথা</p>
+          </div>
+          <div class="flex shrink-0 gap-1.5">
+            <button id="nk-rv-prev" type="button" class="grid h-9 w-9 place-items-center rounded-full border border-emerald-900/15 text-emerald-900 hover:bg-emerald-50" aria-label="আগের মতামত">‹</button>
+            <button id="nk-rv-next" type="button" class="grid h-9 w-9 place-items-center rounded-full border border-emerald-900/15 text-emerald-900 hover:bg-emerald-50" aria-label="পরের মতামত">›</button>
+          </div>
+        </div>
+        <div id="nk-rv-track" class="nk-rv-track" aria-live="off"></div>
+        <div id="nk-rv-dots" class="mt-4 flex flex-wrap justify-center gap-1.5"></div>
+      </section>
+
       <footer class="mt-10 text-center text-xs leading-relaxed text-emerald-900/70">
         <div id="nk-visitors" class="mb-4 hidden flex-wrap items-center justify-center gap-2 text-sm" aria-live="polite">
           <span class="nk-card inline-flex items-center gap-2 rounded-full! px-4 py-2 font-semibold text-emerald-900">
@@ -381,7 +397,7 @@ const desc = c.subtitle;
         <div class="flex items-start justify-between gap-3">
           <div>
             <h2 id="nk-fb-title" class="text-lg font-bold text-emerald-900">মতামত / অভিযোগ জানান</h2>
-            <p class="text-sm text-emerald-900/70">শুধু অ্যাডমিন আপনার বার্তা দেখতে পাবেন।</p>
+            <p class="text-sm text-emerald-900/70">শুধু অ্যাডমিন আপনার বার্তা দেখতে পাবেন, যদি না আপনি নিচে অনুমতি দেন।</p>
           </div>
           <button type="button" id="nk-fb-close" class="grid h-9 w-9 shrink-0 place-items-center rounded-full text-xl text-emerald-900/60 hover:bg-emerald-50" aria-label="বন্ধ করুন">×</button>
         </div>
@@ -407,6 +423,10 @@ const desc = c.subtitle;
           <label for="nk-fb-msg" class="mb-1 block text-sm font-semibold">আপনার বার্তা *</label>
           <textarea id="nk-fb-msg" name="message" required maxlength="3000" rows="4" class="nk-input"></textarea>
         </div>
+        <label class="flex items-start gap-2.5 rounded-xl bg-emerald-50 px-3 py-2.5 text-sm">
+          <input id="nk-fb-public" name="public" type="checkbox" class="mt-0.5 h-4 w-4 shrink-0 accent-emerald-700" />
+          <span>আমার নাম ও বার্তা এই পেজে অন্যদের দেখানো যেতে পারে <span class="block text-xs text-emerald-900/65">ফোন নম্বর ও ঠিকানা কখনো দেখানো হবে না।</span></span>
+        </label>
         <p id="nk-fb-msgbox" class="hidden rounded-xl px-3.5 py-2.5 text-sm" role="alert"></p>
         <button type="submit" class="nk-btn nk-green py-3.5 text-base">পাঠান</button>
       </form>
@@ -417,7 +437,7 @@ const desc = c.subtitle;
     </div>
 
     <script>
-      import { rpc, rpcReady, type Boot, type Claim, type CodeCheck, type CodeRef, type FeatureReq, type FeaturedItem, type FeaturedList, type Submit } from './_lib/rpc';
+      import { rpc, rpcReady, type Boot, type Claim, type CodeCheck, type CodeRef, type FeatureReq, type FeaturedItem, type FeaturedList, type SliderItem, type Submit } from './_lib/rpc';
       import { CODE_RE, countdownText, countryName, defaultVideoLabel, flagUrl, parseToday, parseTopBar, parseVideo, subscribeUrl, parseWinners, prizeLabel, type Winner } from './_lib/content';
 
       // Bangladesh flag (green field, red disc set toward the hoist). Inline SVG so it renders on every OS.
@@ -868,6 +888,95 @@ const desc = c.subtitle;
         btn.textContent = 'খুঁজুন';
       });
 
+      // ---- Visitor feedback slider ----
+      const rvSec = $('nk-rv');
+      const rvTrack = $('nk-rv-track');
+      const rvDots = $('nk-rv-dots');
+      const rvKind: Record<SliderItem['kind'], string> = { suggestion: '💡 পরামর্শ', opinion: '💬 মতামত', complaint: '📝 অভিযোগ' };
+      let rvTimer: ReturnType<typeof setInterval> | undefined;
+      let rvIndex = 0;
+      let rvShown = '';
+      const rvCount = () => rvTrack.children.length;
+      function rvGo(i: number, smooth = true) {
+        const n = rvCount();
+        if (!n) return;
+        rvIndex = (i + n) % n;
+        rvTrack.scrollTo({ left: rvIndex * rvTrack.clientWidth, behavior: smooth && !reduceMotion ? 'smooth' : 'auto' });
+        [...rvDots.children].forEach((d, j) => d.setAttribute('aria-current', String(j === rvIndex)));
+      }
+      function rvAuto() {
+        clearInterval(rvTimer);
+        if (rvCount() > 1 && !reduceMotion) rvTimer = setInterval(() => { if (document.visibilityState === 'visible') rvGo(rvIndex + 1); }, 6500);
+      }
+      function renderSlider(items: SliderItem[]) {
+        const key = JSON.stringify(items);
+        if (key === rvShown) return;
+        rvShown = key;
+        rvSec.classList.toggle('hidden', !items.length);
+        if (!items.length) { clearInterval(rvTimer); return; }
+        rvTrack.replaceChildren(...items.map((it, i) => {
+          const fig = document.createElement('figure');
+          fig.className = 'nk-rv-slide';
+          fig.setAttribute('aria-roledescription', 'slide');
+          fig.setAttribute('aria-label', `${bn(i + 1)} / ${bn(items.length)}`);
+          const inner = document.createElement('div');
+          inner.className = 'flex h-full flex-col rounded-2xl border border-[#e7e1cf] bg-cream p-4 sm:p-5';
+          const q = document.createElement('blockquote');
+          q.className = 'nk-rv-quote flex-1 whitespace-pre-line break-words pl-1 pt-2 text-[15px] leading-relaxed text-emerald-950';
+          q.textContent = it.message;
+          const cap = document.createElement('figcaption');
+          cap.className = 'mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm';
+          const who = document.createElement('b');
+          who.className = 'text-emerald-900';
+          who.textContent = `— ${it.name}`;
+          const tag = document.createElement('span');
+          tag.className = 'rounded-full bg-emerald-50 px-2 py-0.5 text-xs text-emerald-800';
+          tag.textContent = rvKind[it.kind] ?? rvKind.opinion;
+          const date = document.createElement('span');
+          date.className = 'ml-auto text-xs text-emerald-900/55';
+          date.textContent = new Date(it.at).toLocaleDateString('bn-BD', { day: 'numeric', month: 'long' });
+          cap.append(who, tag, date);
+          inner.append(q, cap);
+          fig.append(inner);
+          return fig;
+        }));
+        rvDots.replaceChildren(...items.map((_, i) => {
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.className = 'nk-rv-dot';
+          b.setAttribute('aria-label', `${bn(i + 1)} নম্বর মতামত`);
+          b.addEventListener('click', () => { rvGo(i); rvAuto(); });
+          return b;
+        }));
+        const many = items.length > 1;
+        $('nk-rv-prev').classList.toggle('hidden', !many);
+        $('nk-rv-next').classList.toggle('hidden', !many);
+        rvDots.classList.toggle('hidden', !many);
+        rvGo(Math.min(rvIndex, items.length - 1), false);
+        rvAuto();
+      }
+      async function loadSlider() {
+        if (!rpcReady) return;
+        try { renderSlider(await rpc<SliderItem[]>('nusuk_feedback_slider')); } catch { /* update 13 not run yet: keep hidden */ }
+      }
+      $('nk-rv-prev').addEventListener('click', () => { rvGo(rvIndex - 1); rvAuto(); });
+      $('nk-rv-next').addEventListener('click', () => { rvGo(rvIndex + 1); rvAuto(); });
+      // Swipes and trackpad scrolling: follow the slide that is in view
+      let rvScrollT: ReturnType<typeof setTimeout> | undefined;
+      rvTrack.addEventListener('scroll', () => {
+        clearTimeout(rvScrollT);
+        rvScrollT = setTimeout(() => {
+          const i = Math.round(rvTrack.scrollLeft / Math.max(1, rvTrack.clientWidth));
+          if (i !== rvIndex) { rvIndex = i; [...rvDots.children].forEach((d, j) => d.setAttribute('aria-current', String(j === i))); rvAuto(); }
+        }, 120);
+      });
+      rvSec.addEventListener('pointerenter', () => clearInterval(rvTimer));
+      rvSec.addEventListener('pointerleave', rvAuto);
+      rvSec.addEventListener('focusin', () => clearInterval(rvTimer));
+      addEventListener('resize', () => rvGo(rvIndex, false));
+      loadSlider();
+      setInterval(() => { if (document.visibilityState === 'visible') loadSlider(); }, 5 * 60000);
+
       // ---- Feature request dialog ----
       const ftDialog = $<HTMLDialogElement>('nk-ft');
       const ftForm = $<HTMLFormElement>('nk-ft-form');
@@ -1053,6 +1162,7 @@ const desc = c.subtitle;
           const r = await rpc<{ ok: boolean; reason?: string }>('nusuk_feedback_submit', {
             p_kind: String(fd.get('kind') ?? 'opinion'), p_name: name, p_message: message,
             p_phone: phone || null, p_address: String(fd.get('address') ?? '').trim() || null,
+            p_public: fd.get('public') === 'on',
           });
           if (r.ok) {
             fbForm.reset();

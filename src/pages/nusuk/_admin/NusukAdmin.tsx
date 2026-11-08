@@ -889,6 +889,7 @@ function SettingsPage({ toast, settings, reload }: { toast: ToastFn; settings: S
 type Feedback = {
   id: number; kind: 'complaint' | 'suggestion' | 'opinion'; name: string; phone: string | null; address: string | null;
   message: string; status: 'new' | 'read' | 'resolved'; created_at: string;
+  allow_public?: boolean; on_slider?: boolean; // update 13
 };
 const kindLabel: Record<Feedback['kind'], [string, string]> = {
   complaint: ['Complaint · অভিযোগ', 'bg-red-100 text-red-700'],
@@ -897,7 +898,7 @@ const kindLabel: Record<Feedback['kind'], [string, string]> = {
 };
 function FeedbackPage({ toast, onChange }: { toast: ToastFn; onChange: () => void }) {
   const [rows, setRows] = useState<Feedback[]>([]);
-  const [filter, setFilter] = useState<'open' | 'new' | 'resolved' | 'all'>('open');
+  const [filter, setFilter] = useState<'open' | 'new' | 'resolved' | 'slider' | 'all'>('open');
   const [loading, setLoading] = useState(false);
   const [missing, setMissing] = useState(false);
 
@@ -905,6 +906,7 @@ function FeedbackPage({ toast, onChange }: { toast: ToastFn; onChange: () => voi
     setLoading(true);
     let q = sb!.from('nusuk_feedback').select('*').order('created_at', { ascending: false }).limit(200);
     if (filter === 'open') q = q.in('status', ['new', 'read']);
+    else if (filter === 'slider') q = q.eq('on_slider', true);
     else if (filter !== 'all') q = q.eq('status', filter);
     const { data, error } = await q;
     setLoading(false);
@@ -923,6 +925,12 @@ function FeedbackPage({ toast, onChange }: { toast: ToastFn; onChange: () => voi
     if (error) return toast(errText(error), false);
     setRows((r) => (filter === 'all' || (filter === 'open' && status !== 'resolved') ? r.map((x) => (x.id === id ? { ...x, status } : x)) : r.filter((x) => x.id !== id)));
     onChange();
+  }
+  async function setSlider(f: Feedback, on: boolean) {
+    const { error } = await sb!.from('nusuk_feedback').update({ on_slider: on }).eq('id', f.id);
+    if (error) return toast(/on_slider/.test(error.message) ? 'Run src/pages/nusuk/_sql/update_13_feedback_slider.sql in Supabase first' : errText(error), false);
+    setRows((r) => (filter === 'slider' && !on ? r.filter((x) => x.id !== f.id) : r.map((x) => (x.id === f.id ? { ...x, on_slider: on } : x))));
+    toast(on ? 'Added to the slider on /nusuk' : 'Removed from the slider');
   }
   async function remove(id: number) {
     if (!confirm('Delete this message? This cannot be undone.')) return;
@@ -945,6 +953,7 @@ function FeedbackPage({ toast, onChange }: { toast: ToastFn; onChange: () => voi
             <option value="open">Open (new + read)</option>
             <option value="new">New only</option>
             <option value="resolved">Resolved</option>
+            <option value="slider">On slider</option>
             <option value="all">All</option>
           </select>
           <Btn kind="ghost" onClick={load}>{loading ? 'Loading…' : 'Refresh'}</Btn>
@@ -958,6 +967,8 @@ function FeedbackPage({ toast, onChange }: { toast: ToastFn; onChange: () => voi
               <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${kindLabel[f.kind][1]}`}>{kindLabel[f.kind][0]}</span>
               {f.status === 'new' && <span className="rounded-full bg-gold-500 px-2 py-0.5 text-xs font-bold text-emerald-950">NEW</span>}
               {f.status === 'resolved' && <span className="rounded-full bg-gray-200 px-2 py-0.5 text-xs font-bold text-gray-700">Resolved</span>}
+              {f.on_slider && <span className="rounded-full bg-emerald-800 px-2 py-0.5 text-xs font-bold text-white">★ On slider</span>}
+              {f.allow_public === false && <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600" title="The visitor did not allow showing this message publicly">Private</span>}
               <span className="ml-auto text-xs text-emerald-900/60">{when(f.created_at)}</span>
             </div>
             <div className="mt-2 font-semibold">{f.name}</div>
@@ -971,6 +982,9 @@ function FeedbackPage({ toast, onChange }: { toast: ToastFn; onChange: () => voi
               {f.status !== 'resolved'
                 ? <Btn className="px-2.5! py-1!" onClick={() => setStatus(f.id, 'resolved')}>Mark resolved</Btn>
                 : <Btn kind="ghost" className="px-2.5! py-1!" onClick={() => setStatus(f.id, 'read')}>Reopen</Btn>}
+              {f.on_slider
+                ? <Btn kind="ghost" className="px-2.5! py-1!" onClick={() => setSlider(f, false)}>Remove from slider</Btn>
+                : <Btn kind="gold" className="px-2.5! py-1!" disabled={!f.allow_public} title={f.allow_public ? 'Show this message on /nusuk' : 'The visitor did not allow showing this publicly'} onClick={() => setSlider(f, true)}>★ Show on slider</Btn>}
               <Btn kind="ghost" className="px-2.5! py-1! text-red-700" onClick={() => remove(f.id)}>Delete</Btn>
             </div>
           </article>

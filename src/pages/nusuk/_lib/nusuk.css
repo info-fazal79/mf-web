@@ -100,3 +100,13 @@ body { background: var(--color-cream); color: #10241b; }
 .nk-video-btn:hover { border-color: rgba(204, 0, 0, 0.55); box-shadow: 0 6px 18px -10px rgba(204, 0, 0, 0.55); }
 .nk-video-btn:active { transform: scale(0.99); }
 .nk-video-play { display: grid; place-items: center; width: 2rem; height: 1.4rem; border-radius: 0.45rem; background: #ff0000; color: #fff; flex-shrink: 0; }
+
+/* Visitor feedback slider */
+.nk-rv-track { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scroll-behavior: smooth; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.nk-rv-track::-webkit-scrollbar { display: none; }
+.nk-rv-slide { flex: 0 0 100%; scroll-snap-align: center; padding: 0 0.125rem; }
+.nk-rv-quote { position: relative; }
+.nk-rv-quote::before { content: "\201C"; position: absolute; top: -0.9rem; left: -0.15rem; font-family: Georgia, serif; font-size: 3.5rem; line-height: 1; color: var(--color-gold-400); opacity: 0.55; }
+.nk-rv-dot { height: 0.5rem; width: 0.5rem; border-radius: 9999px; background: rgba(5, 61, 45, 0.18); transition: width 0.2s, background-color 0.2s; }
+.nk-rv-dot[aria-current="true"] { width: 1.25rem; background: var(--color-emerald-700); }
+@media (prefers-reduced-motion: reduce) { .nk-rv-track { scroll-behavior: auto; } }
