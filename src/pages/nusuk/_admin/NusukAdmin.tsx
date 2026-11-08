@@ -21,6 +21,9 @@ type Code = {
   last_used_at: string | null;
   created_at: string;
   featured_at?: string | null;
+  featured_base?: number;
+  approved_at?: string | null;
+  approved_base?: number;
 };
 type Stats = {
   total: number; active: number; remaining: number; used_up: number; inactive: number;
@@ -28,6 +31,7 @@ type Stats = {
 };
 type Settings = {
   enabled: boolean; submissions_enabled: boolean; default_max_uses: number;
+  feature_quota?: number; feature_hours?: number; approved_quota?: number; boost_share?: number;
   logo_url: string | null; notice: string | null; content: Partial<NusukContent> & { winners?: Winner[] };
 };
 
@@ -67,6 +71,24 @@ function Toggle({ on, onChange, label, hint }: { on: boolean; onChange: (v: bool
       </span>
     </label>
   );
+}
+/** Mirrors nusuk_boost_tier() in update_08: which priority tier a code is in right now. */
+type Boost = { tier: 1 | 2 | 3; text: string; cls: string } | null;
+function boostOf(r: Code, s: Settings | null): Boost {
+  const fq = s?.feature_quota ?? 10, fh = s?.feature_hours ?? 12, aq = s?.approved_quota ?? 2;
+  if (r.featured_at) {
+    const got = r.uses - (r.featured_base ?? 0);
+    const leftMs = new Date(r.featured_at).getTime() + fh * 3600e3 - Date.now();
+    if (r.status === 'active' && leftMs > 0 && got < fq) {
+      const h = Math.floor(leftMs / 3600e3), m = Math.floor((leftMs % 3600e3) / 60e3);
+      return { tier: 1, text: `★ featured ${got}/${fq} · ${h}h ${m}m left`, cls: 'bg-amber-100 text-amber-800' };
+    }
+    return { tier: 3, text: `★ feature ended${got >= fq ? ` (${got}/${fq})` : ' (time up)'}`, cls: 'bg-gray-100 text-gray-600' };
+  }
+  if (r.approved_at && r.status === 'active' && r.uses - (r.approved_base ?? 0) < aq) {
+    return { tier: 2, text: `new ${r.uses - (r.approved_base ?? 0)}/${aq}`, cls: 'bg-sky-100 text-sky-800' };
+  }
+  return null;
 }
 const badge: Record<Status, string> = {
   active: 'bg-emerald-100 text-emerald-900',
@@ -166,7 +188,7 @@ function Dashboard({ toast, go }: { toast: ToastFn; go: (r: Route) => void }) {
 
 /* ---------------- Codes table ---------------- */
 const PAGE = 50;
-function CodesPage({ toast, reviewMode = false }: { toast: ToastFn; reviewMode?: boolean }) {
+function CodesPage({ toast, reviewMode = false, settings = null }: { toast: ToastFn; reviewMode?: boolean; settings?: Settings | null }) {
   const [rows, setRows] = useState<Code[]>([]);
   const [count, setCount] = useState(0);
   const [page, setPage] = useState(0);
@@ -235,10 +257,10 @@ function CodesPage({ toast, reviewMode = false }: { toast: ToastFn; reviewMode?:
       }
     >
       {reviewMode && (
-        <p className="mb-3 text-xs text-emerald-900/60">Approved codes go to the top: visitors see them first, before the uploaded codes.</p>
+        <p className="mb-3 text-xs text-emerald-900/60">Approved codes go to the top until they get {settings?.approved_quota ?? 2} copies, then they join the normal pool.</p>
       )}
       {!reviewMode && (
-        <p className="mb-3 text-xs text-emerald-900/60">☆ Feature pins a code above all others for visitors. The most recently featured code is shown first. Click ★ to unfeature.</p>
+        <p className="mb-3 text-xs text-emerald-900/60">☆ Feature puts a code in the top tier until it gets {settings?.feature_quota ?? 10} copies or {settings?.feature_hours ?? 12} hours pass, then it drops back to normal. Approved submissions stay on top for {settings?.approved_quota ?? 2} copies. Change these in Settings → Priority & balance.</p>
       )}
       <div className="mb-3 flex flex-col gap-2 sm:flex-row">
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search code…" className="nk-input sm:max-w-xs" aria-label="Search code" />
@@ -271,7 +293,7 @@ function CodesPage({ toast, reviewMode = false }: { toast: ToastFn; reviewMode?:
             {rows.map((r) => (
               <tr key={r.id} className="border-b border-[#f0ebdc] hover:bg-cream">
                 <td className="p-2"><input type="checkbox" checked={sel.has(r.id)} onChange={(e) => { const n = new Set(sel); e.target.checked ? n.add(r.id) : n.delete(r.id); setSel(n); }} aria-label={`Select ${r.code}`} /></td>
-                <td className="p-2 font-mono font-bold">{r.code}{r.featured_at && <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 font-sans text-xs font-semibold text-amber-800" title={`Featured ${when(r.featured_at)}`}>★ featured</span>}{r.note && <div className="max-w-[16rem] truncate font-sans text-xs font-normal text-emerald-900/60" title={r.note}>{r.note}</div>}</td>
+                <td className="p-2 font-mono font-bold">{r.code}{(() => { const b = boostOf(r, settings); return b && <span className={`ml-2 whitespace-nowrap rounded-full px-2 py-0.5 font-sans text-xs font-semibold ${b.cls}`} title={r.featured_at ? `Featured ${when(r.featured_at)}` : `Approved ${when(r.approved_at ?? null)}`}>{b.text}</span>; })()}{r.note && <div className="max-w-[16rem] truncate font-sans text-xs font-normal text-emerald-900/60" title={r.note}>{r.note}</div>}</td>
                 <td className="p-2"><span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${badge[r.status]}`}>{r.status}</span></td>
                 <td className="p-2 tabular-nums">{r.uses}</td>
                 <td className="p-2">{reviewMode ? r.submitter ?? '—' : r.source}</td>
@@ -284,7 +306,7 @@ function CodesPage({ toast, reviewMode = false }: { toast: ToastFn; reviewMode?:
                     </>
                   ) : (
                     <>
-                      <Btn kind="ghost" className={`px-2.5! py-1! ${r.featured_at ? 'text-amber-600' : ''}`} title={r.featured_at ? 'Unfeature' : 'Feature: show this code first'} aria-label={r.featured_at ? `Unfeature ${r.code}` : `Feature ${r.code}`} onClick={() => bulk(r.featured_at ? { featured_at: null } : { featured_at: new Date().toISOString(), status: 'active' }, [r.id])}>{r.featured_at ? '★' : '☆'}</Btn>{' '}
+                      {(() => { const on = boostOf(r, settings)?.tier === 1; return <Btn kind="ghost" className={`px-2.5! py-1! ${on ? 'text-amber-600' : ''}`} title={on ? 'Unfeature' : r.featured_at ? 'Feature again (restarts quota and timer)' : 'Feature: show this code first'} aria-label={on ? `Unfeature ${r.code}` : `Feature ${r.code}`} onClick={() => bulk(on ? { featured_at: null } : { featured_at: new Date().toISOString(), status: 'active' }, [r.id])}>{on ? '★' : '☆'}</Btn>; })()}{' '}
                       <Btn kind="ghost" className="px-2.5! py-1!" onClick={() => bulk({ status: r.status === 'active' ? 'inactive' : 'active' }, [r.id])}>{r.status === 'active' ? 'Disable' : 'Enable'}</Btn>{' '}
                       <Btn kind="ghost" className="px-2.5! py-1!" onClick={() => setEdit(r)}>Edit</Btn>{' '}
                       <Btn kind="ghost" className="px-2.5! py-1! text-red-700" onClick={() => bulk('delete', [r.id])} aria-label={`Delete ${r.code}`}>✕</Btn>
@@ -521,6 +543,12 @@ function SettingsPage({ toast, settings, reload }: { toast: ToastFn; settings: S
     const { error } = await sb!.from('nusuk_settings').update({
       enabled: next.enabled, submissions_enabled: next.submissions_enabled,
       default_max_uses: Math.max(1, next.default_max_uses || 1),
+      ...(next.feature_quota !== undefined && {
+        feature_quota: Math.max(1, Math.round(next.feature_quota || 10)),
+        feature_hours: Math.min(8760, Math.max(1, Math.round(next.feature_hours || 12))),
+        approved_quota: Math.max(0, Math.round(next.approved_quota ?? 2)),
+        boost_share: Math.min(100, Math.max(0, Math.round(next.boost_share ?? 80))),
+      }),
       logo_url: next.logo_url?.trim() || null, notice: next.notice?.trim() || null,
       content: { ...keep, ...diff }, updated_at: new Date().toISOString(),
     }).eq('id', 1);
@@ -562,6 +590,36 @@ function SettingsPage({ toast, settings, reload }: { toast: ToastFn; settings: S
             <textarea rows={2} className="nk-input" value={s.notice ?? ''} onChange={(e) => setS({ ...s, notice: e.target.value })} placeholder="e.g. প্রতিযোগিতা ৩০ নভেম্বর শেষ হবে" />
           </label>
         </div>
+      </Card>
+      <Card title="Priority & balance" actions={<Btn onClick={() => save()}>Save</Btn>}>
+        {s.feature_quota === undefined ? (
+          <p className="text-sm">Run <code className="font-mono">src/pages/nusuk/_sql/update_08_boost_quotas.sql</code> in Supabase → SQL Editor, then reload this page.</p>
+        ) : (
+          <>
+            <p className="mb-3 text-sm text-emerald-900/75">Visitors get codes in this order: <b>1. Featured</b> → <b>2. New approved submissions</b> → <b>3. All other codes</b> (least copied first). A boosted code drops back to the normal pool once it reaches its quota, so the flow keeps moving.</p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="grid gap-1 text-sm font-semibold">Featured: copies before it drops
+                <input type="number" min={1} className="nk-input" value={s.feature_quota} onChange={(e) => setS({ ...s, feature_quota: +e.target.value })} />
+                <span className="text-xs font-normal text-emerald-900/60">A featured code stays on top until this many visitors copy it.</span>
+              </label>
+              <label className="grid gap-1 text-sm font-semibold">Featured: time limit (hours)
+                <select className="nk-input" value={[6, 10, 12, 20, 24, 48, 72].includes(s.feature_hours ?? 12) ? s.feature_hours : 'custom'} onChange={(e) => e.target.value !== 'custom' && setS({ ...s, feature_hours: +e.target.value })}>
+                  {[6, 10, 12, 20, 24, 48, 72].map((h) => <option key={h} value={h}>{h} hours</option>)}
+                  {![6, 10, 12, 20, 24, 48, 72].includes(s.feature_hours ?? 12) && <option value="custom">{s.feature_hours} hours</option>}
+                </select>
+                <span className="text-xs font-normal text-emerald-900/60">Even if it hasn't reached its copies, the feature ends after this time.</span>
+              </label>
+              <label className="grid gap-1 text-sm font-semibold">New approved submission: copies on top
+                <input type="number" min={0} className="nk-input" value={s.approved_quota} onChange={(e) => setS({ ...s, approved_quota: +e.target.value })} />
+                <span className="text-xs font-normal text-emerald-900/60">0 = approved codes go straight to the normal pool.</span>
+              </label>
+              <label className="grid gap-1 text-sm font-semibold">Balance: boosted share ({s.boost_share}%)
+                <input type="range" min={0} max={100} step={5} value={s.boost_share} onChange={(e) => setS({ ...s, boost_share: +e.target.value })} />
+                <span className="text-xs font-normal text-emerald-900/60">Out of every 100 code views, about {s.boost_share} try featured/new codes first and {100 - (s.boost_share ?? 80)} go to the normal pool, so normal codes keep getting copied too. 100% = boosted always first.</span>
+              </label>
+            </div>
+          </>
+        )}
       </Card>
       <Card title="Page text (Bangla)" actions={<><Btn kind="ghost" onClick={() => setContent(defaultContent)}>Restore defaults</Btn><Btn onClick={() => save()}>Save</Btn></>}>
         <div className="grid gap-3">
@@ -1032,8 +1090,8 @@ export default function NusukAdmin() {
           </div>
         </div>
         {route === 'dashboard' && <Dashboard toast={toast} go={go} />}
-        {route === 'codes' && <CodesPage key="codes" toast={toast} />}
-        {route === 'review' && <CodesPage key="review" toast={toast} reviewMode />}
+        {route === 'codes' && <CodesPage key="codes" toast={toast} settings={settings} />}
+        {route === 'review' && <CodesPage key="review" toast={toast} reviewMode settings={settings} />}
         {route === 'upload' && <Upload toast={toast} defaultMax={settings?.default_max_uses ?? 1} />}
         {route === 'today' && settings && <TodayWinnerPage toast={toast} settings={settings} reload={loadSettings} />}
         {route === 'feedback' && <FeedbackPage toast={toast} onChange={loadUnread} />}
