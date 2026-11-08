@@ -92,6 +92,15 @@ const desc = c.subtitle;
           <summary class="cursor-pointer font-semibold text-emerald-900">আপনার কপি করা কোড</summary>
           <ul id="nk-history-list" class="mt-2 grid gap-1 font-mono text-emerald-950"></ul>
         </details>
+
+        <button id="nk-ft-open" type="button" class="group mt-4 flex w-full items-center gap-3 rounded-2xl border border-gold-500/60 bg-gradient-to-r from-gold-100 to-white px-3.5 py-3 text-left transition hover:border-gold-500 hover:shadow-md hover:shadow-gold-500/20">
+          <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-emerald-900 text-lg text-gold-400" aria-hidden="true">★</span>
+          <span class="min-w-0 flex-1">
+            <span class="block font-bold text-emerald-950">আপনার কোড সবার উপরে দেখাতে চান?</span>
+            <span class="block text-xs text-emerald-900/70">ফিচারের জন্য আবেদন করুন, বেশি মানুষ আপনার কোড ব্যবহার করবেন</span>
+          </span>
+          <span class="shrink-0 text-xl text-emerald-800 transition group-hover:translate-x-0.5" aria-hidden="true">›</span>
+        </button>
       </section>
 
       <!-- ===== Today's winner (Nusuk Manager → Today's winner) ===== -->
@@ -230,6 +239,55 @@ const desc = c.subtitle;
       </footer>
     </main>
 
+    <dialog id="nk-ft" class="m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-md overflow-y-auto rounded-[1.25rem] p-0 shadow-2xl backdrop:bg-emerald-950/60" aria-labelledby="nk-ft-title">
+      <div class="grid gap-3.5 p-5">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <h2 id="nk-ft-title" class="text-lg font-bold text-emerald-900">★ আপনার কোড ফিচার করুন</h2>
+            <p class="text-sm text-emerald-900/70">ফিচার করা কোড সবার আগে দেখানো হয়</p>
+          </div>
+          <button type="button" id="nk-ft-close" class="grid h-9 w-9 shrink-0 place-items-center rounded-full text-xl text-emerald-900/60 hover:bg-emerald-50" aria-label="বন্ধ করুন">×</button>
+        </div>
+
+        <div class="rounded-xl bg-gold-100/70 p-3.5 text-sm leading-relaxed text-emerald-950">
+          <p class="mb-1 font-bold">🎁 ফিচার করার সুবিধা</p>
+          <p class="nk-pre" data-k="feature_benefit">{c.feature_benefit}</p>
+        </div>
+
+        <div class="rounded-xl bg-emerald-50 p-3.5 text-sm leading-relaxed text-emerald-950">
+          <p class="mb-1 font-bold">📝 কীভাবে আবেদন করবেন</p>
+          <p class="nk-pre" data-k="feature_guide">{c.feature_guide}</p>
+        </div>
+
+        <a id="nk-ft-post" href={c.feature_post_url || '#'} target="_blank" rel="noopener" class="nk-btn nk-ghost py-2.5 text-sm" style={c.feature_post_url ? undefined : 'display:none'}>
+          <svg viewBox="0 0 24 24" class="h-4 w-4 text-[#1877f2]" fill="currentColor" aria-hidden="true"><path d="M24 12.07C24 5.4 18.63 0 12 0S0 5.4 0 12.07C0 18.1 4.39 23.1 10.13 24v-8.44H7.08v-3.49h3.04V9.41c0-3.02 1.8-4.7 4.54-4.7 1.310 0 2.68.24 2.68.24v2.97h-1.5c-1.5 0-1.96.93-1.96 1.89v2.26h3.330l-.53 3.49h-2.8V24C19.62 23.1 24 18.1 24 12.07z" /></svg>
+          ফেসবুক পোস্টটি খুলুন ও শেয়ার করুন
+        </a>
+
+        <p class="rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm text-red-800">
+          ⚠️ ফিচারের আবেদন করার আগে অবশ্যই আপনার রেফারেল কোডটি এই পেজে <a href="#submit" id="nk-ft-tosubmit" class="font-semibold underline">জমা দেওয়া</a> থাকতে হবে। জমা না দেওয়া কোড ফিচার করা যাবে না।
+        </p>
+
+        <form id="nk-ft-form" class="grid gap-3" novalidate>
+          <div>
+            <label for="nk-ft-name" class="mb-1 block text-sm font-semibold">আপনার নাম *</label>
+            <input id="nk-ft-name" name="name" required maxlength="120" autocomplete="name" class="nk-input" />
+          </div>
+          <div>
+            <label for="nk-ft-code" class="mb-1 block text-sm font-semibold">আপনার রেফারেল কোড *</label>
+            <input id="nk-ft-code" name="code" required maxlength="40" autocomplete="off" autocapitalize="off" spellcheck="false" class="nk-input font-mono" placeholder="যেমন: NG-y3JkB7lU" />
+          </div>
+          <div>
+            <label for="nk-ft-link" class="mb-1 block text-sm font-semibold">শেয়ার করা পোস্টের লিংক *</label>
+            <input id="nk-ft-link" name="link" type="url" inputmode="url" required maxlength="600" autocomplete="off" class="nk-input" placeholder="https://www.facebook.com/share/p/..." />
+            <p class="mt-1 text-xs text-emerald-900/65">শেয়ার করার পর আপনার টাইমলাইনের পোস্টে ••• চেপে "Copy link" করে এখানে পেস্ট করুন।</p>
+          </div>
+          <p id="nk-ft-msgbox" class="hidden rounded-xl px-3.5 py-2.5 text-sm" role="alert"></p>
+          <button type="submit" class="nk-btn nk-green py-3.5 text-base">আবেদন পাঠান</button>
+        </form>
+      </div>
+    </dialog>
+
     <dialog id="nk-fb" class="m-auto w-[calc(100%-2rem)] max-w-md rounded-[1.25rem] p-0 shadow-2xl backdrop:bg-emerald-950/60" aria-labelledby="nk-fb-title">
       <form id="nk-fb-form" class="grid gap-3 p-5" novalidate>
         <div class="flex items-start justify-between gap-3">
@@ -271,7 +329,7 @@ const desc = c.subtitle;
     </div>
 
     <script>
-      import { rpc, rpcReady, type Boot, type Claim, type CodeRef, type Submit } from './_lib/rpc';
+      import { rpc, rpcReady, type Boot, type Claim, type CodeRef, type FeatureReq, type Submit } from './_lib/rpc';
       import { CODE_RE, countryName, flagUrl, parseToday, parseWinners, prizeLabel, type Winner } from './_lib/content';
 
       // Bangladesh flag (green field, red disc set toward the hoist). Inline SVG so it renders on every OS.
@@ -496,6 +554,12 @@ const desc = c.subtitle;
             if (typeof v === 'string' && v.trim() && el.textContent !== v) el.textContent = v;
           });
         }
+        const post = b.content?.feature_post_url?.trim();
+        if (post && /^https?:\/\//i.test(post)) {
+          const a = $<HTMLAnchorElement>('nk-ft-post');
+          a.href = post;
+          a.style.display = '';
+        }
         const notice = $('nk-notice');
         notice.textContent = b.notice ?? '';
         notice.classList.toggle('hidden', !b.notice);
@@ -628,6 +692,56 @@ const desc = c.subtitle;
         } catch (err) {
           console.error(err);
           say('জমা দেওয়া যায়নি। ইন্টারনেট সংযোগ দেখে আবার চেষ্টা করুন।', false);
+        }
+        btn.disabled = false;
+      });
+
+      // ---- Feature request dialog ----
+      const ftDialog = $<HTMLDialogElement>('nk-ft');
+      const ftForm = $<HTMLFormElement>('nk-ft-form');
+      const ftMsg = $('nk-ft-msgbox');
+      const ftSay = (t: string, ok: boolean) => {
+        ftMsg.textContent = t;
+        ftMsg.className = `rounded-xl px-3.5 py-2.5 text-sm ${ok ? 'bg-emerald-100 text-emerald-900' : 'bg-red-50 text-red-800'}`;
+      };
+      $('nk-ft-open').addEventListener('click', () => {
+        ftMsg.className = 'hidden';
+        ftDialog.showModal();
+        ftDialog.scrollTop = 0;
+      });
+      $('nk-ft-close').addEventListener('click', () => ftDialog.close());
+      $('nk-ft-tosubmit').addEventListener('click', () => ftDialog.close());
+      ftDialog.addEventListener('click', (e) => { if (e.target === ftDialog) ftDialog.close(); });
+      const FB_LINK = /^https?:\/\/([a-z0-9-]+\.)*(facebook\.com|fb\.com|fb\.me|fb\.watch)(\/|$)/i;
+      const ftReasons: Record<string, string> = {
+        closed: 'এই মুহূর্তে আবেদন নেওয়া হচ্ছে না।',
+        missing: 'নাম, কোড আর লিংক তিনটিই দিন।',
+        bad_link: 'ফেসবুকে শেয়ার করা পোস্টের লিংক দিন (facebook.com দিয়ে শুরু)।',
+        not_found: 'এই কোডটি এখনো জমা দেওয়া হয়নি। আগে নিচের "কোড জমা দিন" অংশে কোডটি জমা দিন, তারপর আবেদন করুন।',
+        featured: 'এই কোডটি ইতিমধ্যে ফিচার করা আছে।',
+        exists: 'এই কোডের জন্য একটি আবেদন আগেই জমা আছে, যাচাইয়ের অপেক্ষায়।',
+        busy: 'এই মুহূর্তে আবেদন নেওয়া যাচ্ছে না, পরে চেষ্টা করুন।',
+      };
+      ftForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const fd = new FormData(ftForm);
+        const name = String(fd.get('name') ?? '').trim();
+        const code = String(fd.get('code') ?? '').trim();
+        const link = String(fd.get('link') ?? '').trim();
+        if (!name) return ftSay('আপনার নাম লিখুন।', false);
+        if (!CODE_RE.test(code)) return ftSay('কোডটি সঠিক নয়। নুসুকের কোড NG- দিয়ে শুরু হয়, পরে ৮টি অক্ষর, যেমন: NG-y3JkB7lU', false);
+        if (!FB_LINK.test(link)) return ftSay(ftReasons.bad_link, false);
+        const btn = ftForm.querySelector<HTMLButtonElement>('button[type="submit"]')!;
+        btn.disabled = true;
+        try {
+          const r = await rpc<FeatureReq>('nusuk_feature_request', { p_name: name, p_code: code, p_link: link });
+          if (r.ok) {
+            ftForm.reset();
+            ftSay('ধন্যবাদ! আপনার আবেদন পৌঁছেছে। যাচাই করে অনুমোদন দিলে আপনার কোডটি সবার উপরে দেখানো হবে।', true);
+          } else ftSay(ftReasons[r.reason ?? ''] ?? 'আবেদন পাঠানো যায়নি।', false);
+        } catch (err) {
+          console.error(err);
+          ftSay('পাঠানো যায়নি। ইন্টারনেট সংযোগ দেখে আবার চেষ্টা করুন।', false);
         }
         btn.disabled = false;
       });

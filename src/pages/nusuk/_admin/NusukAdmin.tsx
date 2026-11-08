@@ -685,6 +685,119 @@ function FeedbackPage({ toast, onChange }: { toast: ToastFn; onChange: () => voi
   );
 }
 
+/* ---------------- Feature requests ---------------- */
+type FeatureRequest = {
+  id: number; name: string; code: string; share_link: string;
+  status: 'pending' | 'approved' | 'rejected'; created_at: string; decided_at: string | null;
+};
+type CodeInfo = { code: string; status: Status; featured_at: string | null; uses: number };
+function FeatureRequestsPage({ toast, onChange }: { toast: ToastFn; onChange: () => void }) {
+  const [rows, setRows] = useState<FeatureRequest[]>([]);
+  const [codes, setCodes] = useState<Record<string, CodeInfo>>({});
+  const [filter, setFilter] = useState<'pending' | 'approved' | 'rejected' | 'all'>('pending');
+  const [loading, setLoading] = useState(false);
+  const [missing, setMissing] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    let q = sb!.from('nusuk_feature_requests').select('*').order('created_at', { ascending: filter === 'pending' }).limit(300);
+    if (filter !== 'all') q = q.eq('status', filter);
+    const { data, error } = await q;
+    if (error) {
+      setLoading(false);
+      if (/nusuk_feature_requests/.test(error.message)) setMissing(true);
+      else toast(errText(error), false);
+      return;
+    }
+    setMissing(false);
+    const list = (data ?? []) as FeatureRequest[];
+    setRows(list);
+    const names = [...new Set(list.map((r) => r.code))];
+    if (names.length) {
+      const { data: cs } = await sb!.from('nusuk_codes').select('code,status,featured_at,uses').in('code', names);
+      setCodes(Object.fromEntries(((cs ?? []) as CodeInfo[]).map((c) => [c.code, c])));
+    } else setCodes({});
+    setLoading(false);
+  }, [filter, toast]);
+  useEffect(() => { load(); }, [load]);
+
+  async function approve(r: FeatureRequest) {
+    const { error } = await sb!.rpc('nusuk_admin_feature_approve', { p_id: r.id });
+    if (error) return toast(errText(error), false);
+    toast(`★ ${r.code} is now featured`);
+    load(); onChange();
+  }
+  async function reject(r: FeatureRequest) {
+    const { error } = await sb!.from('nusuk_feature_requests').update({ status: 'rejected', decided_at: new Date().toISOString() }).eq('id', r.id);
+    if (error) return toast(errText(error), false);
+    toast('Rejected');
+    load(); onChange();
+  }
+  async function remove(r: FeatureRequest) {
+    if (!confirm('Delete this request? This cannot be undone.')) return;
+    const { error } = await sb!.from('nusuk_feature_requests').delete().eq('id', r.id);
+    if (error) return toast(errText(error), false);
+    toast('Deleted');
+    load(); onChange();
+  }
+
+  if (missing) {
+    return <Card title="Feature requests"><p className="text-sm">Run <code className="font-mono">src/pages/nusuk/_sql/update_07_feature_requests.sql</code> in Supabase → SQL Editor, then reload this page.</p></Card>;
+  }
+  const stBadge: Record<FeatureRequest['status'], string> = { pending: 'bg-gold-500 text-emerald-950', approved: 'bg-emerald-100 text-emerald-900', rejected: 'bg-red-100 text-red-700' };
+  return (
+    <Card
+      title={`Feature requests (${fmt(rows.length)})`}
+      actions={
+        <>
+          <select value={filter} onChange={(e) => setFilter(e.target.value as typeof filter)} className="nk-input w-36 py-1.5!" aria-label="Filter requests">
+            <option value="pending">Waiting</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+            <option value="all">All</option>
+          </select>
+          <Btn kind="ghost" onClick={load}>{loading ? 'Loading…' : 'Refresh'}</Btn>
+        </>
+      }
+    >
+      <p className="mb-3 text-xs text-emerald-900/60">Open the share link and check the post was really shared. "Approve & feature" puts the code at the top for every visitor (and approves it if it was still in Review). Set the post link visitors must share in Settings → page text → "Feature request: Facebook post link".</p>
+      <div className="grid gap-3">
+        {rows.map((r) => {
+          const c = codes[r.code];
+          return (
+            <article key={r.id} className={`rounded-xl border p-4 ${r.status === 'pending' ? 'border-gold-500/60 bg-gold-100/30' : 'border-[#e7e1cf] bg-white'}`}>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${stBadge[r.status]}`}>{r.status === 'pending' ? 'WAITING' : r.status}</span>
+                <span className="ml-auto text-xs text-emerald-900/60">{when(r.created_at)}</span>
+              </div>
+              <div className="mt-2 font-semibold">{r.name}</div>
+              <div className="mt-1 flex flex-wrap items-center gap-2">
+                <span className="font-mono text-base font-bold">{r.code}</span>
+                {c ? (
+                  <>
+                    <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${badge[c.status]}`}>code: {c.status}</span>
+                    {c.featured_at && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">★ featured</span>}
+                    <span className="text-xs text-emerald-900/60">{c.uses} uses</span>
+                  </>
+                ) : (
+                  <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">code not in the list</span>
+                )}
+              </div>
+              <a href={r.share_link} target="_blank" rel="noopener noreferrer" className="mt-2 block break-all text-sm font-semibold text-emerald-800 underline underline-offset-2">{r.share_link} ↗</a>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {r.status !== 'approved' && <Btn kind="gold" className="px-2.5! py-1!" disabled={!c} onClick={() => approve(r)}>★ Approve &amp; feature</Btn>}
+                {r.status === 'pending' && <Btn kind="ghost" className="px-2.5! py-1!" onClick={() => reject(r)}>Reject</Btn>}
+                <Btn kind="ghost" className="px-2.5! py-1! text-red-700" onClick={() => remove(r)}>Delete</Btn>
+              </div>
+            </article>
+          );
+        })}
+        {!rows.length && <p className="rounded-xl bg-emerald-50 p-6 text-center text-sm text-emerald-900/70">{loading ? 'Loading…' : 'No requests here.'}</p>}
+      </div>
+    </Card>
+  );
+}
+
 /* ---------------- Today's winner ---------------- */
 const todayStr = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 function TodayWinnerPage({ toast, settings, reload }: { toast: ToastFn; settings: Settings; reload: () => void }) {
@@ -807,11 +920,12 @@ function WinnersPage({ toast, settings, reload }: { toast: ToastFn; settings: Se
 }
 
 /* ---------------- Shell ---------------- */
-type Route = 'dashboard' | 'codes' | 'review' | 'upload' | 'today' | 'winners' | 'feedback' | 'settings';
+type Route = 'dashboard' | 'codes' | 'review' | 'features' | 'upload' | 'today' | 'winners' | 'feedback' | 'settings';
 const nav: { r: Route; label: string; icon: string }[] = [
   { r: 'dashboard', label: 'Dashboard', icon: 'M3 13h8V3H3zm10 8h8V11h-8zM3 21h8v-6H3zm10-18v6h8V3z' },
   { r: 'codes', label: 'Codes', icon: 'M4 6h16M4 12h16M4 18h10' },
   { r: 'review', label: 'Review', icon: 'M9 12l2 2 4-4M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z' },
+  { r: 'features', label: 'Feature requests', icon: 'M12 2l3 6.5 7 .8-5.2 4.8 1.5 7L12 17.6 5.7 21.1l1.5-7L2 9.3l7-.8z' },
   { r: 'upload', label: 'Paste codes', icon: 'M12 16V4m0 0l-4 4m4-4l4 4M4 20h16' },
   { r: 'today', label: "Today's winner", icon: 'M12 2l3 6.5 7 .8-5.2 4.8 1.5 7L12 17.6 5.7 21.1l1.5-7L2 9.3l7-.8z' },
   { r: 'feedback', label: 'Feedback', icon: 'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z' },
@@ -858,9 +972,12 @@ export default function NusukAdmin() {
 
   // Unread feedback count for the sidebar badge
   const [unread, setUnread] = useState(0);
+  const [featWaiting, setFeatWaiting] = useState(0);
   const loadUnread = useCallback(async () => {
     const { count, error } = await sb!.from('nusuk_feedback').select('id', { count: 'exact', head: true }).eq('status', 'new');
     setUnread(error ? 0 : count ?? 0);
+    const fr = await sb!.from('nusuk_feature_requests').select('id', { count: 'exact', head: true }).eq('status', 'pending');
+    setFeatWaiting(fr.error ? 0 : fr.count ?? 0);
   }, []);
   useEffect(() => { if (isAdmin) loadUnread(); }, [isAdmin, loadUnread, route]);
 
@@ -895,6 +1012,7 @@ export default function NusukAdmin() {
               <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d={n.icon} /></svg>
               {n.label}
               {n.r === 'feedback' && unread > 0 && <span className="ml-auto rounded-full bg-red-600 px-1.5 text-[11px] font-bold leading-5 text-white">{unread}</span>}
+              {n.r === 'features' && featWaiting > 0 && <span className="ml-auto rounded-full bg-red-600 px-1.5 text-[11px] font-bold leading-5 text-white">{featWaiting}</span>}
             </a>
           ))}
         </nav>
@@ -919,6 +1037,7 @@ export default function NusukAdmin() {
         {route === 'upload' && <Upload toast={toast} defaultMax={settings?.default_max_uses ?? 1} />}
         {route === 'today' && settings && <TodayWinnerPage toast={toast} settings={settings} reload={loadSettings} />}
         {route === 'feedback' && <FeedbackPage toast={toast} onChange={loadUnread} />}
+        {route === 'features' && <FeatureRequestsPage toast={toast} onChange={loadUnread} />}
         {route === 'winners' && settings && <WinnersPage toast={toast} settings={settings} reload={loadSettings} />}
         {route === 'settings' && settings && <SettingsPage toast={toast} settings={settings} reload={loadSettings} />}
       </main>

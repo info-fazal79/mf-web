@@ -9,6 +9,9 @@ export type NusukContent = {
   tab3_title: string;
   tab3_body: string;
   submit_rules: string;
+  feature_benefit: string;
+  feature_guide: string;
+  feature_post_url: string;
   disclaimer: string;
 };
 
@@ -26,6 +29,11 @@ export const defaultContent: NusukContent = {
     'এখান থেকে একটি কোড কপি করে নুসুক অ্যাপে ব্যবহার করলে আপনি একটি নতুন Key (চাবি) পাবেন।\n\nএই Key দিয়ে আপনি আরেকটি প্রশ্নের উত্তর দেওয়ার সুযোগ পাবেন। সেই উত্তর সঠিক হলে আপনার উমরাহ জেতার সম্ভাবনা আরও বেড়ে যাবে। তাই যত বেশি কোড ব্যবহার করবেন, তত বেশি প্রশ্নের উত্তর দিতে পারবেন।\n\nআপনার নিজের রেফারেল কোড এখানে জমা দিলে অন্যরা সেটি ব্যবহার করবেন। এতে তারা নতুন Key পাবেন, আর প্রতিযোগিতার নিয়ম অনুযায়ী আপনিও উপকৃত হবেন। এভাবে সবাই সবাইকে সাহায্য করি।',
   submit_rules:
     '• শুধু নিজের আসল নুসুক রেফারেল কোড দিন। নুসুকের কোড সাধারণত NG- দিয়ে শুরু হয়, যেমন: NG-y3JkB7lU\n• কোডটি নুসুক অ্যাপ থেকে হুবহু কপি করে পেস্ট করুন, ছোট-বড় হাতের অক্ষর যেন না বদলায়।\n• একই কোড একবারই জমা দেওয়া যায়।\n• যাচাই করে অনুমোদন দেওয়ার পর কোডটি সবার জন্য দেখানো হবে।',
+  feature_benefit:
+    'ফিচার করা কোড এই পেজে সবার আগে দেখানো হয়। ফলে অনেক বেশি মানুষ আপনার কোডটি ব্যবহার করবেন, আর আপনি অনেক বেশি Key (চাবি) পাবেন।',
+  feature_guide:
+    '১. প্রথমে আপনার রেফারেল কোডটি এই পেজে জমা দিন (নিচের "কোড জমা দিন" অংশে)।\n২. নিচের বাটন থেকে আমাদের ফেসবুক পোস্টটি খুলে Public করে শেয়ার করুন।\n৩. আপনার শেয়ার করা পোস্টের লিংকটি কপি করুন।\n৪. নিচের ফর্মে আপনার নাম, কোড আর শেয়ারের লিংক দিয়ে আবেদন পাঠান।\n৫. যাচাই করে অনুমোদন দিলে আপনার কোডটি ফিচার করা হবে।',
+  feature_post_url: '',
   disclaimer:
     'এটি একটি স্বেচ্ছাসেবী কমিউনিটি উদ্যোগ। নুসুক বা সৌদি হজ ও উমরাহ মন্ত্রণালয়ের সাথে এর কোনো অফিশিয়াল সম্পর্ক নেই।',
 };
@@ -40,6 +48,9 @@ export const contentFields: { key: keyof NusukContent; label: string; long?: boo
   { key: 'tab3_title', label: 'Tab 3 title' },
   { key: 'tab3_body', label: 'Tab 3 text', long: true },
   { key: 'submit_rules', label: 'Submission rules', long: true },
+  { key: 'feature_benefit', label: 'Feature request: benefit text', long: true },
+  { key: 'feature_guide', label: 'Feature request: steps', long: true },
+  { key: 'feature_post_url', label: 'Feature request: Facebook post link to share' },
   { key: 'disclaimer', label: 'Footer disclaimer', long: true },
 ];
 

@@ -26,4 +26,5 @@ export type Boot = {
   code?: CodeRef | null;
 };
 export type Claim = { enabled: boolean; counted?: boolean; remaining?: number; code?: CodeRef | null };
+export type FeatureReq = { ok: boolean; reason?: 'closed' | 'missing' | 'bad_link' | 'not_found' | 'featured' | 'exists' | 'busy' };
 export type Submit = { ok: boolean; reason?: 'closed' | 'invalid' | 'exists' | 'busy'; status?: string };
