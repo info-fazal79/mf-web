@@ -72,10 +72,11 @@ export const nav: NavItem[] = [
 ];
 
 export const socials: Social[] = [
+  { name: 'Facebook', href: 'https://www.facebook.com/info.fazal17', icon: 'facebook' },
   { name: 'LinkedIn', href: 'https://linkedin.com/in/fazal79', icon: 'linkedin' },
   { name: 'WhatsApp', href: 'https://wa.me/8801317947048', icon: 'whatsapp' },
   { name: 'Email', href: 'mailto:fazal.assdi39@gmail.com', icon: 'mail' },
-  // Add Facebook / YouTube / GitHub links from admin
+  // Add YouTube / GitHub links from admin
 ];
 
 export const hero = {
