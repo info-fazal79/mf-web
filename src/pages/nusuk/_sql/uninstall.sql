@@ -34,6 +34,7 @@ drop function if exists public.nusuk_claim(bigint, bigint[]);
 drop function if exists public.nusuk_bootstrap(bigint[], bigint[]);
 drop function if exists public.nusuk_bootstrap(bigint[]);
 drop function if exists public.nusuk_remaining_for(bigint[]);
+drop function if exists public.nusuk_admin_instant(text[], int);
 drop function if exists public.nusuk_pick(bigint[]);
 drop function if exists public.nusuk_featured_list();
 drop function if exists public.nusuk_mask(text);
