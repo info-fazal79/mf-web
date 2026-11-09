@@ -4,6 +4,7 @@ import { supabase as sb } from '@/lib/supabase';
 import { countdownText } from '../_lib/content';
 import { parseBonus } from '../_lib/bonus';
 import { defaultPopup, parsePopup, popupRunning, type Popup } from '../_lib/popup';
+import { extractCodes } from '../_lib/extract';
 
 type ToastFn = (t: string, ok?: boolean) => void;
 const errText = (e: unknown) => (e && typeof e === 'object' && 'message' in e ? String((e as { message: string }).message) : String(e));
@@ -34,7 +35,7 @@ function useNow() {
 }
 
 type InstantRow = { id: number; code: string; uses: number; status: string; instant_quota: number; instant_base: number; instant_at: string };
-type InstantResult = { added: string[]; boosted: string[]; rejected: string[]; invalid: string[]; quota: number };
+type InstantResult = { added: string[]; boosted: string[]; rejected: string[]; invalid: string[]; quota: number; already: string[] };
 
 /** Paste codes from the group: each goes to the very top until it gets N copies. */
 function InstantCard({ toast }: { toast: ToastFn }) {
@@ -44,6 +45,7 @@ function InstantCard({ toast }: { toast: ToastFn }) {
   const [rows, setRows] = useState<InstantRow[]>([]);
   const [missing, setMissing] = useState(false);
   const [last, setLast] = useState<InstantResult | null>(null);
+  const [again, setAgain] = useState(false);
 
   const load = useCallback(async () => {
     const { data, error } = await sb!.from('nusuk_codes')
@@ -55,14 +57,30 @@ function InstantCard({ toast }: { toast: ToastFn }) {
   }, []);
   useEffect(() => { load(); const t = setInterval(load, 15000); return () => clearInterval(t); }, [load]);
 
-  const codes = text.split(/[\s,;]+/).map((x) => x.trim()).filter(Boolean);
+  // Only NG- codes are taken from whatever is pasted (whole comments are fine); repeats count once
+  const ex = useMemo(() => extractCodes(text), [text]);
+  const codes = ex.unique;
   async function boost() {
-    if (!codes.length) return toast('Paste at least one code', false);
+    if (!codes.length) return toast('No NG- codes found in the pasted text', false);
     setBusy(true);
-    const { data, error } = await sb!.rpc('nusuk_admin_instant', { p_codes: codes, p_quota: quota });
+    // Codes that already had an instant boost (running or finished) are skipped, so a code is never boosted twice by mistake
+    let already: string[] = [];
+    if (!again) {
+      const { data: prev, error: e0 } = await sb!.from('nusuk_codes').select('code').in('code', codes).not('instant_at', 'is', null);
+      if (e0) { setBusy(false); return toast(errText(e0), false); }
+      const set = new Set((prev ?? []).map((x: { code: string }) => x.code.toLowerCase()));
+      already = codes.filter((c) => set.has(c.toLowerCase()));
+    }
+    const fresh = codes.filter((c) => !already.includes(c));
+    if (!fresh.length) {
+      setBusy(false);
+      setLast({ added: [], boosted: [], rejected: [], invalid: [], quota, already });
+      return toast('All of these codes were already boosted before', false);
+    }
+    const { data, error } = await sb!.rpc('nusuk_admin_instant', { p_codes: fresh, p_quota: quota });
     setBusy(false);
     if (error) return toast(/nusuk_admin_instant/.test(error.message) ? 'Run src/pages/nusuk/_sql/update_19_instant.sql in Supabase first.' : errText(error), false);
-    const r = data as InstantResult;
+    const r = { ...(data as InstantResult), already };
     setLast(r);
     toast(`⚡ ${r.boosted.length} code(s) are now at the top for ${r.quota} copies`);
     setText('');
@@ -86,9 +104,19 @@ function InstantCard({ toast }: { toast: ToastFn }) {
         Copy the codes people shared in your group and paste them here. Each one goes to the very top of /nusuk for every visitor until it has been copied
         the number of times below, then it goes back to normal. This is instant (not spread over hours like Feature). Codes that are not in the list yet are added.
       </p>
-      <Field label="Codes" hint={`One per line, or separated by spaces/commas. ${codes.length ? `${codes.length} code(s) found.` : ''}`}>
-        <textarea rows={5} className="nk-input font-mono font-normal" value={text} onChange={(e) => setText(e.target.value)} placeholder={'NG-y3JkB7lU\nNG-abcd1234'} />
+      <Field label="Paste the group comments (or just the codes)" hint="Paste everything as it is: names, text, emojis. Only NG- codes are picked out, and each code counts once.">
+        <textarea rows={6} className="nk-input font-normal" value={text} onChange={(e) => setText(e.target.value)} placeholder={'Rahim Uddin\nআমার কোড NG-y3JkB7lU দয়া করে ব্যবহার করুন 🤲\n\nKarim\nNG-abcd1234'} />
       </Field>
+      {text.trim() && (
+        <div className="rounded-xl border border-[#e7e1cf] bg-cream p-3 text-sm">
+          <div><b>{codes.length}</b> code(s) found{ex.repeats > 0 && <span className="text-emerald-900/60"> · {ex.repeats} repeat(s) removed</span>}</div>
+          {codes.length > 0 && <div className="mt-1.5 flex flex-wrap gap-1">{codes.map((c) => <span key={c} className="rounded bg-white px-1.5 py-0.5 font-mono text-xs ring-1 ring-emerald-900/10">{c}</span>)}</div>}
+        </div>
+      )}
+      <label className="flex items-center gap-2 text-sm">
+        <input type="checkbox" className="h-4 w-4 accent-emerald-700" checked={again} onChange={(e) => setAgain(e.target.checked)} />
+        Also boost codes that were boosted before <span className="text-xs text-emerald-900/55">(off = skip them, so nobody is boosted twice by mistake)</span>
+      </label>
       <div className="flex flex-wrap items-end gap-3">
         <Field label="Copies each (Keys)"><input type="number" min={1} max={1000} className="nk-input w-24 font-normal" value={quota} onChange={(e) => setQuota(Math.max(1, Math.round(+e.target.value) || 1))} /></Field>
         <Btn kind="gold" onClick={boost} disabled={busy || !codes.length}>{busy ? 'Working…' : `⚡ Boost ${codes.length || ''} now`}</Btn>
@@ -96,6 +124,7 @@ function InstantCard({ toast }: { toast: ToastFn }) {
       {last && (
         <div className="rounded-xl bg-emerald-50 p-3 text-sm">
           <b>{last.boosted.length}</b> boosted{last.added.length ? <> · <b>{last.added.length}</b> new code(s) added</> : null}
+          {last.already.length > 0 && <div className="mt-1 text-amber-700">Skipped, already boosted before: {last.already.join(', ')}</div>}
           {last.rejected.length > 0 && <div className="mt-1 text-red-700">Skipped (rejected codes): {last.rejected.join(', ')}</div>}
           {last.invalid.length > 0 && <div className="mt-1 text-red-700">Not valid codes: {last.invalid.join(', ')}</div>}
         </div>

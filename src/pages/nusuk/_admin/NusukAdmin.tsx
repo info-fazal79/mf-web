@@ -5,6 +5,7 @@ import AdsPage from './AdsPage';
 import BonusPage from './BonusPage';
 import CampaignPage from './CampaignPage';
 import PopupPage from './PopupPage';
+import { extractCodes } from '../_lib/extract';
 import { bonusFor, parseBonus } from '../_lib/bonus';
 import { CODE_RE, COUNTRY_CODES, PINNED_COUNT, contentFields, countryName, defaultContent, flagUrl, mergeContent, parseToday, parseTopBar, parseVideo, parseWinners, youtubeId, subscribeUrl, defaultVideoLabel, defaultTopBarText, defaultTopBarDoneText, countdownText, prizeLabel, type NusukContent, type Prize, type TodayWinner, type TopBar, type VideoMode, type Winner } from '../_lib/content';
 
@@ -617,17 +618,7 @@ function EditDialog({ code, onClose, onSaved, toast }: { code: Code; onClose: ()
 }
 
 /* ---------------- Paste & upload (NG- codes only) ---------------- */
-// A Nusuk referral code is always "NG-" + exactly 8 letters/digits, e.g. NG-y3JkB7lU.
-// The lookbehind stops matches inside a longer word; the lookahead rejects a 9th character
-// and codes Facebook cut short with "..." / "…" (from "See more").
-const NG_RE = /(?<![A-Za-z0-9_-])NG-[A-Za-z0-9]{8}(?![A-Za-z0-9_-]|\.\.\.|…)/g;
-
-function extractCodes(text: string) {
-  const all = text.match(NG_RE) ?? [];
-  const seen = new Map<string, string>(); // lower-case key -> first spelling seen
-  for (const c of all) if (!seen.has(c.toLowerCase())) seen.set(c.toLowerCase(), c);
-  return { found: all.length, unique: [...seen.values()], repeats: all.length - seen.size };
-}
+// Codes are pulled out of the pasted text by extractCodes() in ../_lib/extract.ts
 
 type UploadResult = { unique: number; added: string[]; skipped: string[]; repeats: number };
 
