@@ -9,6 +9,7 @@ export type NusukContent = {
   tab3_title: string;
   tab3_body: string;
   submit_rules: string;
+  submit_video_url: string;
   feature_benefit: string;
   feature_guide: string;
   feature_post_url: string;
@@ -27,8 +28,8 @@ export const defaultContent: NusukContent = {
   tab3_title: 'কোডের উপকারিতা',
   tab3_body:
     'এখান থেকে একটি কোড কপি করে নুসুক অ্যাপে ব্যবহার করলে আপনি একটি নতুন Key (চাবি) পাবেন।\n\nএই Key দিয়ে আপনি আরেকটি প্রশ্নের উত্তর দেওয়ার সুযোগ পাবেন। সেই উত্তর সঠিক হলে আপনার উমরাহ জেতার সম্ভাবনা আরও বেড়ে যাবে। তাই যত বেশি কোড ব্যবহার করবেন, তত বেশি প্রশ্নের উত্তর দিতে পারবেন।\n\nআপনার নিজের রেফারেল কোড এখানে জমা দিলে অন্যরা সেটি ব্যবহার করবেন। এতে তারা নতুন Key পাবেন, আর প্রতিযোগিতার নিয়ম অনুযায়ী আপনিও উপকৃত হবেন। এভাবে সবাই সবাইকে সাহায্য করি।',
-  submit_rules:
-    '• শুধু নিজের আসল নুসুক রেফারেল কোড দিন। নুসুকের কোড সাধারণত NG- দিয়ে শুরু হয়, যেমন: NG-y3JkB7lU\n• কোডটি নুসুক অ্যাপ থেকে হুবহু কপি করে পেস্ট করুন, ছোট-বড় হাতের অক্ষর যেন না বদলায়।\n• একই কোড একবারই জমা দেওয়া যায়।\n• যাচাই করে অনুমোদন দেওয়ার পর কোডটি সবার জন্য দেখানো হবে।',
+  submit_rules: 'শুধু নিজের আসল নুসুক রেফারেল কোড দিন। নুসুকের কোড সাধারণত NG- দিয়ে শুরু হয়, যেমন: NG-y3JkB7lU',
+  submit_video_url: 'https://www.youtube.com/shorts/6IqmV8xqRJw',
   feature_benefit:
     'ফিচার করা কোড এই পেজে সবার আগে দেখানো হয়। ফলে অনেক বেশি মানুষ আপনার কোডটি ব্যবহার করবেন, আর আপনি অনেক বেশি Key (চাবি) পাবেন।',
   feature_guide:
@@ -48,6 +49,7 @@ export const contentFields: { key: keyof NusukContent; label: string; long?: boo
   { key: 'tab3_title', label: 'Tab 3 title' },
   { key: 'tab3_body', label: 'Tab 3 text', long: true },
   { key: 'submit_rules', label: 'Submission rules', long: true },
+  { key: 'submit_video_url', label: 'Submit card: YouTube link "how to find your code"' },
   { key: 'feature_benefit', label: 'Feature request: benefit text', long: true },
   { key: 'feature_guide', label: 'Feature request: steps', long: true },
   { key: 'feature_post_url', label: 'Feature request: Facebook post link to share' },

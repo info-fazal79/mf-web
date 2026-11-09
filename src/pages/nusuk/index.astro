@@ -210,6 +210,14 @@ const desc = c.subtitle;
       <section id="submit" class="nk-card mt-8 scroll-mt-4 p-5 sm:p-6" aria-labelledby="nk-sub-h">
         <h2 id="nk-sub-h" class="text-lg font-bold text-emerald-900">আপনার রেফারেল কোড জমা দিন</h2>
         <p class="nk-pre mt-2 rounded-xl bg-emerald-50 p-3.5 text-sm leading-relaxed text-emerald-950" data-k="submit_rules">{c.submit_rules}</p>
+        <a id="nk-sv" href={c.submit_video_url} target="_blank" rel="noopener" class="nk-video-btn mt-3 flex items-center gap-3 rounded-xl px-3.5 py-2.5" style={c.submit_video_url ? undefined : 'display:none'}>
+          <span class="nk-video-play" aria-hidden="true"><svg viewBox="0 0 24 24" class="h-3.5 w-3.5" fill="currentColor"><path d="M8 5v14l11-7z" /></svg></span>
+          <span class="min-w-0 flex-1 text-left">
+            <span class="block text-[15px] font-bold leading-tight">নুসুক অ্যাপে আপনার কোড কোথায় পাবেন?</span>
+            <span class="block text-xs text-[#7a0f0f]/70">ভিডিও দেখুন: কোড খুঁজে বের করা ও এখানে জমা দেওয়া</span>
+          </span>
+          <span class="hidden shrink-0 rounded-full bg-[#ff0000] px-2 py-0.5 text-[11px] font-bold text-white sm:inline">YouTube ›</span>
+        </a>
         <form id="nk-form" class="mt-4 grid gap-3" novalidate>
           <div>
             <label for="nk-f-code" class="mb-1 block text-sm font-semibold">রেফারেল কোড *</label>
@@ -722,6 +730,8 @@ const desc = c.subtitle;
             if (typeof v === 'string' && v.trim() && el.textContent !== v) el.textContent = v;
           });
         }
+        const sv = b.content?.submit_video_url?.trim();
+        if (sv && /^https:\/\/(www\.|m\.)?(youtube\.com|youtu\.be)\//i.test(sv)) $<HTMLAnchorElement>('nk-sv').href = sv;
         const post = b.content?.feature_post_url?.trim();
         if (post && /^https?:\/\//i.test(post)) {
           $<HTMLAnchorElement>('nk-ft-post').href = post;
