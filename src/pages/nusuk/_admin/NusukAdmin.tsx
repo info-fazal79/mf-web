@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNo
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import AdsPage from './AdsPage';
+import BonusPage from './BonusPage';
+import { bonusFor, parseBonus } from '../_lib/bonus';
 import { CODE_RE, COUNTRY_CODES, PINNED_COUNT, contentFields, countryName, defaultContent, flagUrl, mergeContent, parseToday, parseTopBar, parseVideo, parseWinners, youtubeId, subscribeUrl, defaultVideoLabel, defaultTopBarText, defaultTopBarDoneText, countdownText, prizeLabel, type NusukContent, type Prize, type TodayWinner, type TopBar, type VideoMode, type Winner } from '../_lib/content';
 
 /* =====================================================================
@@ -23,6 +25,7 @@ type Code = {
   created_at: string;
   featured_at?: string | null;
   featured_base?: number;
+  boost_quota?: number | null;
   approved_at?: string | null;
   approved_base?: number;
 };
@@ -76,7 +79,8 @@ function Toggle({ on, onChange, label, hint }: { on: boolean; onChange: (v: bool
 /** Mirrors nusuk_boost_tier() in update_08: which priority tier a code is in right now. */
 type Boost = { tier: 1 | 2 | 3; text: string; cls: string } | null;
 function boostOf(r: Code, s: Settings | null): Boost {
-  const fq = s?.feature_quota ?? 10, fh = s?.feature_hours ?? 12, aq = s?.approved_quota ?? 2;
+  const fh = s?.feature_hours ?? 12, aq = s?.approved_quota ?? 2;
+  const fq = r.boost_quota ?? s?.feature_quota ?? 10;
   if (r.featured_at) {
     const got = r.uses - (r.featured_base ?? 0);
     const leftMs = new Date(r.featured_at).getTime() + fh * 3600e3 - Date.now();
@@ -483,8 +487,8 @@ function CodesPage({ toast, reviewMode = false, settings = null }: { toast: Toas
             </>
           ) : (
             <>
-              <Btn kind="gold" onClick={() => bulk({ featured_at: new Date().toISOString(), status: 'active' })}>★ Feature {sel.size}</Btn>
-              <Btn kind="ghost" onClick={() => bulk({ featured_at: null })}>Unfeature</Btn>
+              <Btn kind="gold" onClick={() => bulk({ featured_at: new Date().toISOString(), status: 'active', boost_quota: null })}>★ Feature {sel.size}</Btn>
+              <Btn kind="ghost" onClick={() => bulk({ featured_at: null, boost_quota: null })}>Unfeature</Btn>
               <Btn onClick={() => bulk({ status: 'active' })}>Activate {sel.size}</Btn>
               <Btn kind="ghost" onClick={() => bulk({ status: 'inactive' })}>Deactivate</Btn>
               <Btn kind="ghost" onClick={() => bulk({ uses: 0, last_used_at: null })}>Reset uses</Btn>
@@ -545,7 +549,7 @@ function CodesPage({ toast, reviewMode = false, settings = null }: { toast: Toas
                     </>
                   ) : (
                     <>
-                      {(() => { const on = boostOf(r, settings)?.tier === 1; return <Btn kind="ghost" className={`px-2.5! py-1! ${on ? 'text-amber-600' : ''}`} title={on ? 'Unfeature' : r.featured_at ? 'Feature again (restarts quota and timer)' : 'Feature: show this code first'} aria-label={on ? `Unfeature ${r.code}` : `Feature ${r.code}`} onClick={() => bulk(on ? { featured_at: null } : { featured_at: new Date().toISOString(), status: 'active' }, [r.id])}>{on ? '★' : '☆'}</Btn>; })()}{' '}
+                      {(() => { const on = boostOf(r, settings)?.tier === 1; return <Btn kind="ghost" className={`px-2.5! py-1! ${on ? 'text-amber-600' : ''}`} title={on ? 'Unfeature' : r.featured_at ? 'Feature again (restarts quota and timer)' : 'Feature: show this code first'} aria-label={on ? `Unfeature ${r.code}` : `Feature ${r.code}`} onClick={() => bulk(on ? { featured_at: null, boost_quota: null } : { featured_at: new Date().toISOString(), status: 'active', boost_quota: null }, [r.id])}>{on ? '★' : '☆'}</Btn>; })()}{' '}
                       <Btn kind="ghost" className="px-2.5! py-1!" onClick={() => bulk({ status: r.status === 'active' ? 'inactive' : 'active' }, [r.id])}>{r.status === 'active' ? 'Disable' : 'Enable'}</Btn>{' '}
                       <Btn kind="ghost" className="px-2.5! py-1!" onClick={() => setEdit(r)}>Edit</Btn>{' '}
                       <Btn kind="ghost" className="px-2.5! py-1! text-red-700" onClick={() => bulk('delete', [r.id])} aria-label={`Delete ${r.code}`}>✕</Btn>
@@ -1054,10 +1058,18 @@ function FeedbackPage({ toast, onChange }: { toast: ToastFn; onChange: () => voi
 type FeatureRequest = {
   id: number; name: string; code: string; share_link: string;
   status: 'pending' | 'approved' | 'rejected'; created_at: string; decided_at: string | null;
+  page_follow?: boolean; group_join?: boolean; fb_name?: string | null; bonus_at?: string | null;
 };
 type CodeInfo = { code: string; status: Status; featured_at: string | null; uses: number };
-function FeatureRequestsPage({ toast, onChange }: { toast: ToastFn; onChange: () => void }) {
+function FeatureRequestsPage({ toast, onChange, settings }: { toast: ToastFn; onChange: () => void; settings: Settings | null }) {
   const [rows, setRows] = useState<FeatureRequest[]>([]);
+  const [quota, setQuota] = useState<Record<number, number>>({});
+  // Copy target = normal feature quota + the page/group bonus
+  const base = settings?.feature_quota ?? 10;
+  // Extra copies for following the page / joining the group (Nusuk Manager → Bonus popup)
+  const bonusCfg = parseBonus(settings?.content);
+  const bonusOf = (r: FeatureRequest) => bonusFor(bonusCfg, r.page_follow, r.group_join);
+  const target = (r: FeatureRequest) => quota[r.id] ?? base + bonusOf(r);
   const [codes, setCodes] = useState<Record<string, CodeInfo>>({});
   const [filter, setFilter] = useState<'pending' | 'approved' | 'rejected' | 'all'>('pending');
   const [loading, setLoading] = useState(false);
@@ -1087,9 +1099,10 @@ function FeatureRequestsPage({ toast, onChange }: { toast: ToastFn; onChange: ()
   useEffect(() => { load(); }, [load]);
 
   async function approve(r: FeatureRequest) {
-    const { error } = await sb!.rpc('nusuk_admin_feature_approve', { p_id: r.id });
-    if (error) return toast(errText(error), false);
-    toast(`★ ${r.code} is now featured`);
+    const q = Math.max(1, Math.min(1000, Math.round(target(r)) || base));
+    const { error } = await sb!.rpc('nusuk_admin_feature_approve', { p_id: r.id, p_quota: q });
+    if (error) return toast(/p_quota/.test(error.message) ? 'Run src/pages/nusuk/_sql/update_16_feature_bonus.sql in Supabase first.' : errText(error), false);
+    toast(`★ ${r.code} is now featured for ${q} copies`);
     load(); onChange();
   }
   async function reject(r: FeatureRequest) {
@@ -1149,6 +1162,25 @@ function FeatureRequestsPage({ toast, onChange }: { toast: ToastFn; onChange: ()
                 )}
               </div>
               <a href={r.share_link} target="_blank" rel="noopener noreferrer" className="mt-2 block break-all text-sm font-semibold text-emerald-800 underline underline-offset-2">{r.share_link} ↗</a>
+              {(r.page_follow || r.group_join) && (
+                <div className="mt-2 rounded-lg border border-[#1877f2]/25 bg-[#1877f2]/5 p-2.5 text-sm">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <b className="text-[#1356b8]">Bonus:</b>
+                    {r.page_follow && <span className="rounded-full bg-[#1877f2] px-2 py-0.5 text-xs font-bold text-white">📘 followed page</span>}
+                    {r.group_join && <span className="rounded-full bg-[#1877f2] px-2 py-0.5 text-xs font-bold text-white">👥 joined group</span>}
+                    <span className="rounded-full bg-gold-100 px-2 py-0.5 text-xs font-bold text-emerald-950">+{bonusOf(r)} copies</span>
+                  </div>
+                  <div className="mt-1 text-emerald-900/80">Facebook name: <b>{r.fb_name || '—'}</b> <span className="text-xs text-emerald-900/55">· check it in your page followers / group members</span></div>
+                </div>
+              )}
+              {r.status !== 'approved' && (
+                <label className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+                  Feature for
+                  <input type="number" min={1} max={1000} className="nk-input w-20 py-1!" value={target(r)} onChange={(e) => setQuota({ ...quota, [r.id]: +e.target.value })} />
+                  copies
+                  <span className="text-xs text-emerald-900/55">({base} normal{bonusOf(r) ? ` + ${bonusOf(r)} bonus` : ''}. Lower it if they did not really follow or join.)</span>
+                </label>
+              )}
               <div className="mt-3 flex flex-wrap gap-2">
                 {r.status !== 'approved' && <Btn kind="gold" className="px-2.5! py-1!" disabled={!c} onClick={() => approve(r)}>★ Approve &amp; feature</Btn>}
                 {r.status === 'pending' && <Btn kind="ghost" className="px-2.5! py-1!" onClick={() => reject(r)}>Reject</Btn>}
@@ -1453,12 +1485,13 @@ function WinnersPage({ toast, settings, reload }: { toast: ToastFn; settings: Se
 }
 
 /* ---------------- Shell ---------------- */
-type Route = 'dashboard' | 'codes' | 'review' | 'features' | 'upload' | 'notice' | 'video' | 'ads' | 'today' | 'winners' | 'feedback' | 'settings';
+type Route = 'dashboard' | 'codes' | 'review' | 'features' | 'bonus' | 'upload' | 'notice' | 'video' | 'ads' | 'today' | 'winners' | 'feedback' | 'settings';
 const nav: { r: Route; label: string; icon: string }[] = [
   { r: 'dashboard', label: 'Dashboard', icon: 'M3 13h8V3H3zm10 8h8V11h-8zM3 21h8v-6H3zm10-18v6h8V3z' },
   { r: 'codes', label: 'Codes', icon: 'M4 6h16M4 12h16M4 18h10' },
   { r: 'review', label: 'Review', icon: 'M9 12l2 2 4-4M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z' },
   { r: 'features', label: 'Feature requests', icon: 'M12 2l3 6.5 7 .8-5.2 4.8 1.5 7L12 17.6 5.7 21.1l1.5-7L2 9.3l7-.8z' },
+  { r: 'bonus', label: 'Bonus popup', icon: 'M20 12v9H4v-9M2 7h20v5H2zM12 21V7M12 7H7.5a2.5 2.5 0 1 1 0-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 1 0 0-5C13 2 12 7 12 7z' },
   { r: 'upload', label: 'Paste codes', icon: 'M12 16V4m0 0l-4 4m4-4l4 4M4 20h16' },
   { r: 'notice', label: 'Top notice', icon: 'M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1zM15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13' },
   { r: 'ads', label: 'Ads', icon: 'M3 11l18-5v12L3 14v-3zM11.6 16.8a3 3 0 1 1-5.8-1.6' },
@@ -1582,12 +1615,13 @@ export default function NusukAdmin() {
         {route === 'codes' && <CodesPage key="codes" toast={toast} settings={settings} />}
         {route === 'review' && <CodesPage key="review" toast={toast} reviewMode settings={settings} />}
         {route === 'upload' && <Upload toast={toast} defaultMax={settings?.default_max_uses ?? 1} />}
+        {route === 'bonus' && settings && <BonusPage toast={toast} settings={settings} reload={loadSettings} />}
         {route === 'ads' && settings && <AdsPage toast={toast} settings={settings} reload={loadSettings} />}
         {route === 'video' && settings && <VideoPage toast={toast} settings={settings} reload={loadSettings} />}
         {route === 'notice' && settings && <TopNoticePage toast={toast} settings={settings} reload={loadSettings} />}
         {route === 'today' && settings && <TodayWinnerPage toast={toast} settings={settings} reload={loadSettings} />}
         {route === 'feedback' && <FeedbackPage toast={toast} onChange={loadUnread} />}
-        {route === 'features' && <FeatureRequestsPage toast={toast} onChange={loadUnread} />}
+        {route === 'features' && <FeatureRequestsPage toast={toast} onChange={loadUnread} settings={settings} />}
         {route === 'winners' && settings && <WinnersPage toast={toast} settings={settings} reload={loadSettings} />}
         {route === 'settings' && settings && <SettingsPage toast={toast} settings={settings} reload={loadSettings} />}
       </main>

@@ -22,6 +22,8 @@ const tabs = [
   { id: 't3', title: c.tab3_title, body: c.tab3_body, tk: 'tab3_title', bk: 'tab3_body' },
 ];
 const desc = c.subtitle;
+import { defaultBonus } from './_lib/bonus';
+const bonus0 = defaultBonus();
 ---
 
 <!doctype html>
@@ -423,6 +425,62 @@ const desc = c.subtitle;
       </div>
     </dialog>
 
+    <dialog id="nk-bn" class="m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-md overflow-y-auto rounded-[1.25rem] p-0 shadow-2xl backdrop:bg-emerald-950/60" aria-labelledby="nk-bn-title">
+      <div class="grid gap-3.5 p-5">
+        <div class="flex items-start gap-3">
+          <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-emerald-100 text-lg font-bold text-emerald-700" aria-hidden="true">✓</span>
+          <div class="min-w-0 flex-1">
+            <p class="font-bold text-emerald-900">আপনার আবেদন পৌঁছেছে!</p>
+            <p class="text-sm text-emerald-900/70">যাচাই করে অনুমোদন দিলে আপনার কোড সবার উপরে দেখানো হবে।</p>
+          </div>
+          <button type="button" id="nk-bn-close" class="grid h-9 w-9 shrink-0 place-items-center rounded-full text-xl text-emerald-900/60 hover:bg-emerald-50" aria-label="বন্ধ করুন">×</button>
+        </div>
+
+        <div class="nk-ad-social grid gap-2.5 rounded-2xl p-4 text-white">
+          <h2 id="nk-bn-title" class="text-lg font-bold leading-tight">{bonus0.title}</h2>
+          <p id="nk-bn-text" class="nk-pre text-sm leading-relaxed text-white/90">{bonus0.text}</p>
+          <div id="nk-bn-page" class="rounded-xl bg-white p-2.5 shadow-sm">
+            <div class="flex items-center gap-3">
+              <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#1877f2] text-white"><svg viewBox="0 0 24 24" class="h-5 w-5" fill="currentColor" aria-hidden="true"><path d="M14 8.5V6.8c0-.8.5-1 .9-1H17V2.1L14.1 2C10.9 2 10.2 4.4 10.2 6v2.5H8V12h2.2v10H14V12h2.7l.4-3.5z"/></svg></span>
+              <span class="min-w-0 flex-1">
+                <span class="block text-sm font-bold leading-tight text-emerald-950">আমাদের ফেসবুক পেজ</span>
+                <span id="nk-bn-page-reward" class="mt-1 inline-block rounded-full bg-gold-100 px-2 py-0.5 text-xs font-bold whitespace-nowrap text-emerald-950 ring-1 ring-gold-500/50"></span>
+              </span>
+              <a id="nk-bn-page-link" href="#" target="_blank" rel="noopener" class="shrink-0 rounded-lg bg-[#1877f2] px-3 py-2 text-xs font-bold whitespace-nowrap text-white hover:bg-[#166fe5]">ফলো করুন</a>
+            </div>
+            <label class="mt-2 flex cursor-pointer items-center gap-2 rounded-lg bg-emerald-50 px-2.5 py-1.5 text-sm font-semibold text-emerald-900">
+              <input type="checkbox" id="nk-bn-page-done" class="h-4 w-4 accent-emerald-700" /> আমি পেজটি ফলো করেছি
+            </label>
+          </div>
+          <div id="nk-bn-group" class="rounded-xl bg-white p-2.5 shadow-sm">
+            <div class="flex items-center gap-3">
+              <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#1877f2] text-white"><svg viewBox="0 0 24 24" class="h-5 w-5" fill="currentColor" aria-hidden="true"><path d="M12 12.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zm-6.5.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5zm13 0a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5zM12 14c-3.3 0-6 1.8-6 4v1.5h12V18c0-2.2-2.7-4-6-4z"/></svg></span>
+              <span class="min-w-0 flex-1">
+                <span class="block text-sm font-bold leading-tight text-emerald-950">কমিউনিটি গ্রুপ</span>
+                <span id="nk-bn-group-reward" class="mt-1 inline-block rounded-full bg-gold-100 px-2 py-0.5 text-xs font-bold whitespace-nowrap text-emerald-950 ring-1 ring-gold-500/50"></span>
+              </span>
+              <a id="nk-bn-group-link" href="#" target="_blank" rel="noopener" class="shrink-0 rounded-lg bg-[#1877f2] px-3 py-2 text-xs font-bold whitespace-nowrap text-white hover:bg-[#166fe5]">যুক্ত হোন</a>
+            </div>
+            <label class="mt-2 flex cursor-pointer items-center gap-2 rounded-lg bg-emerald-50 px-2.5 py-1.5 text-sm font-semibold text-emerald-900">
+              <input type="checkbox" id="nk-bn-group-done" class="h-4 w-4 accent-emerald-700" /> আমি গ্রুপে যুক্ত হয়েছি
+            </label>
+          </div>
+          <div id="nk-bn-both" class="rounded-xl bg-gold-100 px-3 py-2 text-center text-sm font-bold text-emerald-950"></div>
+        </div>
+
+        <form id="nk-bn-form" class="grid gap-3" novalidate>
+          <div>
+            <label for="nk-bn-name" class="mb-1 block text-sm font-semibold">আপনার ফেসবুক প্রোফাইলের নাম *</label>
+            <input id="nk-bn-name" name="fbname" maxlength="120" autocomplete="off" class="nk-input" placeholder="যে নামে ফলো বা যুক্ত হয়েছেন" />
+            <p class="mt-1 text-xs text-emerald-900/65">এই নাম দেখে আমরা মিলিয়ে নেব, তারপর আপনার কোডের সাথে বাড়তি Key যোগ করে দেব।</p>
+          </div>
+          <p id="nk-bn-msgbox" class="hidden rounded-xl px-3.5 py-2.5 text-sm" role="alert"></p>
+          <button type="submit" class="nk-btn nk-green py-3 text-base">জানিয়ে দিন</button>
+          <button type="button" id="nk-bn-later" class="text-sm font-semibold text-emerald-900/60 underline underline-offset-2">এখন না, ধন্যবাদ</button>
+        </form>
+      </div>
+    </dialog>
+
     <dialog id="nk-fb" class="m-auto w-[calc(100%-2rem)] max-w-md rounded-[1.25rem] p-0 shadow-2xl backdrop:bg-emerald-950/60" aria-labelledby="nk-fb-title">
       <form id="nk-fb-form" class="grid gap-3 p-5" novalidate>
         <div class="flex items-start justify-between gap-3">
@@ -470,6 +528,7 @@ const desc = c.subtitle;
     <script>
       import { rpc, rpcReady, type Boot, type Claim, type CodeCheck, type CodeRef, type FeatureReq, type FeaturedItem, type FeaturedList, type SliderItem, type Submit } from './_lib/rpc';
       import { adHtml, defaultAds, liveAds, parseAds, sampleDuaAd } from './_lib/ads';
+      import { bonusReady, parseBonus } from './_lib/bonus';
       import { CODE_RE, countdownText, countryName, defaultVideoLabel, flagUrl, parseToday, parseTopBar, parseVideo, subscribeUrl, parseWinners, prizeLabel, type Winner } from './_lib/content';
 
       // Bangladesh flag (green field, red disc set toward the hoist). Inline SVG so it renders on every OS.
@@ -792,7 +851,9 @@ const desc = c.subtitle;
       adsSec.addEventListener('pointerleave', adAuto);
       addEventListener('resize', () => adGo(adIndex, false));
 
+      let lastContent: Record<string, string> | undefined;
       function applyContent(b: Boot) {
+        lastContent = b.content;
         renderAds(b.content);
         renderTopBar(b.content);
         renderVideo(b.content);
@@ -1123,10 +1184,74 @@ const desc = c.subtitle;
           if (r.ok) {
             ftForm.reset();
             ftSay('ধন্যবাদ! আপনার আবেদন পৌঁছেছে। যাচাই করে অনুমোদন দিলে আপনার কোডটি সবার উপরে দেখানো হবে।', true);
+            // Offer the page/group bonus right away (needs update 16, which returns the request id)
+            if (r.id && openBonus(r.id, code)) ftDialog.close();
           } else ftSay(ftReasons[r.reason ?? ''] ?? 'আবেদন পাঠানো যায়নি।', false);
         } catch (err) {
           console.error(err);
           ftSay('পাঠানো যায়নি। ইন্টারনেট সংযোগ দেখে আবার চেষ্টা করুন।', false);
+        }
+        btn.disabled = false;
+      });
+
+      // ---- Bonus popup after a feature request: follow page / join group for extra Keys ----
+      const bnDialog = $<HTMLDialogElement>('nk-bn');
+      const bnForm = $<HTMLFormElement>('nk-bn-form');
+      const bnMsg = $('nk-bn-msgbox');
+      const bnSay = (t: string, ok: boolean) => {
+        bnMsg.textContent = t;
+        bnMsg.className = `rounded-xl px-3.5 py-2.5 text-sm ${ok ? 'bg-emerald-100 text-emerald-900' : 'bg-red-50 text-red-800'}`;
+      };
+      let bnReq: { id: number; code: string } | null = null;
+      function openBonus(id: number, code: string): boolean {
+        const b = parseBonus(lastContent);
+        if (!bonusReady(b)) return false;
+        bnReq = { id, code };
+        $('nk-bn-title').textContent = b.title;
+        $('nk-bn-text').textContent = b.text;
+        for (const [kind, url, r] of [['page', b.page_url, b.page_keys], ['group', b.group_url, b.group_keys]] as const) {
+          $(`nk-bn-${kind}`).style.display = url ? '' : 'none';
+          $<HTMLAnchorElement>(`nk-bn-${kind}-link`).href = url || '#';
+          $(`nk-bn-${kind}-reward`).textContent = b.show_numbers && r ? `+${bn(r)} বাড়তি Key` : '🎁 বাড়তি Key';
+        }
+        const both = $('nk-bn-both');
+        both.textContent = b.show_numbers && b.both_keys ? `🎁 দুটোই করলে মোট +${bn(b.both_keys)} বাড়তি Key` : '🎁 দুটোই করলে আরও বেশি বাড়তি Key';
+        both.style.display = b.page_url && b.group_url ? '' : 'none';
+        bnForm.reset();
+        bnMsg.className = 'hidden';
+        bnForm.querySelector<HTMLButtonElement>('button[type="submit"]')!.disabled = false;
+        bnDialog.showModal();
+        bnDialog.scrollTop = 0;
+        return true;
+      }
+      // Opening a link ticks its box (they can untick it)
+      for (const kind of ['page', 'group']) {
+        $(`nk-bn-${kind}-link`).addEventListener('click', () => { $<HTMLInputElement>(`nk-bn-${kind}-done`).checked = true; });
+      }
+      $('nk-bn-close').addEventListener('click', () => bnDialog.close());
+      $('nk-bn-later').addEventListener('click', () => bnDialog.close());
+      bnDialog.addEventListener('click', (e) => { if (e.target === bnDialog) bnDialog.close(); });
+      bnForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (!bnReq) return bnDialog.close();
+        const page = $<HTMLInputElement>('nk-bn-page-done').checked && $('nk-bn-page').style.display !== 'none';
+        const group = $<HTMLInputElement>('nk-bn-group-done').checked && $('nk-bn-group').style.display !== 'none';
+        const fbName = $<HTMLInputElement>('nk-bn-name').value.trim();
+        if (!page && !group) return bnSay('পেজ ফলো বা গ্রুপে যুক্ত হওয়ার পর পাশের বক্সে টিক দিন।', false);
+        if (!fbName) return bnSay('আপনার ফেসবুক প্রোফাইলের নাম লিখুন, যাতে আমরা মিলিয়ে নিতে পারি।', false);
+        const btn = bnForm.querySelector<HTMLButtonElement>('button[type="submit"]')!;
+        btn.disabled = true;
+        try {
+          const r = await rpc<{ ok: boolean; reason?: string }>('nusuk_feature_bonus', { p_id: bnReq.id, p_code: bnReq.code, p_page: page, p_group: group, p_fb_name: fbName });
+          if (r.ok) {
+            bnSay('জাযাকাল্লাহু খাইরান! 🤍 যাচাই করে অনুমোদনের সময় আপনার কোডের সাথে বাড়তি Key যোগ করে দেওয়া হবে।', true);
+            setTimeout(() => bnDialog.close(), 3500);
+            return;
+          }
+          bnSay('তথ্যটি সেভ করা যায়নি। আবার চেষ্টা করুন।', false);
+        } catch (err) {
+          console.error(err);
+          bnSay('পাঠানো যায়নি। ইন্টারনেট সংযোগ দেখে আবার চেষ্টা করুন।', false);
         }
         btn.disabled = false;
       });

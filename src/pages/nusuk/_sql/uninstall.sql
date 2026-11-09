@@ -20,6 +20,8 @@ drop function if exists public.nusuk_pick(bigint[]);
 drop function if exists public.nusuk_featured_list();
 drop function if exists public.nusuk_mask(text);
 drop function if exists public.nusuk_boost_tier(public.nusuk_codes, public.nusuk_settings);
+drop function if exists public.nusuk_feature_bonus(bigint, text, boolean, boolean, text);
+drop function if exists public.nusuk_admin_feature_approve(bigint, int);
 drop function if exists public.nusuk_admin_feature_approve(bigint);
 drop function if exists public.nusuk_feature_request(text, text, text);
 drop table if exists public.nusuk_feature_requests;
