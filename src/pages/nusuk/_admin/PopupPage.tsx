@@ -1,10 +1,11 @@
 /* Nusuk Manager → Popup notice: a popup when people open /nusuk (stored in nusuk_settings.content.popup). */
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { supabase as sb } from '@/lib/supabase';
 import { countdownText } from '../_lib/content';
 import { parseBonus } from '../_lib/bonus';
 import { defaultPopup, parsePopup, popupRunning, type Popup } from '../_lib/popup';
 import { extractCodes } from '../_lib/extract';
+import { collectorHref } from '../_lib/collector';
 
 type ToastFn = (t: string, ok?: boolean) => void;
 const errText = (e: unknown) => (e && typeof e === 'object' && 'message' in e ? String((e as { message: string }).message) : String(e));
@@ -36,6 +37,29 @@ function useNow() {
 
 type InstantRow = { id: number; code: string; uses: number; status: string; instant_quota: number; instant_base: number; instant_at: string };
 type InstantResult = { added: string[]; boosted: string[]; rejected: string[]; invalid: string[]; quota: number; already: string[] };
+
+/** Drag-to-bookmarks button that collects NG- codes from a Facebook group page. */
+function CollectorButton() {
+  const ref = useRef<HTMLAnchorElement>(null);
+  // React does not allow javascript: links in markup, so the link is set directly
+  useEffect(() => { ref.current?.setAttribute('href', collectorHref()); }, []);
+  return (
+    <div className="grid gap-2 rounded-xl border border-[#1877f2]/30 bg-[#1877f2]/5 p-3.5 text-sm">
+      <b>📥 Collect codes from the group (one-time setup)</b>
+      <p className="text-emerald-900/75">Facebook doesn't let you copy a long page in one go (you get "Facebook Facebook…"). This button scrolls the group for you and collects every code.</p>
+      <ol className="grid list-decimal gap-1 pl-5 text-emerald-950">
+        <li>Show the bookmarks bar: press <b>Ctrl+Shift+B</b>.</li>
+        <li>Drag this button onto the bookmarks bar:
+          {' '}<a ref={ref} onClick={(e) => { e.preventDefault(); alert('Drag this button to your bookmarks bar, then click it on your Facebook group page.'); }}
+            className="ml-1 inline-flex cursor-grab items-center gap-1 rounded-full bg-[#1877f2] px-3 py-1 text-xs font-bold text-white">📥 কোড সংগ্রহ</a>
+        </li>
+        <li>Open your group on Facebook (sorted by <b>New</b>), scroll to the top, and click <b>📥 কোড সংগ্রহ</b> in the bookmarks bar.</li>
+        <li>It scrolls down by itself and counts codes. When it has gone far enough, press <b>থামান</b> (or wait until it ends), then <b>কপি করুন</b>.</li>
+        <li>Paste here and press <b>⚡ Boost</b>. Codes boosted before are skipped automatically.</li>
+      </ol>
+    </div>
+  );
+}
 
 /** Paste codes from the group: each goes to the very top until it gets N copies. */
 function InstantCard({ toast }: { toast: ToastFn }) {
@@ -104,6 +128,7 @@ function InstantCard({ toast }: { toast: ToastFn }) {
         Copy the codes people shared in your group and paste them here. Each one goes to the very top of /nusuk for every visitor until it has been copied
         the number of times below, then it goes back to normal. This is instant (not spread over hours like Feature). Codes that are not in the list yet are added.
       </p>
+      <CollectorButton />
       <Field label="Paste the group comments (or just the codes)" hint="Paste everything as it is: names, text, emojis. Only NG- codes are picked out, and each code counts once.">
         <textarea rows={6} className="nk-input font-normal" value={text} onChange={(e) => setText(e.target.value)} placeholder={'Rahim Uddin\nআমার কোড NG-y3JkB7lU দয়া করে ব্যবহার করুন 🤲\n\nKarim\nNG-abcd1234'} />
       </Field>
