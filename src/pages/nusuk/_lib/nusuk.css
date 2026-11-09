@@ -130,3 +130,6 @@ a.nk-ad:hover { transform: translateY(-1px); box-shadow: 0 10px 24px -14px rgba(
   background-color: #1556b8;
   background-image: radial-gradient(circle at 100% 0%, rgba(220, 188, 82, 0.35), transparent 55%), linear-gradient(135deg, #1877f2, #0b3d8c);
 }
+.nk-cm-head {
+  background-image: radial-gradient(circle at 100% 0%, rgba(220, 188, 82, 0.22), transparent 55%), linear-gradient(180deg, rgba(7, 94, 69, 0.06), transparent);
+}

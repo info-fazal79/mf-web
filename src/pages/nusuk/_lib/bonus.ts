@@ -35,6 +35,7 @@ const int = (v: unknown, d: number) => {
   const n = Math.round(Number(v));
   return Number.isFinite(n) && n >= 0 && n <= 1000 && v !== '' && v !== null ? n : d;
 };
+export const isWaUrl = (u: string) => /^https:\/\/(chat\.whatsapp\.com|wa\.me|(www\.)?whatsapp\.com)\/[^\s"'<>]+$/i.test(u);
 export const isFbUrl = (u: string) => /^https:\/\/([a-z0-9-]+\.)*(facebook\.com|fb\.com|fb\.me)(\/|$)/i.test(u);
 
 export function parseBonus(c: unknown): Bonus {
@@ -53,6 +54,32 @@ export function parseBonus(c: unknown): Bonus {
     group_keys: int(b.group_keys, base.group_keys),
     both_keys: int(b.both_keys, base.both_keys),
     show_numbers: b.show_numbers === true,
+  };
+}
+
+/**
+ * "Join our community" card at the bottom of /nusuk (after the visitor feedback).
+ * Uses the page and group links from the bonus settings, plus a WhatsApp link.
+ * Stored in nusuk_settings.content.community.
+ */
+export type Community = { on: boolean; title: string; text: string; whatsapp_url: string };
+export const defaultCommunity = (): Community => ({
+  on: true,
+  title: 'আমাদের কমিউনিটিতে যুক্ত হতে পারেন 🤝',
+  text: 'নুসুক কোড আর উমরাহ প্রতিযোগিতার আপডেট, প্রশ্নোত্তর আর একে অপরকে সাহায্য করার জন্য আমাদের একটি ছোট্ট কমিউনিটি আছে। চাইলে আপনিও যুক্ত হতে পারেন।',
+  whatsapp_url: '',
+});
+export function parseCommunity(c: unknown): Community {
+  const base = defaultCommunity();
+  const raw = c && typeof c === 'object' ? (c as Record<string, unknown>).community : null;
+  if (!raw || typeof raw !== 'object') return base;
+  const m = raw as Record<string, unknown>;
+  const wa = str(m.whatsapp_url, 600);
+  return {
+    on: m.on !== false,
+    title: str(m.title, 120) || base.title,
+    text: str(m.text, 600) || base.text,
+    whatsapp_url: isWaUrl(wa) ? wa : '',
   };
 }
 
