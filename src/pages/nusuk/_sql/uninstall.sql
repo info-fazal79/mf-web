@@ -3,21 +3,24 @@
 -- Removes every Nusuk table, function and code from Supabase. Cannot be undone.
 -- After running it, delete the folder src/pages/nusuk/ and push.
 -- =====================================================================
-drop function if exists public.nusuk_camp_draw(text, date, date, text);
-drop function if exists public.nusuk_camp_admin_board(date, date, boolean);
+drop function if exists public.nusuk_camp_draw(bigint, date, date, boolean, text);
+drop function if exists public.nusuk_camp_admin_board(bigint, date, date, boolean);
 drop function if exists public.nusuk_camp_hit(text, text, boolean, boolean);
 drop function if exists public.nusuk_camp_bonus(text, text);
 drop function if exists public.nusuk_camp_me(text, text, uuid);
 drop function if exists public.nusuk_camp_state();
-drop function if exists public.nusuk_camp_can_view();
-drop function if exists public.nusuk_camp_scores(date, date, boolean);
+drop function if exists public.nusuk_camp_top(bigint, date, date, boolean);
+drop function if exists public.nusuk_camp_scores(bigint, date, date, boolean);
+drop function if exists public.nusuk_camp_current();
+drop function if exists public.nusuk_camp_window(public.nusuk_camp_posts, public.nusuk_campaigns, date);
 drop function if exists public.nusuk_camp_week_start(date);
 drop function if exists public.nusuk_camp_today();
 drop table if exists public.nusuk_camp_draws;
 drop table if exists public.nusuk_camp_links;
 drop table if exists public.nusuk_camp_people;
 drop table if exists public.nusuk_camp_posts;
-drop table if exists public.nusuk_camp_settings;
+drop table if exists public.nusuk_campaigns;
+drop table if exists public.nusuk_camp_config;
 drop function if exists public.nusuk_feedback_slider();
 drop function if exists public.nusuk_feedback_submit(text, text, text, text, text, boolean);
 drop function if exists public.nusuk_feedback_submit(text, text, text, text, text);

@@ -1,41 +1,43 @@
 /**
  * Share campaign on /nusuk (Nusuk Manager → Campaign).
  * Visitors enter their Nusuk code + Facebook profile and get a personal link per
- * post, new every day. When Facebook reads the link (they posted it), the share is
- * counted by the worker (worker/index.js). Hidden from everyone except a signed-in
- * admin until it is published.
+ * post for each share window (e.g. new every day). When Facebook reads the link
+ * (they posted it), the share is counted by the worker (worker/index.js).
+ * A Hidden campaign is only shown to a signed-in admin; a Live one to everyone.
  */
 import { rpc } from './rpc';
 import { parseBonus } from './bonus';
 
-type Post = { id: number; title: string; image: string };
 type Row = { code: string; n: number };
 type State = {
   visible: boolean;
+  id?: number;
   published?: boolean;
-  admin?: boolean;
   title?: string;
   rules?: string;
   starts?: string | null;
   ends?: string | null;
   open?: boolean;
+  follow_points?: number;
+  join_points?: number;
   people?: number;
-  posts?: Post[];
-  board?: { day: Row[]; week: Row[]; final: Row[] };
+  board?: { day: Row[]; week: Row[]; all: Row[] };
 };
-type Link = { post: number; slug: string; done: boolean; clicks: number };
+type MyPost = {
+  id: number; title: string; image: string; points: number; every: number;
+  slug: string | null; done: boolean; next: string | null; from: string | null;
+  state: 'open' | 'done' | 'soon' | 'ended';
+};
 type Me = {
   ok: boolean;
   reason?: 'closed' | 'not_found' | 'bad_profile' | 'need_profile';
   code?: string;
   profile?: string;
-  open?: boolean;
   follow?: boolean;
   join?: boolean;
-  links?: Link[];
+  posts?: MyPost[];
   today?: number;
-  week?: number;
-  final?: number;
+  total?: number;
 };
 
 const URL_ = import.meta.env.PUBLIC_SUPABASE_URL as string | undefined;
@@ -82,7 +84,10 @@ async function adminToken(): Promise<string | null> {
 }
 
 const DEFAULT_RULES =
-  '১. নিচে আপনার নুসুক রেফারেল কোড আর ফেসবুক প্রোফাইলের লিংক দিন।\n২. প্রতিটি পোস্টের জন্য আপনার নিজের একটি লিংক তৈরি হবে। লিংকটি কপি করে ফেসবুকে Public পোস্ট দিন।\n৩. ফেসবুক লিংকের প্রিভিউ দেখানোর সাথে সাথে আপনার শেয়ারটি গোনা হবে। প্রতিটি পোস্ট দিনে একবার গোনা হয়।\n৪. প্রতিদিন নতুন লিংক তৈরি হয়, তাই প্রতিদিন আবার শেয়ার করতে পারবেন।\n৫. দৈনিক ও সাপ্তাহিক পুরস্কার শুধু শেয়ারের ভিত্তিতে। চূড়ান্ত পুরস্কারে পেজ ফলো ও গ্রুপে যুক্ত হওয়ার জন্য ১ পয়েন্ট করে যোগ হবে।\n৬. বিজয়ী লটারির মাধ্যমে বাছাই করা হবে। পুরস্কার দেওয়ার আগে আপনার ফেসবুক প্রোফাইলে পোস্টগুলো যাচাই করা হবে এবং নুসুক অ্যাপে আপনার কোডের স্ক্রিনশট চাওয়া হবে।';
+  '১. নিচে আপনার নুসুক রেফারেল কোড আর ফেসবুক প্রোফাইলের লিংক দিন।\n২. প্রতিটি পোস্টের জন্য আপনার নিজের একটি লিংক তৈরি হবে। লিংকটি কপি করে ফেসবুকে Public পোস্ট দিন।\n৩. ফেসবুক লিংকের প্রিভিউ দেখানোর সাথে সাথে আপনার শেয়ার গোনা হবে এবং পয়েন্ট যোগ হবে।\n৪. প্রতিটি পোস্ট নির্দিষ্ট সময় পরপর আবার শেয়ার করা যায় (যেমন দিনে একবার)। পোস্টের পাশে তা লেখা থাকবে।\n৫. পেজ ফলো ও গ্রুপে যুক্ত হওয়ার জন্য একবার করে বোনাস পয়েন্ট পাবেন।\n৬. বিজয়ী লটারির মাধ্যমে বাছাই করা হবে। পুরস্কার দেওয়ার আগে আপনার ফেসবুক প্রোফাইলে পোস্টগুলো যাচাই করা হবে এবং নুসুক অ্যাপে আপনার কোডের স্ক্রিনশট চাওয়া হবে।';
+
+const everyText = (n: number) =>
+  n === 0 ? 'পুরো প্রতিযোগিতায় একবার' : n === 1 ? 'প্রতিদিন একবার' : n === 7 ? 'সপ্তাহে একবার' : `প্রতি ${bn(n)} দিনে একবার`;
 
 export function initCampaign(opts: { device: () => string; content: () => unknown }) {
   const openBtn = document.getElementById('nk-cp-open') as HTMLButtonElement | null;
@@ -93,7 +98,7 @@ export function initCampaign(opts: { device: () => string; content: () => unknow
   let token: string | null = null;
   let state: State = { visible: false };
   let me: Me | null = null;
-  let tab: 'day' | 'week' | 'final' = 'day';
+  let tab: 'day' | 'week' | 'all' = 'day';
   let poll: ReturnType<typeof setInterval> | undefined;
   let msg = '';
 
@@ -112,7 +117,8 @@ export function initCampaign(opts: { device: () => string; content: () => unknow
     const saved = store.get();
     if (!saved) { me = null; return; }
     try {
-      me = await rpc<Me>('nusuk_camp_me', { p_code: saved.code, p_profile: profile ?? null, p_device: opts.device() }, token);
+      // The saved profile joins them to a new campaign without asking again
+      me = await rpc<Me>('nusuk_camp_me', { p_code: saved.code, p_profile: profile ?? saved.profile ?? null, p_device: opts.device() }, token);
       if (me.ok && me.code) store.set({ code: me.code, profile: me.profile ?? saved.profile });
     } catch {
       me = { ok: false, reason: 'closed' };
@@ -128,13 +134,13 @@ export function initCampaign(opts: { device: () => string; content: () => unknow
 
   function boardHtml() {
     const rows = state.board?.[tab] ?? [];
-    const tabs = ([['day', 'আজ'], ['week', 'এই সপ্তাহ'], ['final', 'চূড়ান্ত']] as const)
+    const tabs = ([['day', 'আজ'], ['week', 'এই সপ্তাহ'], ['all', 'সব মিলিয়ে']] as const)
       .map(([k, l]) => `<button type="button" data-tab="${k}" class="rounded-full px-3 py-1 text-xs font-bold ${tab === k ? 'bg-emerald-900 text-gold-100' : 'bg-emerald-50 text-emerald-900'}">${l}</button>`)
       .join('');
     const list = rows.length
-      ? rows.map((r, i) => `<li class="flex items-center gap-2 rounded-lg ${i < 3 ? 'bg-gold-100/60' : 'bg-emerald-50/70'} px-3 py-1.5 text-sm"><b class="w-5 text-emerald-900/60">${bn(i + 1)}</b><span class="font-mono font-bold text-emerald-950">${esc(r.code)}</span><span class="ml-auto font-bold text-emerald-900">${bn(r.n)} ${tab === 'final' ? 'পয়েন্ট' : 'শেয়ার'}</span></li>`).join('')
+      ? rows.map((r, i) => `<li class="flex items-center gap-2 rounded-lg ${i < 3 ? 'bg-gold-100/60' : 'bg-emerald-50/70'} px-3 py-1.5 text-sm"><b class="w-5 text-emerald-900/60">${bn(i + 1)}</b><span class="font-mono font-bold text-emerald-950">${esc(r.code)}</span><span class="ml-auto font-bold text-emerald-900">${bn(r.n)} পয়েন্ট</span></li>`).join('')
       : '<li class="rounded-lg bg-emerald-50 px-3 py-3 text-center text-sm text-emerald-900/60">এখনো কেউ নেই, প্রথম হোন!</li>';
-    return `<section class="grid gap-2"><div class="flex items-center justify-between gap-2"><h3 class="text-sm font-bold text-emerald-900">🏅 শীর্ষ অংশগ্রহণকারী</h3><div class="flex gap-1">${tabs}</div></div><ul class="grid gap-1">${list}</ul><p class="text-xs text-emerald-900/55">একই সংখ্যক শেয়ার হলে বিজয়ী লটারির মাধ্যমে বাছাই হবে। নিরাপত্তার জন্য কোডের মাঝের অংশ লুকানো।</p></section>`;
+    return `<section class="grid gap-2"><div class="flex flex-wrap items-center justify-between gap-2"><h3 class="text-sm font-bold text-emerald-900">🏅 শীর্ষ অংশগ্রহণকারী</h3><div class="flex gap-1">${tabs}</div></div><ul class="grid gap-1">${list}</ul><p class="text-xs text-emerald-900/55">"সব মিলিয়ে" তালিকায় ফলো ও গ্রুপের বোনাস পয়েন্টও যোগ হয়। সমান পয়েন্ট হলে বিজয়ী লটারির মাধ্যমে বাছাই হবে। কোডের মাঝের অংশ লুকানো।</p></section>`;
   }
 
   function joinHtml() {
@@ -153,51 +159,54 @@ export function initCampaign(opts: { device: () => string; content: () => unknow
 
   function meHtml() {
     const m = me!;
-    const posts = state.posts ?? [];
-    const links = new Map((m.links ?? []).map((l) => [l.post, l]));
+    const posts = m.posts ?? [];
     const b = parseBonus(opts.content());
     const stat = (label: string, n: number, cls: string) => `<div class="rounded-xl ${cls} px-2 py-2 text-center"><div class="text-xs">${label}</div><div class="text-lg font-bold">${bn(n)}</div></div>`;
     const postRows = posts.map((p) => {
-      const l = links.get(p.id);
-      const url = l ? `${location.origin}/s/${l.slug}` : '';
-      return `<li class="rounded-xl border ${l?.done ? 'border-emerald-600/40 bg-emerald-50/60' : 'border-emerald-900/10 bg-white'} p-3">
+      const url = p.slug ? `${location.origin}/s/${p.slug}` : '';
+      const status =
+        p.state === 'done' ? `✓ শেয়ার গোনা হয়েছে${p.next ? ` · আবার শেয়ার করা যাবে ${bnDate(p.next)}` : ''}`
+        : p.state === 'open' ? 'এখনো শেয়ার হয়নি'
+        : p.state === 'soon' ? `শেয়ার শুরু হবে ${bnDate(p.from)}`
+        : 'এই পোস্টের শেয়ারের সময় শেষ';
+      return `<li class="rounded-xl border ${p.state === 'done' ? 'border-emerald-600/40 bg-emerald-50/60' : p.state === 'open' ? 'border-emerald-900/10 bg-white' : 'border-emerald-900/10 bg-gray-50 opacity-70'} p-3">
         <div class="flex items-center gap-3">
           ${p.image ? `<img src="${esc(p.image)}" alt="" loading="lazy" referrerpolicy="no-referrer" class="h-12 w-12 shrink-0 rounded-lg object-cover">` : '<span class="grid h-12 w-12 shrink-0 place-items-center rounded-lg bg-[#1877f2] text-xl text-white">f</span>'}
           <div class="min-w-0 flex-1">
             <div class="truncate text-sm font-bold text-emerald-950">${esc(p.title || 'পোস্ট')}</div>
-            <div class="text-xs ${l?.done ? 'font-bold text-emerald-700' : 'text-emerald-900/60'}">${l?.done ? '✓ আজকের শেয়ার গোনা হয়েছে' : l ? 'আজ এখনো শেয়ার হয়নি' : 'আজ লিংক নেই'}</div>
+            <div class="text-xs text-emerald-900/65"><b class="text-emerald-800">+${bn(p.points)} পয়েন্ট</b> · ${everyText(p.every)}</div>
+            <div class="text-xs ${p.state === 'done' ? 'font-bold text-emerald-700' : 'text-emerald-900/60'}">${status}</div>
           </div>
         </div>
-        ${l ? `<div class="mt-2 flex gap-2"><input readonly value="${esc(url)}" class="nk-input min-w-0 flex-1 py-1.5! font-mono text-xs!" aria-label="আপনার লিংক"><button type="button" data-copy="${esc(url)}" class="nk-btn ${l.done ? 'nk-ghost' : 'nk-gold'} shrink-0 px-3 py-1.5 text-sm">কপি</button></div>` : ''}
+        ${p.state === 'open' || (p.state === 'done' && url) ? `<div class="mt-2 flex gap-2"><input readonly value="${esc(url)}" class="nk-input min-w-0 flex-1 py-1.5! font-mono text-xs!" aria-label="আপনার লিংক"><button type="button" data-copy="${esc(url)}" class="nk-btn ${p.state === 'done' ? 'nk-ghost' : 'nk-gold'} shrink-0 px-3 py-1.5 text-sm">কপি</button></div>` : ''}
       </li>`;
     }).join('');
-    const bonusBtn = (kind: 'follow' | 'join', url: string, label: string, done: boolean) =>
-      url ? `<a href="${esc(url)}" target="_blank" rel="noopener" data-bonus="${kind}" class="flex items-center gap-2 rounded-xl ${done ? 'bg-emerald-50 text-emerald-800' : 'bg-[#1877f2] text-white'} px-3 py-2.5 text-sm font-bold">${label}<span class="ml-auto text-xs">${done ? '✓ পেয়েছেন' : '+১ পয়েন্ট'}</span></a>` : '';
+    const bonusBtn = (kind: 'follow' | 'join', url: string, label: string, pts: number, done: boolean) =>
+      url && pts > 0 ? `<a href="${esc(url)}" target="_blank" rel="noopener" data-bonus="${kind}" class="flex items-center gap-2 rounded-xl ${done ? 'bg-emerald-50 text-emerald-800' : 'bg-[#1877f2] text-white'} px-3 py-2.5 text-sm font-bold">${label}<span class="ml-auto text-xs">${done ? `✓ +${bn(pts)} পেয়েছেন` : `+${bn(pts)} পয়েন্ট (একবার)`}</span></a>` : '';
+    const fp = state.follow_points ?? 0, jp = state.join_points ?? 0;
+    const bonus = bonusBtn('follow', b.page_url, '📘 পেজ ফলো করুন', fp, !!m.follow) + bonusBtn('join', b.group_url, '👥 গ্রুপে যুক্ত হোন', jp, !!m.join);
     return `
       <div class="flex items-center justify-between gap-2 rounded-xl bg-emerald-50 px-3 py-2 text-sm">
         <span>কোড: <b class="font-mono">${esc(m.code ?? '')}</b></span>
         <button type="button" id="nk-cp-change" class="text-xs font-semibold text-emerald-800 underline">পরিবর্তন</button>
       </div>
-      <div class="grid grid-cols-3 gap-2">
-        ${stat('আজকের শেয়ার', m.today ?? 0, 'bg-gold-100/70 text-emerald-950')}
-        ${stat('এই সপ্তাহে', m.week ?? 0, 'bg-emerald-50 text-emerald-900')}
-        ${stat('মোট পয়েন্ট', m.final ?? 0, 'bg-emerald-900 text-gold-100')}
+      <div class="grid grid-cols-2 gap-2">
+        ${stat('আজকের পয়েন্ট', m.today ?? 0, 'bg-gold-100/70 text-emerald-950')}
+        ${stat('মোট পয়েন্ট', m.total ?? 0, 'bg-emerald-900 text-gold-100')}
       </div>
-      ${m.open ? `<section class="grid gap-2">
-        <h3 class="text-sm font-bold text-emerald-900">📢 আজকের পোস্ট (${bn(posts.length)}টি)</h3>
+      ${bonus ? `<section class="grid gap-2"><h3 class="text-sm font-bold text-emerald-900">⭐ বোনাস পয়েন্ট (একবারই)</h3>${bonus}</section>` : ''}
+      ${state.open ? `<section class="grid gap-2">
+        <h3 class="text-sm font-bold text-emerald-900">📢 শেয়ার করার পোস্ট</h3>
         <p class="text-xs leading-relaxed text-emerald-900/70">লিংক কপি করে ফেসবুকে <b>Public</b> পোস্ট দিন। প্রিভিউ দেখানোর পর কয়েক সেকেন্ডের মধ্যে এখানে ✓ চলে আসবে।</p>
-        <ul class="grid gap-2">${postRows || '<li class="rounded-xl bg-emerald-50 p-3 text-center text-sm">আজ কোনো পোস্ট নেই।</li>'}</ul>
-      </section>` : '<p class="rounded-xl bg-gold-100/60 p-3 text-center text-sm">এই মুহূর্তে শেয়ারের সময় চালু নেই।</p>'}
-      ${b.page_url || b.group_url ? `<section class="grid gap-2"><h3 class="text-sm font-bold text-emerald-900">⭐ একবারের বোনাস (চূড়ান্ত পুরস্কারের জন্য)</h3>
-        ${bonusBtn('follow', b.page_url, '📘 পেজ ফলো করুন', !!m.follow)}
-        ${bonusBtn('join', b.group_url, '👥 গ্রুপে যুক্ত হোন', !!m.join)}</section>` : ''}`;
+        <ul class="grid gap-2">${postRows || '<li class="rounded-xl bg-emerald-50 p-3 text-center text-sm">এখন কোনো পোস্ট নেই।</li>'}</ul>
+      </section>` : '<p class="rounded-xl bg-gold-100/60 p-3 text-center text-sm">এই মুহূর্তে শেয়ারের সময় চালু নেই।</p>'}`;
   }
 
   function render() {
     const s = state;
     const period = s.starts || s.ends ? `<p class="text-xs font-semibold text-emerald-800">📅 ${s.starts ? bnDate(s.starts) : ''}${s.ends ? ` থেকে ${bnDate(s.ends)} পর্যন্ত` : ' থেকে'}</p>` : '';
     body!.innerHTML = `
-      ${s.published ? '' : '<p class="rounded-xl border border-gold-500/60 bg-gold-100/60 px-3 py-2 text-xs font-semibold text-emerald-950">👁️ শুধু আপনি (অ্যাডমিন) এটি দেখছেন। Nusuk Manager → Campaign থেকে Publish করলে সবাই দেখবে।</p>'}
+      ${s.published ? '' : '<p class="rounded-xl border border-gold-500/60 bg-gold-100/60 px-3 py-2 text-xs font-semibold text-emerald-950">👁️ এই ক্যাম্পেইন Hidden: শুধু আপনি (অ্যাডমিন) দেখছেন। Nusuk Manager → Campaign থেকে Status "Live" করলে সবাই দেখবে।</p>'}
       <div>
         <h2 id="nk-cp-title" class="text-lg font-bold text-emerald-900">🏆 ${esc(s.title || 'শেয়ার করুন, পুরস্কার জিতুন')}</h2>
         ${period}
