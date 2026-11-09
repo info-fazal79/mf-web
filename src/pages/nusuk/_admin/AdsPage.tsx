@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { supabase as sb } from '@/lib/supabase';
 import { uploadMedia } from '@/admin/media';
-import { adHtml, adMissing, adTypes, defaultAds, liveAds, parseAds, sampleDuaAd, type Ad, type Ads, type AdType } from '../_lib/ads';
+import { adHtml, adMissing, adTypes, defaultAds, liveAds, parseAds, sampleDuaAd, sampleSocialAd, type Ad, type Ads, type AdType } from '../_lib/ads';
 
 type ToastFn = (t: string, ok?: boolean) => void;
 const errText = (e: unknown) => (e && typeof e === 'object' && 'message' in e ? String((e as { message: string }).message) : String(e));
@@ -62,6 +62,41 @@ function ImageField({ label, value, onChange, toast, hint }: { label: string; va
   );
 }
 
+function SocialFields({ ad, set, toast }: { ad: Ad; set: (p: Partial<Ad>) => void; toast: ToastFn }) {
+  const inp = (k: keyof Ad, max: number, ph = '') => (
+    <input className="nk-input font-normal" maxLength={max} value={(ad[k] as string) ?? ''} onChange={(e) => set({ [k]: e.target.value })} placeholder={ph} />
+  );
+  return (
+    <>
+      <Field label="Title">{inp('title', 120, 'ফলো ও জয়েন করে ফ্রি Key নিন!')}</Field>
+      <Field label="Instructions" hint="What visitors get and how. Shown above the buttons.">
+        <textarea rows={4} maxLength={600} className="nk-input font-normal" value={ad.text ?? ''} onChange={(e) => set({ text: e.target.value })} />
+      </Field>
+      <div className="grid gap-3 rounded-xl border border-[#e7e1cf] bg-cream p-3">
+        <b className="text-sm">📘 Facebook page</b>
+        <Field label="Page link" hint="Leave empty to hide the page button.">{inp('link', 1000, 'https://facebook.com/…')}</Field>
+        <div className="grid gap-3 sm:grid-cols-[1fr_6rem]">
+          <Field label="Button text">{inp('cta', 60, 'পেজ ফলো করুন')}</Field>
+          <Field label="Reward">{inp('reward', 8, '5')}</Field>
+        </div>
+      </div>
+      <div className="grid gap-3 rounded-xl border border-[#e7e1cf] bg-cream p-3">
+        <b className="text-sm">👥 Community group</b>
+        <Field label="Group link" hint="Leave empty to hide the group button.">{inp('link2', 1000, 'https://facebook.com/groups/…')}</Field>
+        <div className="grid gap-3 sm:grid-cols-[1fr_6rem]">
+          <Field label="Button text">{inp('cta2', 60, 'গ্রুপে জয়েন করুন')}</Field>
+          <Field label="Reward">{inp('reward2', 8, '5')}</Field>
+        </div>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Field label="Reward for doing both" hint="Shown when both links are set. Empty = hidden.">{inp('rewardBoth', 8, '15')}</Field>
+        <Field label="Reward unit" hint="e.g. Key, কি, পয়েন্ট">{inp('unit', 20, 'Key')}</Field>
+      </div>
+      <ImageField label="Page logo (optional)" value={ad.icon ?? ''} onChange={(v) => set({ icon: v })} toast={toast} hint="Small round picture at the top right." />
+    </>
+  );
+}
+
 function Editor({ ad, onChange, toast }: { ad: Ad; onChange: (a: Ad) => void; toast: ToastFn }) {
   const set = (p: Partial<Ad>) => onChange({ ...ad, ...p });
   const t = ad.type;
@@ -72,6 +107,8 @@ function Editor({ ad, onChange, toast }: { ad: Ad; onChange: (a: Ad) => void; to
           {adTypes.map((x) => <option key={x.type} value={x.type}>{x.name}: {x.hint}</option>)}
         </select>
       </Field>
+      {t === 'social' && <SocialFields ad={ad} set={set} toast={toast} />}
+      {t !== 'social' && <>
       {t === 'app' && <ImageField label="App icon" value={ad.icon ?? ''} onChange={(v) => set({ icon: v })} toast={toast} hint="Square picture. Tip: copy it from your Google Play page." />}
       {(t === 'image' || t === 'card') && <ImageField label={t === 'image' ? 'Banner picture' : 'Picture'} value={ad.image ?? ''} onChange={(v) => set({ image: v })} toast={toast} hint={t === 'image' ? 'Any size works; wide pictures (e.g. 1200×400 or 1200×628) look best.' : undefined} />}
       <Field label={t === 'app' ? 'App name' : t === 'image' ? 'Picture description (for screen readers)' : 'Title'}>
@@ -96,6 +133,7 @@ function Editor({ ad, onChange, toast }: { ad: Ad; onChange: (a: Ad) => void; to
           <input className="nk-input font-normal" maxLength={60} value={ad.cta ?? ''} onChange={(e) => set({ cta: e.target.value })} placeholder={t === 'app' ? 'ডাউনলোড করুন' : 'বিস্তারিত দেখুন'} />
         </Field>
       )}
+      </>}
       <div className="grid gap-3 sm:grid-cols-2">
         <Field label="Show from (optional)"><input type="date" className="nk-input font-normal" value={ad.start ?? ''} onChange={(e) => set({ start: e.target.value })} /></Field>
         <Field label="Show until (optional)"><input type="date" className="nk-input font-normal" value={ad.end ?? ''} onChange={(e) => set({ end: e.target.value })} /></Field>
@@ -124,7 +162,7 @@ export default function AdsPage({ toast, settings, reload }: { toast: ToastFn; s
     change({ ...ads, items });
   };
   const add = (type: AdType) => {
-    const a: Ad = { id: newId(), on: true, type };
+    const a: Ad = { id: newId(), on: true, type, ...(type === 'social' ? sampleSocialAd() : {}) };
     change({ ...ads, items: [...ads.items, a] });
     setOpen(a.id);
   };

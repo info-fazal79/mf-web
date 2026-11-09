@@ -126,3 +126,7 @@ a.nk-ad:hover { transform: translateY(-1px); box-shadow: 0 10px 24px -14px rgba(
 .nk-ads-track::-webkit-scrollbar { display: none; }
 .nk-ads-track > * { flex: 0 0 100%; scroll-snap-align: center; }
 @media (prefers-reduced-motion: reduce) { .nk-ads-track { scroll-behavior: auto; } }
+.nk-ad-social {
+  background-color: #1556b8;
+  background-image: radial-gradient(circle at 100% 0%, rgba(220, 188, 82, 0.35), transparent 55%), linear-gradient(135deg, #1877f2, #0b3d8c);
+}
