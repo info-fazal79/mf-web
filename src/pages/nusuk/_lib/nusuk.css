@@ -144,3 +144,6 @@ a.nk-ad:hover { transform: translateY(-1px); box-shadow: 0 10px 24px -14px rgba(
   background-image: radial-gradient(circle at 100% 0%, rgba(220, 188, 82, 0.45), transparent 60%), linear-gradient(135deg, #075e45, #032b20);
 }
 .nk-pp-clock { letter-spacing: 0.04em; }
+
+/* Admin sidebar menu: thin scrollbar when the list is taller than the screen */
+.nk-side-nav { scrollbar-width: thin; scrollbar-color: rgba(220, 188, 82, 0.4) transparent; }

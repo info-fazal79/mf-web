@@ -1577,18 +1577,18 @@ export default function NusukAdmin() {
 
   return (
     <div className="min-h-screen lg:flex">
-      <aside className="nk-pattern sticky top-0 z-30 text-white lg:h-screen lg:w-60 lg:shrink-0">
-        <div className="flex items-center gap-3 px-4 py-3 lg:py-5">
+      <aside className="nk-pattern sticky top-0 z-30 text-white lg:flex lg:h-screen lg:w-60 lg:shrink-0 lg:flex-col">
+        <div className="flex items-center gap-3 px-4 py-3 lg:shrink-0 lg:py-4">
           <Logo />
           <div className="min-w-0 flex-1 leading-tight">
             <div className="font-bold">Nusuk Manager</div>
             <div className="truncate text-xs text-gold-100/80">{session.user.email}</div>
           </div>
         </div>
-        <nav className="flex gap-1 overflow-x-auto px-2 pb-2 lg:flex-col lg:px-3" aria-label="Nusuk admin">
+        <nav className="nk-side-nav flex gap-1 overflow-x-auto px-2 pb-2 lg:min-h-0 lg:flex-1 lg:flex-col lg:gap-0.5 lg:overflow-x-hidden lg:overflow-y-auto lg:px-3" aria-label="Nusuk admin">
           {nav.map((n) => (
             <a key={n.r} href={`#/${n.r}`} onClick={() => setRouteState(n.r)} aria-current={route === n.r ? 'page' : undefined}
-              className={`flex shrink-0 items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-semibold ${route === n.r ? 'bg-gold-500 text-emerald-950' : 'text-emerald-50 hover:bg-white/10'}`}>
+              className={`flex shrink-0 items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-semibold lg:py-1.5 ${route === n.r ? 'bg-gold-500 text-emerald-950' : 'text-emerald-50 hover:bg-white/10'}`}>
               <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d={n.icon} /></svg>
               {n.label}
               {n.r === 'feedback' && unread > 0 && <span className="ml-auto rounded-full bg-red-600 px-1.5 text-[11px] font-bold leading-5 text-white">{unread}</span>}
@@ -1598,7 +1598,7 @@ export default function NusukAdmin() {
             </a>
           ))}
         </nav>
-        <div className="hidden gap-1 px-3 pt-4 lg:grid">
+        <div className="hidden shrink-0 gap-0.5 border-t border-white/10 px-3 py-3 lg:grid">
           <a href="/nusuk" target="_blank" rel="noopener" className="rounded-lg px-3 py-2 text-sm text-emerald-50 hover:bg-white/10">View public page ↗</a>
           <button type="button" onClick={() => sb.auth.signOut()} className="rounded-lg px-3 py-2 text-left text-sm text-emerald-50 hover:bg-white/10">Sign out</button>
         </div>
