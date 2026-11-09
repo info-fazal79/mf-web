@@ -4,11 +4,12 @@ const KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY as string | undefined;
 
 export const rpcReady = Boolean(URL_ && KEY);
 
-export async function rpc<T>(fn: string, args: Record<string, unknown> = {}): Promise<T> {
+/** `token`: a signed-in user's access token (used so the admin can preview hidden features). */
+export async function rpc<T>(fn: string, args: Record<string, unknown> = {}, token?: string | null): Promise<T> {
   if (!URL_ || !KEY) throw new Error('Supabase is not configured');
   const res = await fetch(`${URL_}/rest/v1/rpc/${fn}`, {
     method: 'POST',
-    headers: { apikey: KEY, Authorization: `Bearer ${KEY}`, 'Content-Type': 'application/json' },
+    headers: { apikey: KEY, Authorization: `Bearer ${token || KEY}`, 'Content-Type': 'application/json' },
     body: JSON.stringify(args),
   });
   if (!res.ok) throw new Error(`${fn}: ${res.status} ${await res.text()}`);

@@ -134,6 +134,11 @@ const cm0 = defaultCommunity();
             <span id="nk-fl-count" class="hidden rounded-full bg-emerald-900 px-1.5 text-xs leading-5 text-gold-100"></span>
           </button>
         </div>
+        <button id="nk-cp-open" type="button" style="display:none" class="nk-cp-cta mt-2 flex w-full items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-bold text-gold-100">
+          <span aria-hidden="true">🏆</span>
+          <span class="whitespace-nowrap">শেয়ার প্রতিযোগিতায় অংশ নিন</span>
+          <span id="nk-cp-badge" style="display:none" class="rounded-full bg-gold-500 px-2 py-0.5 text-[11px] text-emerald-950">শুধু আপনি দেখছেন</span>
+        </button>
       </section>
 
       <!-- ===== Today's winner (Nusuk Manager → Today's winner) ===== -->
@@ -447,6 +452,13 @@ const cm0 = defaultCommunity();
       </div>
     </dialog>
 
+    <dialog id="nk-cp" class="m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-md overflow-y-auto rounded-[1.25rem] p-0 shadow-2xl backdrop:bg-emerald-950/60" aria-labelledby="nk-cp-title">
+      <div class="relative">
+        <button type="button" id="nk-cp-close" class="absolute top-3 right-3 z-10 grid h-9 w-9 place-items-center rounded-full bg-white/80 text-xl text-emerald-900/60 hover:bg-emerald-50" aria-label="বন্ধ করুন">×</button>
+        <div id="nk-cp-body" class="grid gap-3.5 p-5 pt-6"></div>
+      </div>
+    </dialog>
+
     <dialog id="nk-bn" class="m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-md overflow-y-auto rounded-[1.25rem] p-0 shadow-2xl backdrop:bg-emerald-950/60" aria-labelledby="nk-bn-title">
       <div class="grid gap-3.5 p-5">
         <div class="flex items-start gap-3">
@@ -551,6 +563,7 @@ const cm0 = defaultCommunity();
       import { rpc, rpcReady, type Boot, type Claim, type CodeCheck, type CodeRef, type FeatureReq, type FeaturedItem, type FeaturedList, type SliderItem, type Submit } from './_lib/rpc';
       import { adHtml, defaultAds, liveAds, parseAds, sampleDuaAd } from './_lib/ads';
       import { bonusReady, parseBonus, parseCommunity } from './_lib/bonus';
+      import { initCampaign } from './_lib/campaign';
       import { CODE_RE, countdownText, countryName, defaultVideoLabel, flagUrl, parseToday, parseTopBar, parseVideo, subscribeUrl, parseWinners, prizeLabel, type Winner } from './_lib/content';
 
       // Bangladesh flag (green field, red disc set toward the hoist). Inline SVG so it renders on every OS.
@@ -1478,6 +1491,8 @@ const cm0 = defaultCommunity();
       ping();
       loadFeatured();
       setInterval(ping, 45000);
+      // Share campaign: only visible once published (or to a signed-in admin)
+      initCampaign({ device: () => device, content: () => lastContent });
       // Keep the remaining counter fresh while the tab is visible
       setInterval(() => { if (document.visibilityState === 'visible' && !busy) boot(true); }, 45000);
     </script>
