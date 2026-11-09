@@ -206,6 +206,15 @@ const desc = c.subtitle;
         ))}
       </section>
 
+      <!-- ===== Promotional ads (Nusuk Manager → Ads). Hidden unless switched on. ===== -->
+      <section id="nk-ads" class="mt-8 hidden" aria-roledescription="carousel" aria-label="বিজ্ঞাপন">
+        <div class="mb-1.5 flex items-center justify-between px-1">
+          <span id="nk-ads-label" class="text-[11px] font-semibold tracking-wide text-emerald-900/50">বিজ্ঞাপন</span>
+          <span id="nk-ads-dots" class="flex gap-1.5"></span>
+        </div>
+        <div id="nk-ads-track" class="nk-ads-track gap-0"></div>
+      </section>
+
       <!-- ===== Submit your code ===== -->
       <section id="submit" class="nk-card mt-8 scroll-mt-4 p-5 sm:p-6" aria-labelledby="nk-sub-h">
         <h2 id="nk-sub-h" class="text-lg font-bold text-emerald-900">আপনার রেফারেল কোড জমা দিন</h2>
@@ -460,6 +469,7 @@ const desc = c.subtitle;
 
     <script>
       import { rpc, rpcReady, type Boot, type Claim, type CodeCheck, type CodeRef, type FeatureReq, type FeaturedItem, type FeaturedList, type SliderItem, type Submit } from './_lib/rpc';
+      import { adHtml, defaultAds, liveAds, parseAds, sampleDuaAd } from './_lib/ads';
       import { CODE_RE, countdownText, countryName, defaultVideoLabel, flagUrl, parseToday, parseTopBar, parseVideo, subscribeUrl, parseWinners, prizeLabel, type Winner } from './_lib/content';
 
       // Bangladesh flag (green field, red disc set toward the hoist). Inline SVG so it renders on every OS.
@@ -719,7 +729,71 @@ const desc = c.subtitle;
         if ($('nk-video-label').textContent !== label) $('nk-video-label').textContent = label;
       }
 
+      // ---- Promotional ads: one = static, several = carousel ----
+      const adsSec = $('nk-ads');
+      const adsTrack = $('nk-ads-track');
+      const adsDots = $('nk-ads-dots');
+      const adPreview = new URLSearchParams(location.search).has('adpreview'); // admin preview before switching on
+      let adsKey = '';
+      let adsTimer: ReturnType<typeof setInterval> | undefined;
+      let adIndex = 0;
+      let adEvery = 6000;
+      function adGo(i: number, smooth = true) {
+        const n = adsTrack.children.length;
+        if (!n) return;
+        adIndex = (i + n) % n;
+        adsTrack.scrollTo({ left: adIndex * adsTrack.clientWidth, behavior: smooth && !reduceMotion ? 'smooth' : 'auto' });
+        [...adsDots.children].forEach((d, j) => d.setAttribute('aria-current', String(j === adIndex)));
+      }
+      function adAuto() {
+        clearInterval(adsTimer);
+        if (adsTrack.children.length > 1 && !reduceMotion) adsTimer = setInterval(() => { if (document.visibilityState === 'visible') adGo(adIndex + 1); }, adEvery);
+      }
+      function renderAds(content: unknown) {
+        const saved = !!content && typeof content === 'object' && 'ads' in content;
+        // Preview before anything is saved: show the ready-made sample
+        const ads = saved || !adPreview ? parseAds(content) : { ...defaultAds(), items: [sampleDuaAd()] };
+        const items = ads.on || adPreview ? liveAds(ads) : [];
+        const key = JSON.stringify([items, ads.label, ads.interval]);
+        if (key === adsKey) return;
+        adsKey = key;
+        adsSec.classList.toggle('hidden', !items.length);
+        clearInterval(adsTimer);
+        if (!items.length) { adsTrack.replaceChildren(); return; }
+        adEvery = ads.interval * 1000;
+        $('nk-ads-label').textContent = adPreview && !ads.on ? `${ads.label} · প্রিভিউ (এখনো সবার জন্য বন্ধ)` : ads.label;
+        adsTrack.innerHTML = items.map((a) => `<div class="px-0.5" aria-roledescription="slide">${adHtml(a)}</div>`).join('');
+        // Image hosts sometimes refuse the first request: retry each picture once
+        adsTrack.querySelectorAll('img').forEach((img) => {
+          const retry = () => { if (img.dataset.retried) return; img.dataset.retried = '1'; img.src = `${img.src.split('#')[0]}#retry`; };
+          img.addEventListener('error', retry);
+          if (img.complete && !img.naturalWidth) retry();
+        });
+        adsDots.replaceChildren(...(items.length > 1 ? items.map((_, i) => {
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.className = 'nk-rv-dot';
+          b.setAttribute('aria-label', `${bn(i + 1)} নম্বর বিজ্ঞাপন`);
+          b.addEventListener('click', () => { adGo(i); adAuto(); });
+          return b;
+        }) : []));
+        adGo(Math.min(adIndex, items.length - 1), false);
+        adAuto();
+      }
+      let adScrollT: ReturnType<typeof setTimeout> | undefined;
+      adsTrack.addEventListener('scroll', () => {
+        clearTimeout(adScrollT);
+        adScrollT = setTimeout(() => {
+          const i = Math.round(adsTrack.scrollLeft / Math.max(1, adsTrack.clientWidth));
+          if (i !== adIndex) { adIndex = i; [...adsDots.children].forEach((d, j) => d.setAttribute('aria-current', String(j === i))); adAuto(); }
+        }, 120);
+      });
+      adsSec.addEventListener('pointerenter', () => clearInterval(adsTimer));
+      adsSec.addEventListener('pointerleave', adAuto);
+      addEventListener('resize', () => adGo(adIndex, false));
+
       function applyContent(b: Boot) {
+        renderAds(b.content);
         renderTopBar(b.content);
         renderVideo(b.content);
         renderToday(b.content);

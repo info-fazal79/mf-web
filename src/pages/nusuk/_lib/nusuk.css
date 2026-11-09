@@ -113,3 +113,16 @@ body { background: var(--color-cream); color: #10241b; }
 
 /* Footer band: same pattern as the hero, softer top edge */
 .nk-footer { box-shadow: inset 0 1px 0 rgba(220, 188, 82, 0.25); }
+
+/* Promotional ads */
+.nk-ad { transition: transform 0.15s, box-shadow 0.15s; }
+a.nk-ad:hover { transform: translateY(-1px); box-shadow: 0 10px 24px -14px rgba(3, 43, 32, 0.5); }
+.nk-ad-app {
+  background-color: var(--color-emerald-900);
+  background-image: radial-gradient(circle at 100% 0%, rgba(220, 188, 82, 0.35), transparent 55%), linear-gradient(135deg, #075e45, #032b20);
+}
+.nk-ad-text { background: linear-gradient(135deg, #f8efd1, #fbf8f1 60%); border: 1px solid rgba(201, 162, 39, 0.35); }
+.nk-ads-track { display: flex; align-items: flex-start; overflow-x: auto; scroll-snap-type: x mandatory; scroll-behavior: smooth; scrollbar-width: none; }
+.nk-ads-track::-webkit-scrollbar { display: none; }
+.nk-ads-track > * { flex: 0 0 100%; scroll-snap-align: center; }
+@media (prefers-reduced-motion: reduce) { .nk-ads-track { scroll-behavior: auto; } }
