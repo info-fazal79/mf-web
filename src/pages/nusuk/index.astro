@@ -58,20 +58,16 @@ const cm0 = defaultCommunity();
     <header class="nk-pattern text-white">
       <div class="mx-auto max-w-xl px-4 pt-4 pb-24 sm:pb-28">
         <nav class="flex items-center justify-between gap-3">
-          <a href="/nusuk" class="flex items-center gap-2.5" aria-label="Nusuk code share home">
-            <span id="nk-logo" class="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-xl bg-white/10 ring-1 ring-gold-400/40">
-              <svg viewBox="0 0 32 32" class="h-6 w-6" aria-hidden="true">
-                <path fill="#dcbc52" d="M16 2l3.6 8.4L28 14l-8.4 3.6L16 26l-3.6-8.4L4 14l8.4-3.6z" />
-                <rect x="11" y="12" width="10" height="10" rx="1" fill="#053d2d" stroke="#dcbc52" stroke-width="1.2" />
-                <path d="M11 15h10" stroke="#dcbc52" stroke-width="1.2" />
-              </svg>
+          <a href="/nusuk" class="flex min-w-0 items-center gap-2.5" aria-label="Ribatul Ummah · Nusuk Code Share">
+            <span id="nk-logo" class="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-xl bg-[#e9ef9f] ring-1 ring-gold-400/50">
+              <img src="/nusuk/ribat-logo-96.webp" alt="Ribat" width="44" height="44" class="h-full w-full object-cover" />
             </span>
-            <span class="leading-tight">
-              <span class="block text-[15px] font-bold">Nusuk Code Share</span>
-              <span class="block text-xs text-gold-100/80">উমরাহ প্রতিযোগিতা</span>
+            <span class="min-w-0 leading-tight">
+              <span class="block truncate text-[16px] font-bold">Ribatul Ummah</span>
+              <span class="block text-[11px] leading-snug text-gold-100/85">Nusuk Code Share - উমরাহ প্রতিযোগিতা</span>
             </span>
           </a>
-          <a href="#submit" class="rounded-full border border-gold-400/50 px-3.5 py-1.5 text-sm font-semibold text-gold-100 hover:bg-white/10">কোড জমা দিন</a>
+          <a href="#submit" class="shrink-0 whitespace-nowrap rounded-full border border-gold-400/50 px-3 py-1.5 text-[13px] font-semibold text-gold-100 hover:bg-white/10 sm:px-3.5 sm:text-sm">কোড জমা দিন</a>
         </nav>
         <h1 class="mt-5 text-center text-2xl font-bold sm:text-3xl" data-k="title">{c.title}</h1>
         <p class="mx-auto mt-1.5 max-w-md text-center text-sm text-emerald-100/85" data-k="subtitle">{c.subtitle}</p>
