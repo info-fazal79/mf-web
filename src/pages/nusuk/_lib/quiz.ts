@@ -103,7 +103,9 @@ export function initQuiz() {
       <form id="nk-qz-reg" class="grid gap-3" novalidate>
         <label class="grid gap-1 text-sm font-semibold">আপনার নাম *<input name="name" maxlength="60" autocomplete="name" class="nk-input font-normal" placeholder="লিডারবোর্ডে এই নাম দেখাবে" /></label>
         <label class="grid gap-1 text-sm font-semibold">নুসুক রেফারেল কোড *<input name="code" maxlength="40" autocomplete="off" autocapitalize="off" spellcheck="false" class="nk-input font-mono font-normal tracking-wider" placeholder="NG-xxxxxxxx" /></label>
-        <p class="text-xs text-emerald-900/65">কোডটি আগে থেকেই এই সাইটে জমা থাকতে হবে। একটি কোডে একটিই আইডি।</p>
+        <label class="grid gap-1 text-sm font-semibold">পাসওয়ার্ড *<input name="pw" type="password" minlength="4" maxlength="40" autocomplete="new-password" class="nk-input font-normal" placeholder="কমপক্ষে ৪ অক্ষর" /></label>
+        <label class="grid gap-1 text-sm font-semibold">আবার পাসওয়ার্ড *<input name="pw2" type="password" minlength="4" maxlength="40" autocomplete="new-password" class="nk-input font-normal" placeholder="একই পাসওয়ার্ড আবার লিখুন" /></label>
+        <p class="text-xs text-emerald-900/65">কোডটি আগে থেকেই এই সাইটে জমা থাকতে হবে। একটি কোডে একটিই আইডি। পাসওয়ার্ডটি মনে রাখুন, অন্য ফোনে প্রবেশ করতে লাগবে।</p>
         <div id="nk-qz-msg">${note}</div>
         <button type="submit" class="nk-btn nk-green py-3 text-base">আইডি তৈরি করুন</button>
         <button type="button" data-go="welcome" class="text-sm font-semibold text-emerald-900/60 underline underline-offset-2">‹ ফিরে যান</button>
@@ -113,23 +115,30 @@ export function initQuiz() {
       const f = new FormData(e.target as HTMLFormElement);
       const name = String(f.get('name') ?? '').trim();
       const code = String(f.get('code') ?? '').replace(/\s/g, '');
+      const pw = String(f.get('pw') ?? '');
       const say = (t: string, ok = false) => ($('nk-qz-msg').innerHTML = msg(t, ok));
       if (!name) return say('আপনার নাম লিখুন।');
+      const bad = pwProblem(pw, String(f.get('pw2') ?? ''));
       if (!CODE_RE.test(code)) return say('কোডটি সঠিক নয়। নুসুকের কোড NG- দিয়ে শুরু হয়, তারপর ৮টি অক্ষর। যেমন: NG-y3JkB7lU');
+      if (bad) return say(bad);
       const btn = (e.target as HTMLFormElement).querySelector<HTMLButtonElement>('button[type=submit]')!;
       btn.disabled = true;
       try {
-        const r = await rpc<{ ok: boolean; reason?: string; id?: number; name?: string; token?: string; existing?: boolean }>('nusuk_quiz_register', { p_name: name, p_code: code });
+        const r = await rpc<{ ok: boolean; reason?: string; id?: number; name?: string; token?: string; existing?: boolean }>('nusuk_quiz_register', { p_name: name, p_code: code, p_password: pw });
         if (r.ok && r.id && r.token) {
           saveMe({ id: r.id, token: r.token, name: r.name ?? name });
           created(r.id, r.name ?? name, code, !!r.existing);
           loadPublic();
           return;
         }
+        if (r.reason === 'exists') {
+          btn.disabled = false;
+          return login(msg(`এই কোডে আগেই একটি আইডি আছে${r.id ? ` (আইডি ${r.id})` : ''}। আইডি আর পাসওয়ার্ড দিয়ে প্রবেশ করুন। পাসওয়ার্ড ভুলে গেলে মতামত বা গ্রুপে অ্যাডমিনকে জানান।`, true), r.id);
+        }
         if (r.reason === 'not_found') {
           $('nk-qz-msg').innerHTML = `${msg('⚠️ এই কোডটি আমাদের তালিকায় নেই। কুইজ খেলতে আগে কোডটি এই পেজে জমা দিন, তারপর আবার আসুন।')}
             <a href="#submit" data-close class="nk-btn nk-gold mt-2 w-full py-2.5 text-sm">কোড জমা দিতে যান ›</a>`;
-        } else say(r.reason === 'rejected' ? 'এই কোডটি অনুমোদন পায়নি, তাই এটি দিয়ে কুইজে অংশ নেওয়া যাবে না।' : r.reason === 'closed' ? 'কুইজ এখন বন্ধ আছে।' : 'আইডি তৈরি করা যায়নি। তথ্যগুলো দেখে আবার চেষ্টা করুন।');
+        } else say(r.reason === 'password' ? 'পাসওয়ার্ড কমপক্ষে ৪ অক্ষরের হতে হবে।' : r.reason === 'rejected' ? 'এই কোডটি অনুমোদন পায়নি, তাই এটি দিয়ে কুইজে অংশ নেওয়া যাবে না।' : r.reason === 'closed' ? 'কুইজ এখন বন্ধ আছে।' : 'আইডি তৈরি করা যায়নি। তথ্যগুলো দেখে আবার চেষ্টা করুন।');
       } catch (err) {
         console.error(err);
         say('তৈরি করা যায়নি। ইন্টারনেট সংযোগ দেখে আবার চেষ্টা করুন।');
@@ -146,43 +155,120 @@ export function initQuiz() {
         <div class="mt-1 text-xs text-emerald-900/70">কোড: <span class="font-mono">${esc(code)}</span></div>
         <button type="button" id="nk-qz-copyid" class="nk-btn nk-ghost mt-3 px-4 py-2 text-sm">আইডি কপি করুন</button>
       </div>
-      ${msg('📌 এই আইডিটি মনে রাখুন বা লিখে রাখুন। অন্য ফোনে খেলতে আইডি আর আপনার নুসুক কোডের শেষ ৪টি অক্ষর লাগবে। এই ফোনে আর কিছু লাগবে না।', true)}
+      ${msg('📌 এই আইডি আর আপনার পাসওয়ার্ড মনে রাখুন বা লিখে রাখুন। অন্য ফোনে খেলতে এই দুটো লাগবে। এই ফোনে আর কিছু লাগবে না।', true)}
       <button type="button" data-go="play" class="nk-btn nk-green py-3.5 text-base">কুইজ শুরু করুন ›</button>`);
     $('nk-qz-copyid').addEventListener('click', async (e) => {
       try { await navigator.clipboard.writeText(String(id)); (e.target as HTMLElement).textContent = '✓ কপি হয়েছে'; } catch {}
     });
   }
 
-  function login(note = '') {
-    show(`${head('আইডি দিয়ে প্রবেশ', 'আপনার কুইজ আইডি আর নুসুক কোডের শেষ ৪টি অক্ষর দিন।')}
+  const toNum = (v: string) => Number(v.replace(/[০-৯]/g, (d) => String('০১২৩৪৫৬৭৮৯'.indexOf(d))).replace(/\D/g, ''));
+  function pwProblem(pw: string, pw2: string) {
+    if (pw.length < 4) return 'পাসওয়ার্ড কমপক্ষে ৪ অক্ষরের দিন।';
+    if (pw !== pw2) return 'দুটো পাসওয়ার্ড মেলেনি। আবার লিখুন।';
+    return '';
+  }
+
+  function login(note = '', id?: number) {
+    show(`${head('আইডি দিয়ে প্রবেশ', 'আপনার কুইজ আইডি আর পাসওয়ার্ড দিন।')}
       <form id="nk-qz-login" class="grid gap-3" novalidate>
-        <label class="grid gap-1 text-sm font-semibold">কুইজ আইডি *<input name="id" inputmode="numeric" maxlength="7" autocomplete="off" class="nk-input font-mono text-lg font-normal tracking-widest" placeholder="যেমন: 1005" /></label>
-        <label class="grid gap-1 text-sm font-semibold">নুসুক কোডের শেষ ৪টি অক্ষর *<input name="last4" maxlength="4" autocomplete="off" autocapitalize="off" spellcheck="false" class="nk-input font-mono text-lg font-normal tracking-widest" placeholder="যেমন: B7lU" /></label>
-        <p class="text-xs text-emerald-900/65">লিডারবোর্ডে সবার আইডি দেখা যায়, তাই আপনার নিরাপত্তার জন্য কোডের শেষ অংশটি চাওয়া হচ্ছে।</p>
+        <label class="grid gap-1 text-sm font-semibold">কুইজ আইডি *<input name="id" inputmode="numeric" maxlength="7" autocomplete="username" class="nk-input font-mono text-lg font-normal tracking-widest" placeholder="যেমন: 1005" value="${id ?? ''}" /></label>
+        <label class="grid gap-1 text-sm font-semibold">পাসওয়ার্ড *<input name="pw" type="password" maxlength="40" autocomplete="current-password" class="nk-input font-normal" /></label>
         <div id="nk-qz-msg">${note}</div>
         <button type="submit" class="nk-btn nk-green py-3 text-base">প্রবেশ করুন</button>
         <button type="button" data-go="register" class="text-sm font-semibold text-emerald-800 underline underline-offset-2">আইডি নেই? নতুন আইডি তৈরি করুন</button>
+        <p class="text-center text-xs text-emerald-900/60">পাসওয়ার্ড ভুলে গেলে মতামত ফর্ম বা কমিউনিটি গ্রুপে আপনার আইডি জানিয়ে অ্যাডমিনের কাছে নতুন পাসওয়ার্ড চান।</p>
       </form>`);
     ($('nk-qz-login') as HTMLFormElement).addEventListener('submit', async (e) => {
       e.preventDefault();
       const f = new FormData(e.target as HTMLFormElement);
-      const id = Number(String(f.get('id') ?? '').replace(/[০-৯]/g, (d) => String('০১২৩৪৫৬৭৮৯'.indexOf(d))).replace(/\D/g, ''));
-      const last4 = String(f.get('last4') ?? '').trim();
+      const pid = toNum(String(f.get('id') ?? ''));
+      const pw = String(f.get('pw') ?? '');
       const say = (t: string) => ($('nk-qz-msg').innerHTML = msg(t));
-      if (!id) return say('আপনার কুইজ আইডি লিখুন (যেমন 1005)।');
-      if (last4.length !== 4) return say('নুসুক কোডের শেষ ৪টি অক্ষর লিখুন।');
+      if (!pid) return say('আপনার কুইজ আইডি লিখুন (যেমন 1005)।');
+      if (!pw) return say('পাসওয়ার্ড লিখুন।');
       const btn = (e.target as HTMLFormElement).querySelector<HTMLButtonElement>('button[type=submit]')!;
       btn.disabled = true;
       try {
-        const r = await rpc<{ ok: boolean; reason?: string; id?: number; name?: string; token?: string }>('nusuk_quiz_login', { p_id: id, p_last4: last4 });
+        const r = await rpc<{ ok: boolean; reason?: string; id?: number; name?: string; token?: string }>('nusuk_quiz_signin', { p_id: pid, p_password: pw });
         if (r.ok && r.id && r.token) { saveMe({ id: r.id, token: r.token, name: r.name ?? '' }); loadPublic(); return play(); }
+        if (r.reason === 'no_password') return claim(pid);
         if (r.reason === 'no_id') {
           $('nk-qz-msg').innerHTML = `${msg('এই আইডিটি পাওয়া যায়নি। আপনি নতুন হলে একটি আইডি তৈরি করে নিন।')}
             <button type="button" data-go="register" class="nk-btn nk-gold mt-2 w-full py-2.5 text-sm">নতুন আইডি তৈরি করুন ›</button>`;
-        } else say('কোডের শেষ ৪টি অক্ষর মেলেনি। আবার দেখে লিখুন।');
+        } else say('পাসওয়ার্ড মেলেনি। আবার দেখে লিখুন।');
       } catch (err) {
         console.error(err);
         say('প্রবেশ করা যায়নি। ইন্টারনেট সংযোগ দেখে আবার চেষ্টা করুন।');
+      }
+      btn.disabled = false;
+    });
+  }
+
+  /** An ID made before passwords existed, opened on another device: prove it with the full code, then set a password. */
+  function claim(id: number) {
+    show(`${head('পাসওয়ার্ড তৈরি করুন', `আইডি ${id}-এ এখনো পাসওয়ার্ড নেই। আইডিটি আপনার কিনা নিশ্চিত করতে পুরো নুসুক কোডটি দিন, তারপর নতুন পাসওয়ার্ড দিন।`)}
+      <form id="nk-qz-claim" class="grid gap-3" novalidate>
+        <label class="grid gap-1 text-sm font-semibold">এই আইডির নুসুক কোড *<input name="code" maxlength="40" autocomplete="off" autocapitalize="off" spellcheck="false" class="nk-input font-mono font-normal tracking-wider" placeholder="NG-xxxxxxxx" /></label>
+        <label class="grid gap-1 text-sm font-semibold">পাসওয়ার্ড *<input name="pw" type="password" minlength="4" maxlength="40" autocomplete="new-password" class="nk-input font-normal" placeholder="কমপক্ষে ৪ অক্ষর" /></label>
+        <label class="grid gap-1 text-sm font-semibold">আবার পাসওয়ার্ড *<input name="pw2" type="password" minlength="4" maxlength="40" autocomplete="new-password" class="nk-input font-normal" placeholder="একই পাসওয়ার্ড আবার লিখুন" /></label>
+        <div id="nk-qz-msg"></div>
+        <button type="submit" class="nk-btn nk-green py-3 text-base">পাসওয়ার্ড সেট করে প্রবেশ করুন</button>
+        <button type="button" data-go="login" class="text-sm font-semibold text-emerald-900/60 underline underline-offset-2">‹ ফিরে যান</button>
+      </form>`);
+    ($('nk-qz-claim') as HTMLFormElement).addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const f = new FormData(e.target as HTMLFormElement);
+      const code = String(f.get('code') ?? '').replace(/\s/g, '');
+      const pw = String(f.get('pw') ?? '');
+      const say = (t: string) => ($('nk-qz-msg').innerHTML = msg(t));
+      if (!CODE_RE.test(code)) return say('পুরো নুসুক কোডটি দিন, যেমন: NG-y3JkB7lU');
+      const bad = pwProblem(pw, String(f.get('pw2') ?? ''));
+      if (bad) return say(bad);
+      const btn = (e.target as HTMLFormElement).querySelector<HTMLButtonElement>('button[type=submit]')!;
+      btn.disabled = true;
+      try {
+        const r = await rpc<{ ok: boolean; reason?: string; id?: number; name?: string; token?: string }>('nusuk_quiz_claim', { p_id: id, p_code: code, p_password: pw });
+        if (r.ok && r.id && r.token) { saveMe({ id: r.id, token: r.token, name: r.name ?? '' }); loadPublic(); return play(); }
+        if (r.reason === 'has_password') return login(msg('এই আইডিতে পাসওয়ার্ড আগেই আছে। পাসওয়ার্ড দিয়ে প্রবেশ করুন।', true), id);
+        say(r.reason === 'wrong' ? 'কোডটি এই আইডির সাথে মেলেনি।' : 'সেট করা যায়নি। আবার চেষ্টা করুন।');
+      } catch (err) {
+        console.error(err);
+        say('সেট করা যায়নি। ইন্টারনেট সংযোগ দেখে আবার চেষ্টা করুন।');
+      }
+      btn.disabled = false;
+    });
+  }
+
+  /** Signed-in player sets (or changes) their password. */
+  function setPassword(required: boolean) {
+    const me = readMe();
+    if (!me) return welcome();
+    show(`${head(required ? '🔐 একটি পাসওয়ার্ড তৈরি করুন' : 'পাসওয়ার্ড বদলান', required ? `এখন থেকে আইডি আর পাসওয়ার্ড দিয়ে প্রবেশ করতে হবে। আইডি ${me.id}-এর জন্য একটি পাসওয়ার্ড দিন, অন্য ফোনে খেলতে এটা লাগবে।` : `আইডি ${me.id}-এর নতুন পাসওয়ার্ড দিন।`)}
+      <form id="nk-qz-setpw" class="grid gap-3" novalidate>
+        <label class="grid gap-1 text-sm font-semibold">পাসওয়ার্ড *<input name="pw" type="password" minlength="4" maxlength="40" autocomplete="new-password" class="nk-input font-normal" placeholder="কমপক্ষে ৪ অক্ষর" /></label>
+        <label class="grid gap-1 text-sm font-semibold">আবার পাসওয়ার্ড *<input name="pw2" type="password" minlength="4" maxlength="40" autocomplete="new-password" class="nk-input font-normal" placeholder="একই পাসওয়ার্ড আবার লিখুন" /></label>
+        <div id="nk-qz-msg"></div>
+        <button type="submit" class="nk-btn nk-green py-3 text-base">পাসওয়ার্ড সেভ করুন</button>
+        ${required ? '' : '<button type="button" data-go="play" class="text-sm font-semibold text-emerald-900/60 underline underline-offset-2">‹ ফিরে যান</button>'}
+      </form>`);
+    ($('nk-qz-setpw') as HTMLFormElement).addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const f = new FormData(e.target as HTMLFormElement);
+      const pw = String(f.get('pw') ?? '');
+      const say = (t: string, ok = false) => ($('nk-qz-msg').innerHTML = msg(t, ok));
+      const bad = pwProblem(pw, String(f.get('pw2') ?? ''));
+      if (bad) return say(bad);
+      const btn = (e.target as HTMLFormElement).querySelector<HTMLButtonElement>('button[type=submit]')!;
+      btn.disabled = true;
+      try {
+        const r = await rpc<{ ok: boolean; reason?: string }>('nusuk_quiz_set_password', { p_token: me.token, p_password: pw });
+        if (r.ok) { say('✓ পাসওয়ার্ড সেভ হয়েছে।', true); setTimeout(play, 900); return; }
+        if (r.reason === 'signed_out') { saveMe(null); return login(msg('আবার প্রবেশ করুন।')); }
+        say('সেভ করা যায়নি। আবার চেষ্টা করুন।');
+      } catch (err) {
+        console.error(err);
+        say('সেভ করা যায়নি। ইন্টারনেট সংযোগ দেখে আবার চেষ্টা করুন।');
       }
       btn.disabled = false;
     });
@@ -198,6 +284,9 @@ export function initQuiz() {
       return show(msg('কুইজ এখন বন্ধ আছে।'));
     }
     skew = Date.parse(state.now) - Date.now();
+    let hasPw = true;
+    try { hasPw = await rpc<boolean>('nusuk_quiz_has_password', { p_token: me.token }); } catch {}
+    if (hasPw === false) return setPassword(true);
     renderPlay();
   }
 
@@ -251,7 +340,7 @@ export function initQuiz() {
       ${main}
       <div class="flex flex-wrap items-center justify-between gap-2 border-t border-[#e7e1cf] pt-3 text-sm">
         <button type="button" data-go="board" class="font-semibold text-emerald-800 underline underline-offset-2">🏆 পুরো লিডারবোর্ড</button>
-        <button type="button" data-go="logout" class="text-xs text-emerald-900/55 underline underline-offset-2">এই ফোন থেকে বের হন</button>
+        <span class="flex gap-3"><button type="button" data-go="setpw" class="text-xs text-emerald-900/55 underline underline-offset-2">পাসওয়ার্ড বদলান</button><button type="button" data-go="logout" class="text-xs text-emerald-900/55 underline underline-offset-2">বের হন</button></span>
       </div>`);
 
     if (target) {
@@ -341,8 +430,9 @@ export function initQuiz() {
     else if (go === 'login') login();
     else if (go === 'play') play();
     else if (go === 'board') board();
+    else if (go === 'setpw') setPassword(false);
     else if (go === 'logout') {
-      if (!confirm('এই ফোন থেকে বের হবেন? আবার প্রবেশ করতে আইডি আর কোডের শেষ ৪টি অক্ষর লাগবে।')) return;
+      if (!confirm('এই ফোন থেকে বের হবেন? আবার প্রবেশ করতে আইডি আর পাসওয়ার্ড লাগবে।')) return;
       const me = readMe();
       if (me) { try { await rpc('nusuk_quiz_logout', { p_token: me.token }); } catch {} }
       saveMe(null);

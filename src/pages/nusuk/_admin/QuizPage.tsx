@@ -137,6 +137,16 @@ export default function QuizPage({ toast }: { toast: ToastFn }) {
     setQs((l) => l.filter((y) => y.id !== x.id));
     toast('Deleted');
   }
+  async function resetPassword(id: number, label = '') {
+    const pw = prompt(`New password for player ${id}${label ? ` (${label})` : ''} (at least 4 characters). They will be signed out on every device and must use this password.`);
+    if (pw === null) return;
+    if (pw.trim().length < 4) return toast('Password must be at least 4 characters', false);
+    const { data, error } = await sb!.rpc('nusuk_admin_quiz_password', { p_id: id, p_password: pw.trim() });
+    if (error) return toast(/nusuk_admin_quiz_password/.test(error.message) ? 'Run update_24_quiz_password.sql in Supabase first' : errText(error), false);
+    const r = data as { ok: boolean; reason?: string };
+    if (!r.ok) return toast(r.reason === 'no_id' ? `No player with ID ${id}` : 'Could not set the password', false);
+    toast(`Password set for ${id}. Tell them: ID ${id}, password ${pw.trim()}`);
+  }
   async function deletePlayer(id: number, name: string) {
     if (!confirm(`Remove player ${id} (${name}) and all their answers? They can make a new ID later.`)) return;
     const { error } = await sb!.from('nusuk_quiz_players').delete().eq('id', id);
@@ -228,6 +238,10 @@ export default function QuizPage({ toast }: { toast: ToastFn }) {
         </div>
       </Card>
 
+      <Card title="Forgotten password">
+        <ResetBox onReset={(id) => resetPassword(id)} />
+      </Card>
+
       <Card title={`Leaderboard (this season)`}>
         {ov?.board?.length ? (
           <div className="overflow-x-auto">
@@ -242,7 +256,7 @@ export default function QuizPage({ toast }: { toast: ToastFn }) {
                     <td className="p-2 font-mono text-xs">{r.code}</td>
                     <td className="p-2 text-right tabular-nums">{fmt(r.correct)}</td>
                     <td className="p-2 text-right font-bold tabular-nums">{fmt(r.points)}</td>
-                    <td className="p-2 text-right"><Btn kind="ghost" className="px-2! py-0.5! text-xs! text-red-700" onClick={() => deletePlayer(r.id, r.name)}>Remove</Btn></td>
+                    <td className="p-2 text-right whitespace-nowrap"><Btn kind="ghost" className="px-2! py-0.5! text-xs!" onClick={() => resetPassword(r.id, r.name)}>Set password</Btn> <Btn kind="ghost" className="px-2! py-0.5! text-xs! text-red-700" onClick={() => deletePlayer(r.id, r.name)}>Remove</Btn></td>
                   </tr>
                 ))}
               </tbody>
@@ -271,6 +285,19 @@ function SettingsForm({ s, busy, onSave }: { s: Settings; busy: boolean; onSave:
       </div>
       <p className="text-xs text-emerald-900/65">{times.length ? <>Questions open at <b>{times.join(', ')}</b> (one every {Math.floor(gap / 60)}h {gap % 60}m). Each stays open until {f.end}.</> : 'End time must be after the start time.'}</p>
       <div className="flex justify-end"><Btn disabled={busy} onClick={() => onSave({ title: f.title.trim() || 'দৈনিক ইসলামিক কুইজ', start_min: start, end_min: end, per_day: f.per_day, points: f.points })}>{busy ? 'Saving…' : 'Save settings'}</Btn></div>
+    </div>
+  );
+}
+
+function ResetBox({ onReset }: { onReset: (id: number) => void }) {
+  const [id, setId] = useState('');
+  return (
+    <div className="grid gap-2">
+      <p className="text-sm text-emerald-900/70">If a player forgets their password, check it is really them (e.g. they tell you their Nusuk code), then set a new one here and send it to them.</p>
+      <div className="flex flex-wrap gap-2">
+        <input className="nk-input w-40 font-mono" inputMode="numeric" placeholder="Player ID, e.g. 1005" value={id} onChange={(e) => setId(e.target.value.replace(/\D/g, ''))} />
+        <Btn disabled={!id} onClick={() => onReset(Number(id))}>Set new password</Btn>
+      </div>
     </div>
   );
 }

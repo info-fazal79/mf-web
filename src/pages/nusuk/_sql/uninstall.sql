@@ -66,6 +66,13 @@ drop table if exists public.nusuk_active_log;
 drop table if exists public.nusuk_hourly;
 drop table if exists public.nusuk_daily;
 -- update 23 · quiz
+drop function if exists public.nusuk_admin_quiz_password(int, text);
+drop function if exists public.nusuk_quiz_has_password(uuid);
+drop function if exists public.nusuk_quiz_set_password(uuid, text);
+drop function if exists public.nusuk_quiz_claim(int, text, text);
+drop function if exists public.nusuk_quiz_signin(int, text);
+drop function if exists public.nusuk_quiz_register(text, text, text);
+drop function if exists public.nusuk_quiz_pw_ok(text);
 drop function if exists public.nusuk_admin_quiz();
 drop function if exists public.nusuk_quiz_logout(uuid);
 drop function if exists public.nusuk_quiz_answer(uuid, int, int);
