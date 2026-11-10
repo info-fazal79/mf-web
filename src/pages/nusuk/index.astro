@@ -144,8 +144,12 @@ const cm0 = defaultCommunity();
       <!-- ===== Today's winner (Nusuk Manager → Today's winner) ===== -->
       <section id="nk-today" class="mt-6 hidden" aria-labelledby="nk-today-h">
         <div class="relative overflow-hidden rounded-[1.25rem] border-2 border-gold-500/70 bg-gradient-to-r from-gold-100 via-white to-white px-4 py-3.5 shadow-md shadow-gold-500/15">
-          <div class="flex items-center justify-between gap-2">
+          <div class="flex flex-wrap items-center justify-between gap-2">
             <h2 id="nk-today-h" class="inline-flex items-center gap-1 rounded-full bg-emerald-900 px-3 py-1 text-xs font-bold text-gold-100">🎉 <span id="nk-today-label">আজকের বিজয়ী</span></h2>
+            <span id="nk-today-next" class="nk-next order-last flex w-full items-center justify-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold text-emerald-950 sm:order-none sm:w-auto" style="display:none" aria-live="off">
+              <span aria-hidden="true">⏳</span><span id="nk-today-next-label">পরবর্তী বিজয়ী ঘোষণা</span>
+              <b id="nk-today-left" class="rounded-md bg-emerald-900 px-1.5 py-0.5 font-mono tabular-nums text-gold-100"></b>
+            </span>
             <span id="nk-today-date" class="text-xs text-emerald-900/65"></span>
           </div>
           <div class="mt-2.5 flex items-center gap-3.5">
@@ -852,8 +856,34 @@ const cm0 = defaultCommunity();
       wlDialog.addEventListener('click', (e) => { if (e.target === wlDialog) wlDialog.close(); });
 
       // ---- Today's winner ----
+      // Countdown to the next winner announcement (Nusuk Manager → Today's winner)
+      let nextTimer: ReturnType<typeof setInterval> | undefined;
+      function renderNext(nextAt?: string) {
+        clearInterval(nextTimer);
+        const box = $('nk-today-next');
+        const end = nextAt ? Date.parse(nextAt) : NaN;
+        // Hide when not set, or more than 6 hours after the time (the admin forgot to update it)
+        if (Number.isNaN(end) || Date.now() - end > 6 * 3600e3) { box.style.display = 'none'; return; }
+        box.style.display = '';
+        const tick = () => {
+          const left = end - Date.now();
+          if (left > 0) {
+            $('nk-today-next-label').textContent = 'পরবর্তী বিজয়ী ঘোষণা';
+            $('nk-today-left').textContent = countdownText(left);
+            $('nk-today-left').style.display = '';
+          } else {
+            clearInterval(nextTimer);
+            $('nk-today-next-label').textContent = '🎉 নতুন বিজয়ী এখনই ঘোষণা হচ্ছে';
+            $('nk-today-left').style.display = 'none';
+          }
+        };
+        tick();
+        if (end > Date.now()) nextTimer = setInterval(tick, 1000);
+      }
+
       function renderToday(content: unknown) {
         const t = parseToday(content);
+        renderNext(t?.next_at);
         $('nk-today').classList.toggle('hidden', !t);
         if (!t) return;
         const d = new Date();

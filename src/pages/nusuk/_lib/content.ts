@@ -91,14 +91,16 @@ export const parseWinners = (c: unknown): Winner[] => {
 };
 
 /** "Today's winner" card, stored in nusuk_settings.content.today_winner and edited from Nusuk Manager → Today's winner. */
-export type TodayWinner = { name: string; country: string; prize: Prize; prize_text?: string; date: string; link?: string };
+/** `next_at` (ISO, optional): when the next winner will be announced, shown as a live countdown on the card. */
+export type TodayWinner = { name: string; country: string; prize: Prize; prize_text?: string; date: string; link?: string; next_at?: string };
 
 export const parseToday = (c: unknown): TodayWinner | null => {
   const t = c && typeof c === 'object' ? (c as Record<string, unknown>).today_winner : null;
   if (!t || typeof t !== 'object') return null;
   const w = t as TodayWinner;
   if (typeof w.name !== 'string' || !w.name.trim() || typeof w.country !== 'string' || !COUNTRY_CODES.includes(w.country)) return null;
-  return { ...w, prize: (['umrah', 'zamzam', 'other'] as const).includes(w.prize) ? w.prize : 'other' };
+  const next_at = typeof w.next_at === 'string' && !Number.isNaN(Date.parse(w.next_at)) ? w.next_at : undefined;
+  return { ...w, next_at, prize: (['umrah', 'zamzam', 'other'] as const).includes(w.prize) ? w.prize : 'other' };
 };
 
 /** Temporary announcement bar at the very top of /nusuk, stored in nusuk_settings.content.topbar

@@ -1222,9 +1222,10 @@ function TodayWinnerPage({ toast, settings, reload }: { toast: ToastFn; settings
   function save() {
     if (!w.name.trim()) return toast('Enter the winner name', false);
     if (w.link && !/^https:\/\//.test(w.link.trim())) return toast('Link must start with https://', false);
-    write({ name: w.name.trim(), country: w.country, prize: w.prize, prize_text: w.prize === 'other' ? w.prize_text?.trim() || undefined : undefined, date: w.date || todayStr(), link: w.link?.trim() || undefined });
+    write({ name: w.name.trim(), country: w.country, prize: w.prize, prize_text: w.prize === 'other' ? w.prize_text?.trim() || undefined : undefined, date: w.date || todayStr(), link: w.link?.trim() || undefined, next_at: w.next_at || undefined });
   }
   const saved = parseToday(settings.content);
+  const nowTW = useNow();
 
   return (
     <div className="grid gap-4 lg:grid-cols-[1fr_20rem]">
@@ -1251,6 +1252,17 @@ function TodayWinnerPage({ toast, settings, reload }: { toast: ToastFn; settings
           </label>
           {w.prize === 'other' && <label className="grid gap-1 text-sm font-semibold">Prize text<input className="nk-input" value={w.prize_text ?? ''} maxLength={60} onChange={(e) => setW({ ...w, prize_text: e.target.value })} /></label>}
           <label className="grid gap-1 text-sm font-semibold sm:col-span-2">Nusuk post link (optional)<input className="nk-input" value={w.link ?? ''} onChange={(e) => setW({ ...w, link: e.target.value })} placeholder="https://www.facebook.com/MyNusuk/posts/…" /></label>
+          <div className="grid gap-2 rounded-xl border border-gold-500/50 bg-gold-100/30 p-3 sm:col-span-2">
+            <label className="grid gap-1 text-sm font-semibold">⏳ Next winner announcement (countdown on the card)
+              <input type="datetime-local" className="nk-input font-normal" value={isoToLocalInput(w.next_at)} onChange={(e) => setW({ ...w, next_at: localInputToIso(e.target.value) })} />
+            </label>
+            <div className="flex flex-wrap items-center gap-1.5 text-xs">
+              <span className="font-semibold text-emerald-900/70">Quick:</span>
+              {[1, 3, 6, 12, 24].map((h) => <Btn key={h} kind="ghost" className="px-2! py-1! text-xs!" onClick={() => setW({ ...w, next_at: new Date(Date.now() + h * 3600e3).toISOString() })}>+{h} h</Btn>)}
+              {w.next_at && <Btn kind="ghost" className="px-2! py-1! text-xs! text-red-700" onClick={() => setW({ ...w, next_at: undefined })}>No countdown</Btn>}
+            </div>
+            <p className="text-xs text-emerald-900/60">Your computer's time; visitors anywhere see the right time left. When it reaches zero the card says "🎉 নতুন বিজয়ী এখনই ঘোষণা হচ্ছে". It hides itself 6 hours later if you haven't updated the winner. Click Save after changing it.</p>
+          </div>
         </div>
       </Card>
       <Card title="Preview">
@@ -1259,6 +1271,7 @@ function TodayWinnerPage({ toast, settings, reload }: { toast: ToastFn; settings
           <img src={flagUrl(w.country, 80)} alt="" className="mx-auto mt-3 h-10 w-[60px] rounded object-cover shadow ring-1 ring-black/10" />
           <div className="mt-2 break-words text-lg font-bold" dir="auto">{w.name || 'Winner name'}</div>
           <div className="text-sm text-emerald-900/70">{countryName(w.country, 'bn')}</div>
+          {w.next_at && <div className="nk-next mx-auto mt-3 w-fit rounded-full px-3 py-1 text-xs font-bold text-emerald-950">⏳ পরবর্তী বিজয়ী ঘোষণা {Date.parse(w.next_at) > nowTW ? countdownText(Date.parse(w.next_at) - nowTW) : '· এখনই'}</div>}
         </div>
       </Card>
     </div>
