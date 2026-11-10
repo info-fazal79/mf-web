@@ -358,5 +358,5 @@ export function initQuiz() {
 
   // Opened from a shared link: /nusuk#quiz
   loadPublic().then(() => { if (location.hash === '#quiz' && pub?.enabled) { open(); readMe() ? play() : welcome(); } });
-  setInterval(() => { if (document.visibilityState === 'visible' && !dlg.open) loadPublic(); }, 120000);
+  setInterval(() => { if (document.visibilityState === 'visible' && !dlg.open) loadPublic(); }, 5 * 60_000 * (0.9 + Math.random() * 0.2));
 }

@@ -1189,10 +1189,12 @@ const cm0 = defaultCommunity();
         status.textContent = b.notice ? '' : 'কার্যক্রম সাময়িকভাবে বন্ধ আছে';
       }
 
+      let lastBoot = 0;
       async function boot(keepCode = false) {
         if (!rpcReady) { status.textContent = 'সার্ভার কনফিগার করা হয়নি'; return; }
         try {
           const b = await rpc<Boot>('nusuk_bootstrap', { p_exclude: exclude(), p_used: usedIds() });
+          lastBoot = Date.now();
           applyContent(b);
           if (!b.enabled) return closed(b);
           setRemaining(b.remaining);
@@ -1414,7 +1416,7 @@ const cm0 = defaultCommunity();
       rvSec.addEventListener('focusin', () => clearInterval(rvTimer));
       addEventListener('resize', () => rvGo(rvIndex, false));
       loadSlider();
-      setInterval(() => { if (document.visibilityState === 'visible') loadSlider(); }, 5 * 60000);
+      setInterval(() => { if (document.visibilityState === 'visible') loadSlider(); }, 15 * 60_000);
 
       // ---- Feature request dialog ----
       const ftDialog = $<HTMLDialogElement>('nk-ft');
@@ -1728,13 +1730,20 @@ const cm0 = defaultCommunity();
       boot();
       ping();
       loadFeatured();
-      setInterval(ping, 45000);
+      // ---- Background refresh (kept slow to save Supabase requests, logs and data) ----
+      // Settings (winners, ads, notices) rarely change: refresh every ~5 min, only while the tab is visible.
+      // Clicks (copy, submit, answers) still go to the server at once.
+      const jitter = (ms: number) => ms * (0.9 + Math.random() * 0.2); // spread visitors out
+      setInterval(ping, jitter(90_000)); // "active now" counts anyone seen in the last 2 minutes
+      document.addEventListener('visibilitychange', () => {
+        // Back on the tab after a while: catch up once
+        if (document.visibilityState === 'visible' && !busy && Date.now() - lastBoot > 5 * 60_000) boot(true);
+      });
       // Share campaign: only visible once published (or to a signed-in admin)
       initCampaign({ device: () => device, content: () => lastContent });
       initLive({ device });
       initQuiz();
-      // Keep the remaining counter fresh while the tab is visible
-      setInterval(() => { if (document.visibilityState === 'visible' && !busy) boot(true); }, 45000);
+      setInterval(() => { if (document.visibilityState === 'visible' && !busy) boot(true); }, jitter(5 * 60_000));
     </script>
   </body>
 </html>

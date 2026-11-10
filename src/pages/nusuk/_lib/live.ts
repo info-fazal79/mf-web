@@ -240,5 +240,9 @@ export function initLive(opts: { device: string }) {
   }
 
   load();
-  setInterval(() => { if (document.visibilityState === 'visible' && !gwDlg.open && !noDlg.open) load(); }, 30_000);
+  // Vote/giveaway counts: every ~2 min while visible (own votes update at once); catch up when coming back to the tab
+  let lastLoad = Date.now();
+  const refresh = () => { if (document.visibilityState === 'visible' && !gwDlg.open && !noDlg.open) { lastLoad = Date.now(); load(); } };
+  setInterval(refresh, 120_000 * (0.9 + Math.random() * 0.2));
+  document.addEventListener('visibilitychange', () => { if (Date.now() - lastLoad > 120_000) refresh(); });
 }
