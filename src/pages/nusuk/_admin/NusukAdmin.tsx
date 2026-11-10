@@ -6,6 +6,7 @@ import BonusPage from './BonusPage';
 import CampaignPage from './CampaignPage';
 import PopupPage from './PopupPage';
 import { GiveawayCard, PollCard } from './LiveCards';
+import RafflePage from './RafflePage';
 import { extractCodes } from '../_lib/extract';
 import { bonusFor, parseBonus } from '../_lib/bonus';
 import { CODE_RE, COUNTRY_CODES, PINNED_COUNT, contentFields, countryName, defaultContent, flagUrl, mergeContent, parseToday, parseTopBar, parseVideo, parseWinners, youtubeId, subscribeUrl, defaultVideoLabel, defaultTopBarText, defaultTopBarDoneText, countdownText, prizeLabel, type NusukContent, type Prize, type TodayWinner, type TopBar, type VideoMode, type Winner } from '../_lib/content';
@@ -32,6 +33,7 @@ type Code = {
   instant_quota?: number | null;
   instant_base?: number;
   boost_quota?: number | null;
+  boost_hours?: number | null;
   approved_at?: string | null;
   approved_base?: number;
 };
@@ -85,7 +87,7 @@ function Toggle({ on, onChange, label, hint }: { on: boolean; onChange: (v: bool
 /** Mirrors nusuk_boost_tier() in update_08: which priority tier a code is in right now. */
 type Boost = { tier: 1 | 2 | 3; text: string; cls: string } | null;
 function boostOf(r: Code, s: Settings | null): Boost {
-  const fh = s?.feature_hours ?? 12, aq = s?.approved_quota ?? 2;
+  const fh = r.boost_hours ?? s?.feature_hours ?? 12, aq = s?.approved_quota ?? 2;
   const fq = r.boost_quota ?? s?.feature_quota ?? 10;
   // Instant boost (Popup notice → Instant Keys) comes before everything else
   if (r.instant_quota) {
@@ -498,8 +500,8 @@ function CodesPage({ toast, reviewMode = false, settings = null }: { toast: Toas
             </>
           ) : (
             <>
-              <Btn kind="gold" onClick={() => bulk({ featured_at: new Date().toISOString(), status: 'active', boost_quota: null })}>★ Feature {sel.size}</Btn>
-              <Btn kind="ghost" onClick={() => bulk({ featured_at: null, boost_quota: null })}>Unfeature</Btn>
+              <Btn kind="gold" onClick={() => bulk({ featured_at: new Date().toISOString(), status: 'active', boost_quota: null, boost_hours: null })}>★ Feature {sel.size}</Btn>
+              <Btn kind="ghost" onClick={() => bulk({ featured_at: null, boost_quota: null, boost_hours: null })}>Unfeature</Btn>
               <Btn onClick={() => bulk({ status: 'active' })}>Activate {sel.size}</Btn>
               <Btn kind="ghost" onClick={() => bulk({ status: 'inactive' })}>Deactivate</Btn>
               <Btn kind="ghost" onClick={() => bulk({ uses: 0, last_used_at: null })}>Reset uses</Btn>
@@ -560,7 +562,7 @@ function CodesPage({ toast, reviewMode = false, settings = null }: { toast: Toas
                     </>
                   ) : (
                     <>
-                      {(() => { const on = boostOf(r, settings)?.tier === 1; return <Btn kind="ghost" className={`px-2.5! py-1! ${on ? 'text-amber-600' : ''}`} title={on ? 'Unfeature' : r.featured_at ? 'Feature again (restarts quota and timer)' : 'Feature: show this code first'} aria-label={on ? `Unfeature ${r.code}` : `Feature ${r.code}`} onClick={() => bulk(on ? { featured_at: null, boost_quota: null } : { featured_at: new Date().toISOString(), status: 'active', boost_quota: null }, [r.id])}>{on ? '★' : '☆'}</Btn>; })()}{' '}
+                      {(() => { const on = boostOf(r, settings)?.tier === 1; return <Btn kind="ghost" className={`px-2.5! py-1! ${on ? 'text-amber-600' : ''}`} title={on ? 'Unfeature' : r.featured_at ? 'Feature again (restarts quota and timer)' : 'Feature: show this code first'} aria-label={on ? `Unfeature ${r.code}` : `Feature ${r.code}`} onClick={() => bulk(on ? { featured_at: null, boost_quota: null, boost_hours: null } : { featured_at: new Date().toISOString(), status: 'active', boost_quota: null, boost_hours: null }, [r.id])}>{on ? '★' : '☆'}</Btn>; })()}{' '}
                       <Btn kind="ghost" className="px-2.5! py-1!" onClick={() => bulk({ status: r.status === 'active' ? 'inactive' : 'active' }, [r.id])}>{r.status === 'active' ? 'Disable' : 'Enable'}</Btn>{' '}
                       <Btn kind="ghost" className="px-2.5! py-1!" onClick={() => setEdit(r)}>Edit</Btn>{' '}
                       <Btn kind="ghost" className="px-2.5! py-1! text-red-700" onClick={() => bulk('delete', [r.id])} aria-label={`Delete ${r.code}`}>✕</Btn>
@@ -1501,7 +1503,7 @@ function WinnersPage({ toast, settings, reload }: { toast: ToastFn; settings: Se
 }
 
 /* ---------------- Shell ---------------- */
-type Route = 'dashboard' | 'codes' | 'review' | 'features' | 'bonus' | 'campaign' | 'popup' | 'upload' | 'notice' | 'video' | 'ads' | 'today' | 'winners' | 'feedback' | 'settings';
+type Route = 'dashboard' | 'codes' | 'review' | 'features' | 'bonus' | 'campaign' | 'popup' | 'raffle' | 'upload' | 'notice' | 'video' | 'ads' | 'today' | 'winners' | 'feedback' | 'settings';
 const nav: { r: Route; label: string; icon: string }[] = [
   { r: 'dashboard', label: 'Dashboard', icon: 'M3 13h8V3H3zm10 8h8V11h-8zM3 21h8v-6H3zm10-18v6h8V3z' },
   { r: 'codes', label: 'Codes', icon: 'M4 6h16M4 12h16M4 18h10' },
@@ -1511,6 +1513,7 @@ const nav: { r: Route; label: string; icon: string }[] = [
   { r: 'bonus', label: 'Community & bonus', icon: 'M20 12v9H4v-9M2 7h20v5H2zM12 21V7M12 7H7.5a2.5 2.5 0 1 1 0-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 1 0 0-5C13 2 12 7 12 7z' },
   { r: 'upload', label: 'Paste codes', icon: 'M12 16V4m0 0l-4 4m4-4l4 4M4 20h16' },
   { r: 'notice', label: 'Top notice', icon: 'M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1zM15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13' },
+  { r: 'raffle', label: 'Raffle draw', icon: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 3v9l6.4 6.4M12 12 5.6 18.4M12 12H3' },
   { r: 'popup', label: 'Popup notice', icon: 'M4 5h16v11H8l-4 4zM12 8v3M12 13.5v.5' },
   { r: 'ads', label: 'Ads', icon: 'M3 11l18-5v12L3 14v-3zM11.6 16.8a3 3 0 1 1-5.8-1.6' },
   { r: 'video', label: 'Video', icon: 'M2.5 7.5a2.5 2.5 0 0 1 2.5-2.5h14a2.5 2.5 0 0 1 2.5 2.5v9a2.5 2.5 0 0 1-2.5 2.5H5a2.5 2.5 0 0 1-2.5-2.5zM10 9.5v5l4.5-2.5z' },
@@ -1634,6 +1637,7 @@ export default function NusukAdmin() {
         {route === 'review' && <CodesPage key="review" toast={toast} reviewMode settings={settings} />}
         {route === 'upload' && <Upload toast={toast} defaultMax={settings?.default_max_uses ?? 1} />}
         {route === 'campaign' && <CampaignPage toast={toast} />}
+        {route === 'raffle' && <RafflePage toast={toast} />}
         {route === 'popup' && settings && <PopupPage toast={toast} settings={settings} reload={loadSettings} />}
         {route === 'bonus' && settings && <BonusPage toast={toast} settings={settings} reload={loadSettings} />}
         {route === 'ads' && settings && <AdsPage toast={toast} settings={settings} reload={loadSettings} />}

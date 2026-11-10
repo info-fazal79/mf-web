@@ -11,6 +11,7 @@ type Give = {
   id: number; title: string; prize: string; prize_image: string; details: string; ends_at: string | null; open: boolean;
   need_page: boolean; need_group: boolean; need_share: boolean; page_url: string; group_url: string; post_url: string;
   entries: number; mine: boolean; winner: { name: string; code: string } | null;
+  winners?: { place: number; name: string; code: string; prize: string }[];
 };
 type Live = { now?: string; poll: Poll | null; giveaway: Give | null };
 
@@ -79,8 +80,9 @@ export function initLive(opts: { device: string }) {
       </div></div>`;
     }
     if (g) {
-      const status = g.winner
-        ? `<span class="font-bold">🏆 বিজয়ী: ${esc(g.winner.name)} <span class="font-mono text-xs opacity-80">(${esc(g.winner.code)})</span></span>`
+      const ws = g.winners?.length ? g.winners : g.winner ? [{ place: 1, name: g.winner.name, code: g.winner.code, prize: g.prize }] : [];
+      const status = ws.length
+        ? `<span class="font-bold">🏆 বিজয়ী: ${ws.slice(0, 3).map((w) => `${esc(w.name)} <span class="font-mono text-xs opacity-80">(${esc(w.code)})</span>`).join(', ')}${ws.length > 3 ? ` <button type="button" data-gw class="underline">+${bn(ws.length - 3)} জন</button>` : ''}</span>`
         : g.open
           ? `${g.ends_at ? `<span class="nk-live-cd">⏳ <span data-cd="${esc(g.ends_at)}"></span></span>` : ''}
              <button type="button" data-gw class="rounded-full bg-emerald-900 px-3 py-1 text-xs font-bold text-gold-100 hover:bg-emerald-800">${g.mine ? '✓ অংশ নিয়েছেন' : 'অংশ নিন →'}</button>`
@@ -171,11 +173,14 @@ export function initLive(opts: { device: string }) {
       </div>
       ${g.prize_image ? `<img src="${esc(g.prize_image)}" alt="" class="max-h-56 w-full rounded-xl bg-emerald-50 object-contain">` : ''}
       ${g.prize ? `<div class="rounded-xl bg-gold-100/70 px-3.5 py-2.5 text-center"><div class="text-xs text-emerald-900/70">পুরস্কার</div><div class="text-lg font-bold text-emerald-950">${esc(g.prize)}</div></div>` : ''}
-      ${g.winner ? `<div class="rounded-xl bg-emerald-900 px-3.5 py-3 text-center text-gold-100"><div class="text-xs">🏆 বিজয়ী</div><div class="text-lg font-bold">${esc(g.winner.name)}</div><div class="font-mono text-xs opacity-80">${esc(g.winner.code)}</div></div>` : ''}
+      ${(() => {
+        const ws = g.winners?.length ? g.winners : g.winner ? [{ place: 1, name: g.winner.name, code: g.winner.code, prize: g.prize }] : [];
+        return ws.length ? `<div class="grid gap-1.5 rounded-xl bg-emerald-900 px-3.5 py-3 text-gold-100"><div class="text-center text-xs">🏆 বিজয়ী</div>${ws.map((w) => `<div class="flex items-center gap-2 rounded-lg bg-white/10 px-3 py-1.5 text-sm"><b>${bn(w.place)}.</b><span class="min-w-0 flex-1 truncate font-semibold">${esc(w.name)}</span><span class="font-mono text-xs opacity-80">${esc(w.code)}</span>${w.prize ? `<span class="text-xs">🎁 ${esc(w.prize)}</span>` : ''}</div>`).join('')}</div>` : '';
+      })()}
       ${g.open && g.ends_at ? `<p class="text-center text-sm font-semibold text-emerald-900">⏳ শেষ হতে বাকি <span data-cd2="${esc(g.ends_at)}" class="font-mono"></span></p>` : ''}
       ${g.details ? `<p class="nk-pre text-sm leading-relaxed text-emerald-950/85">${esc(g.details)}</p>` : ''}
       <p class="text-center text-xs text-emerald-900/60">এখন পর্যন্ত ${bn(g.entries)} জন অংশ নিয়েছেন। সময় শেষে লটারির মাধ্যমে বিজয়ী বাছাই হবে।</p>
-      ${g.open && !g.winner ? `<form class="grid gap-3" novalidate>
+      ${g.open && !(g.winners?.length || g.winner) ? `<form class="grid gap-3" novalidate>
         <h3 class="text-sm font-bold text-emerald-900">✅ অংশ নিতে যা করতে হবে</h3>
         ${task(g.need_page, g.page_url, '📘 আমাদের ফেসবুক পেজ ফলো করুন', 'আমি পেজ ফলো করেছি', 'page')}
         ${task(g.need_group, g.group_url, '👥 কমিউনিটি গ্রুপে যুক্ত হোন', 'আমি গ্রুপে যুক্ত হয়েছি', 'group')}
