@@ -149,3 +149,5 @@ a.nk-ad:hover { transform: translateY(-1px); box-shadow: 0 10px 24px -14px rgba(
 .nk-side-nav { scrollbar-width: thin; scrollbar-color: rgba(220, 188, 82, 0.4) transparent; }
 .nk-next { background: linear-gradient(90deg, #ffe066, #ffc928); box-shadow: 0 2px 8px -3px rgba(201, 162, 39, 0.8); }
 .nk-faq summary::-webkit-details-marker { display: none; }
+.nk-side-btn { flex-shrink: 0; width: 7.5rem; padding-inline: 0.75rem; font-size: 1rem; font-weight: 700; }
+@media (min-width: 640px) { .nk-side-btn { width: 8.5rem; } }
