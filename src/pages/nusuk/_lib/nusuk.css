@@ -151,11 +151,12 @@ a.nk-ad:hover { transform: translateY(-1px); box-shadow: 0 10px 24px -14px rgba(
 .nk-faq summary::-webkit-details-marker { display: none; }
 .nk-side-btn { flex-shrink: 0; width: 7.5rem; padding-inline: 0.75rem; font-size: 1rem; font-weight: 700; }
 @media (min-width: 640px) { .nk-side-btn { width: 8.5rem; } }
-.nk-live-poll { background: linear-gradient(90deg, #0a4a37, #075e45 50%, #0a4a37); border-top: 1px solid rgba(255, 255, 255, 0.12); }
-.nk-live-gw { background: linear-gradient(90deg, #ffd84d, #ffe58a 50%, #ffd84d); }
+.nk-live-poll { background: linear-gradient(90deg, #ffe066, #fff1b3 50%, #ffe066); border-bottom: 1px solid rgba(201, 162, 39, 0.45); }
+.nk-live-gw { background: linear-gradient(90deg, #ffd84d, #ffe58a 50%, #ffd84d); border-bottom: 1px solid rgba(201, 162, 39, 0.45); }
 .nk-live-cd { border-radius: 0.5rem; background: #063d2e; color: #ffe08a; padding: 0.1rem 0.5rem; font-weight: 700; font-variant-numeric: tabular-nums; }
-.nk-vote { display: inline-flex; align-items: center; gap: 0.3rem; border-radius: 9999px; border: 1px solid rgba(255, 255, 255, 0.35); background: rgba(255, 255, 255, 0.1); padding: 0.2rem 0.7rem; font-size: 0.8rem; font-weight: 700; color: #fff; transition: background 0.15s; }
-.nk-vote:hover:not(:disabled) { background: rgba(255, 255, 255, 0.22); }
+.nk-vote { display: inline-flex; align-items: center; gap: 0.3rem; border-radius: 9999px; border: 1px solid rgba(6, 61, 46, 0.3); background: rgba(255, 255, 255, 0.7); padding: 0.2rem 0.75rem; font-size: 0.8rem; font-weight: 700; color: #063d2e; transition: background 0.15s; }
+.nk-vote:hover:not(:disabled) { background: #fff; }
 .nk-vote:disabled { opacity: 0.7; cursor: default; }
-.nk-vote-on { background: #ffe08a; color: #063d2e; border-color: #ffe08a; }
-.nk-vote-on.nk-vote-no { background: #fecaca; color: #7f1d1d; border-color: #fecaca; }
+.nk-vote-on { background: #075e45; color: #ffe08a; border-color: #075e45; }
+.nk-vote-on:hover:not(:disabled) { background: #075e45; }
+.nk-vote-on.nk-vote-no { background: #b91c1c; color: #fff; border-color: #b91c1c; }

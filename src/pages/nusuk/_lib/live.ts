@@ -68,14 +68,14 @@ export function initLive(opts: { device: string }) {
     let html = '';
     if (p) {
       const yesOn = p.mine === 1, noOn = p.mine === -1;
-      html += `<div class="nk-live-poll text-white"><div class="mx-auto flex max-w-xl flex-wrap items-center justify-center gap-x-3 gap-y-1.5 px-4 py-2.5 text-center text-sm">
+      html += `<div class="nk-live-poll text-emerald-950"><div class="mx-auto flex max-w-xl flex-wrap items-center justify-center gap-x-3 gap-y-1.5 px-4 py-2.5 text-center text-sm">
         <span class="font-semibold leading-snug">🗳️ ${esc(p.question)}</span>
         <span class="flex items-center gap-1.5">
           <button type="button" data-vote="1" ${p.open ? '' : 'disabled'} class="nk-vote ${yesOn ? 'nk-vote-on' : ''}" aria-pressed="${yesOn}">👍 হ্যাঁ <b>${bn(p.yes)}</b></button>
           <button type="button" data-vote="-1" ${p.open ? '' : 'disabled'} class="nk-vote ${noOn ? 'nk-vote-on nk-vote-no' : ''}" aria-pressed="${noOn}">👎 না <b>${bn(p.no)}</b></button>
         </span>
-        ${p.open && p.ends_at ? `<span class="text-xs text-white/75">⏳ <span data-cd="${esc(p.ends_at)}"></span></span>` : ''}
-        ${!p.open ? '<span class="text-xs text-white/75">ভোট শেষ</span>' : p.mine ? '<span class="text-xs text-gold-100">✓ আপনার ভোট দেওয়া হয়েছে</span>' : ''}
+        ${p.open && p.ends_at ? `<span class="text-xs text-emerald-900/75">⏳ <span data-cd="${esc(p.ends_at)}"></span></span>` : ''}
+        ${!p.open ? '<span class="text-xs text-emerald-900/75">ভোট শেষ</span>' : p.mine ? '<span class="text-xs font-semibold text-emerald-800">✓ আপনার ভোট দেওয়া হয়েছে</span>' : ''}
       </div></div>`;
     }
     if (g) {
