@@ -156,6 +156,7 @@ export default function RafflePage({ toast }: { toast: ToastFn }) {
     loadData();
   }
   async function giveKeys(w: Winner) {
+    if (/^NG-TEST\d{4}$/.test(w.code)) return toast('🧪 This is a test code: no Keys are given (so it never enters the real code list).', false);
     const a = award[w.id] ?? { keys: w.keys ?? 50, hours: 0 };
     if (!a.keys || a.keys < 1) return toast('How many Keys?', false);
     if (!confirm(`Give ${w.code} ${a.keys} Keys ${a.hours ? `spread over ${a.hours} hour(s)` : 'instantly (top of the page until done)'}?`)) return;

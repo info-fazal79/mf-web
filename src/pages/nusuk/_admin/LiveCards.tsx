@@ -197,6 +197,42 @@ export function GiveawayCard({ toast, content }: { toast: ToastFn; content: unkn
     toast('New giveaway (hidden). Fill it in and press Start.');
     load();
   }
+  // ---- Test data: a hidden giveaway with dummy entries, to try the Raffle draw ----
+  const TEST_TITLE = '🧪 TEST giveaway';
+  async function addTest() {
+    setBusy(true);
+    const { data, error } = await sb!.from('nusuk_giveaways').insert({
+      title: TEST_TITLE, prize: '৫০টি Key', details: 'শুধু পরীক্ষার জন্য। ভিজিটররা এটা দেখতে পায় না।', is_on: false,
+      starts_at: new Date(Date.now() - 2 * 3600e3).toISOString(), ends_at: new Date(Date.now() - 3600e3).toISOString(),
+      prizes: [{ place: 1, prize: '১০০টি Key', keys: 100 }, { place: 2, prize: '৫০টি Key', keys: 50 }, { place: 3, prize: 'একটি বই', keys: null }],
+    }).select('id').single();
+    if (error) { setBusy(false); return toast(errText(error), false); }
+    const id = (data as { id: number }).id;
+    const names = ['Rahim Uddin', 'Karim Mia', 'Salma Begum', 'Abdullah Al Mamun', 'Fatema Khatun', 'Hasan Ali', 'Nusrat Jahan', 'Tanvir Ahmed', 'Ayesha Siddika', 'Mizanur Rahman', 'Sumaiya Akter', 'Rafiq Islam'];
+    const rows = Array.from({ length: 24 }, (_, i) => ({
+      giveaway_id: id, code: `NG-TEST${String(i + 1).padStart(4, '0')}`, fb_name: `${names[i % names.length]} ${i + 1}`,
+      did_page: true, did_group: true, status: i === 6 || i === 18 ? 'invalid' : 'ok',
+    }));
+    const { error: e2 } = await sb!.from('nusuk_giveaway_entries').insert(rows);
+    setBusy(false);
+    if (e2) return toast(errText(e2), false);
+    setSel(id);
+    toast('🧪 Test giveaway added: 24 dummy entries (2 invalid). Try it in Raffle draw.');
+    load();
+  }
+  async function removeTest() {
+    if (!confirm('Delete all test giveaways (🧪 TEST) with their entries and winners, and any NG-TEST… code?')) return;
+    setBusy(true);
+    const a = await sb!.from('nusuk_giveaways').delete().eq('title', TEST_TITLE);
+    const b = await sb!.from('nusuk_codes').delete().like('code', 'NG-TEST%');
+    setBusy(false);
+    if (a.error || b.error) return toast(errText(a.error ?? b.error), false);
+    setSel(null);
+    toast('Test data removed');
+    load();
+  }
+  const hasTest = list.some((x) => x.title === TEST_TITLE);
+
   const set = (p: Partial<Give>) => g && setG({ ...g, ...p });
   async function save(extra: Partial<Give> = {}) {
     if (!g) return;
@@ -255,13 +291,14 @@ export function GiveawayCard({ toast, content }: { toast: ToastFn; content: unkn
   const okCount = entries.filter((e) => e.status === 'ok').length;
 
   return (
-    <Card title="🎁 Giveaway (in the top bar)" actions={<Btn kind="gold" onClick={create}>+ New giveaway</Btn>}>
+    <Card title="🎁 Giveaway (in the top bar)" actions={<><Btn kind="ghost" onClick={addTest} disabled={busy} title="A hidden giveaway with 24 dummy entries, to try the Raffle draw">🧪 Add test data</Btn>{hasTest && <Btn kind="ghost" className="text-red-700" onClick={removeTest} disabled={busy}>🧹 Remove test data</Btn>}<Btn kind="gold" onClick={create}>+ New giveaway</Btn></>}>
       <p className="mb-3 text-sm text-emerald-900/70">A prize for a few hours with a live countdown in the top bar. Visitors do the tasks, give their Nusuk code and Facebook name (and the share link), and join the draw. Check the entries, then draw a winner; the winner shows in the bar for a day.</p>
       {list.length > 1 && (
         <div className="mb-3 flex flex-wrap gap-1.5">
           {list.map((x) => <button key={x.id} type="button" onClick={() => setSel(x.id)} className={`rounded-full px-3 py-1 text-xs font-semibold ${sel === x.id ? 'bg-emerald-900 text-gold-100' : 'bg-emerald-50 text-emerald-900'}`}>{x.title} · {when(x.created_at)}</button>)}
         </div>
       )}
+      {g?.title === TEST_TITLE && <p className="mb-3 rounded-xl bg-amber-50 px-3.5 py-2.5 text-sm text-amber-900">🧪 This is test data: hidden from visitors. Try it in <b>Raffle draw</b>. Don't press "Give Keys" for its winners (fake codes); remove it with "🧹 Remove test data" when done.</p>}
       {!g ? <p className="text-sm text-emerald-900/60">No giveaways yet. Click "+ New giveaway".</p> : (
         <div className="grid gap-4">
           <div className={`flex flex-wrap items-center gap-3 rounded-xl border p-3.5 ${running ? 'border-emerald-600/40 bg-emerald-50' : 'border-[#e7e1cf] bg-cream'}`}>
