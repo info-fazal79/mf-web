@@ -202,20 +202,23 @@ const cm0 = defaultCommunity();
         </div>
       </section>
 
-      <!-- ===== Info tabs ===== -->
-      <section class="mt-8" aria-label="তথ্য">
-        <div class="grid grid-cols-3 gap-2" role="tablist">
-          {tabs.map((t, i) => (
-            <button type="button" role="tab" id={`tab-${t.id}`} aria-controls={`panel-${t.id}`} aria-selected={i === 0 ? 'true' : 'false'} tabindex={i === 0 ? 0 : -1} class="nk-tab min-w-0 rounded-xl border border-emerald-700/25 bg-white px-1.5 py-2.5 text-center text-[13px] leading-snug font-semibold text-emerald-900 sm:text-sm" data-k={t.tk}>
-              {t.title}
-            </button>
+      <!-- ===== Info as questions & answers (text from Nusuk Manager → Settings → Page text) ===== -->
+      <section class="mt-8" aria-labelledby="nk-faq-h">
+        <h2 id="nk-faq-h" class="mb-2.5 px-1 text-base font-bold text-emerald-900">❓ জরুরি প্রশ্ন ও উত্তর</h2>
+        <div class="nk-card divide-y divide-emerald-900/10 overflow-hidden p-0">
+          {tabs.map((t) => (
+            <details name="nk-faq" class="nk-faq group">
+              <summary class="flex cursor-pointer list-none items-center gap-3 px-4 py-3.5 font-semibold text-emerald-900 transition hover:bg-emerald-50/60 sm:px-5">
+                <span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-emerald-50 text-sm font-bold text-emerald-700 group-open:bg-emerald-700 group-open:text-white" aria-hidden="true">?</span>
+                <span class="min-w-0 flex-1" data-k={t.tk}>{t.title}</span>
+                <svg viewBox="0 0 24 24" class="h-5 w-5 shrink-0 text-emerald-700 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+              </summary>
+              <div class="px-4 pb-4 sm:px-5 sm:pl-[3.75rem]">
+                <p class="nk-pre text-[15px] leading-relaxed text-emerald-950/90" data-k={t.bk}>{t.body}</p>
+              </div>
+            </details>
           ))}
         </div>
-        {tabs.map((t, i) => (
-          <div role="tabpanel" id={`panel-${t.id}`} aria-labelledby={`tab-${t.id}`} class:list={['nk-card mt-3 p-5', i !== 0 && 'hidden']}>
-            <p class="nk-pre leading-relaxed text-[15px]" data-k={t.bk}>{t.body}</p>
-          </div>
-        ))}
       </section>
 
       <!-- ===== Promotional ads (Nusuk Manager → Ads). Hidden unless switched on. ===== -->
@@ -1201,25 +1204,6 @@ const cm0 = defaultCommunity();
         await boot();
         busy = false;
       });
-
-      // ---- Tabs ----
-      const tabsEls = [...document.querySelectorAll<HTMLButtonElement>('[role="tab"]')];
-      tabsEls.forEach((tab, i) => {
-        tab.addEventListener('click', () => select(i));
-        tab.addEventListener('keydown', (e) => {
-          if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
-            const n = (i + (e.key === 'ArrowRight' ? 1 : tabsEls.length - 1)) % tabsEls.length;
-            select(n); tabsEls[n].focus();
-          }
-        });
-      });
-      function select(i: number) {
-        tabsEls.forEach((t, j) => {
-          t.setAttribute('aria-selected', String(i === j));
-          t.tabIndex = i === j ? 0 : -1;
-          document.getElementById(t.getAttribute('aria-controls')!)?.classList.toggle('hidden', i !== j);
-        });
-      }
 
       // ---- Submit form ----
       const form = $<HTMLFormElement>('nk-form');
