@@ -54,6 +54,8 @@ const cm0 = defaultCommunity();
         <a id="nk-topbar-link" class="hidden shrink-0 rounded-full bg-white/20 px-2.5 py-0.5 text-xs font-bold hover:bg-white/30" target="_blank" rel="noopener">দেখুন →</a>
       </div>
     </div>
+    <!-- Vote and giveaway strips (Nusuk Manager → Top notice) -->
+    <div id="nk-live" class="hidden"></div>
     <!-- ===== Hero: code box is the first thing on screen ===== -->
     <header class="nk-pattern text-white">
       <div class="mx-auto max-w-xl px-4 pt-4 pb-24 sm:pb-28">
@@ -609,6 +611,7 @@ const cm0 = defaultCommunity();
       import { bonusReady, parseBonus, parseCommunity } from './_lib/bonus';
       import { initCampaign } from './_lib/campaign';
       import { parsePopup, popupRunning } from './_lib/popup';
+      import { initLive } from './_lib/live';
       import { CODE_RE, countdownText, countryName, defaultVideoLabel, flagUrl, parseToday, parseTopBar, parseVideo, subscribeUrl, parseWinners, prizeLabel, type Winner } from './_lib/content';
 
       // Bangladesh flag (green field, red disc set toward the hoist). Inline SVG so it renders on every OS.
@@ -1675,6 +1678,7 @@ const cm0 = defaultCommunity();
       setInterval(ping, 45000);
       // Share campaign: only visible once published (or to a signed-in admin)
       initCampaign({ device: () => device, content: () => lastContent });
+      initLive({ device });
       // Keep the remaining counter fresh while the tab is visible
       setInterval(() => { if (document.visibilityState === 'visible' && !busy) boot(true); }, 45000);
     </script>

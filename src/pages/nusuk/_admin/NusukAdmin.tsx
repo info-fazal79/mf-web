@@ -5,6 +5,7 @@ import AdsPage from './AdsPage';
 import BonusPage from './BonusPage';
 import CampaignPage from './CampaignPage';
 import PopupPage from './PopupPage';
+import { GiveawayCard, PollCard } from './LiveCards';
 import { extractCodes } from '../_lib/extract';
 import { bonusFor, parseBonus } from '../_lib/bonus';
 import { CODE_RE, COUNTRY_CODES, PINNED_COUNT, contentFields, countryName, defaultContent, flagUrl, mergeContent, parseToday, parseTopBar, parseVideo, parseWinners, youtubeId, subscribeUrl, defaultVideoLabel, defaultTopBarText, defaultTopBarDoneText, countdownText, prizeLabel, type NusukContent, type Prize, type TodayWinner, type TopBar, type VideoMode, type Winner } from '../_lib/content';
@@ -1442,6 +1443,8 @@ function TopNoticePage({ toast, settings, reload }: { toast: ToastFn; settings: 
         </div>
         {!t.on && <p className="mt-2 text-xs text-emerald-900/60">Hidden on the page while the notice is OFF.</p>}
       </Card>
+      <PollCard toast={toast} />
+      <GiveawayCard toast={toast} content={settings.content} />
     </div>
   );
 }
