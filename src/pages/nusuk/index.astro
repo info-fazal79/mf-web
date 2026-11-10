@@ -180,19 +180,19 @@ const cm0 = defaultCommunity();
               <p class="text-sm text-emerald-100/85" id="nk-win-sum"></p>
             </div>
           </div>
-          <!-- Umrah winners: all shown, stacked by date -->
-          <div id="nk-win-umrah" class="mt-5 hidden">
-            <h3 class="mb-2 text-sm font-bold text-gold-400">🕋 দুইজনের উমরাহ সফর</h3>
-            <ul id="nk-win-umrah-list" class="grid gap-2"></ul>
-          </div>
-          <!-- Zamzam (and other prizes): auto-sliding, one card at a time -->
-          <div id="nk-win-slide" class="mt-5 hidden">
-            <div class="mb-2 flex items-center justify-between gap-2">
-              <h3 class="text-sm font-bold text-gold-400">💧 ২০ কার্টন জমজমের পানি</h3>
+          <!-- One tab per prize; each tab shows its winners one at a time in an endless slider -->
+          <div id="nk-win-tabs" class="mt-5 grid auto-cols-fr grid-flow-col gap-1.5 rounded-full bg-black/20 p-1" role="tablist" aria-label="পুরস্কার"></div>
+          <div class="mt-3">
+            <div class="mb-2 flex items-center justify-end">
               <span id="nk-win-slide-count" class="text-xs text-emerald-100/75" aria-live="polite"></span>
             </div>
-            <div id="nk-win-track" class="nk-track flex snap-x snap-mandatory overflow-x-auto" aria-roledescription="carousel" aria-label="জমজমের পানি বিজয়ীরা"></div>
+            <div id="nk-win-view" class="overflow-hidden rounded-xl" aria-roledescription="carousel" aria-label="বিজয়ীরা">
+              <div id="nk-win-track" class="nk-win-track flex"></div>
+            </div>
             <div id="nk-win-dots" class="mt-2.5 flex justify-center gap-1.5"></div>
+            <button id="nk-win-all" type="button" class="mx-auto mt-3 flex items-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-4 py-1.5 text-xs font-bold text-gold-100 hover:bg-white/20">
+              📋 <span id="nk-win-all-label">সব বিজয়ী দেখুন</span>
+            </button>
           </div>
           <p class="mt-4 text-center text-sm font-semibold text-gold-100">আপনিও হতে পারেন পরবর্তী বিজয়ী। এখনই কোড কপি করে অংশ নিন!</p>
         </div>
@@ -452,6 +452,22 @@ const cm0 = defaultCommunity();
       </div>
     </dialog>
 
+    <dialog id="nk-wl" class="m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-md overflow-y-auto rounded-[1.25rem] p-0 shadow-2xl backdrop:bg-emerald-950/60" aria-labelledby="nk-wl-title">
+      <div class="grid gap-3 p-5">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <h2 id="nk-wl-title" class="text-lg font-bold text-emerald-900"></h2>
+            <p id="nk-wl-sub" class="text-sm text-emerald-900/70"></p>
+          </div>
+          <button type="button" id="nk-wl-close" class="grid h-9 w-9 shrink-0 place-items-center rounded-full text-xl text-emerald-900/60 hover:bg-emerald-50" aria-label="বন্ধ করুন">×</button>
+        </div>
+        <table class="w-full text-sm">
+          <thead><tr class="border-b border-emerald-900/10 text-left text-xs text-emerald-900/60"><th class="w-10 py-1.5">ক্রম</th><th class="py-1.5">নাম</th><th class="py-1.5 text-right">তারিখ</th></tr></thead>
+          <tbody id="nk-wl-body"></tbody>
+        </table>
+      </div>
+    </dialog>
+
     <dialog id="nk-pp" class="m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-sm overflow-y-auto rounded-[1.25rem] p-0 shadow-2xl backdrop:bg-emerald-950/60" aria-labelledby="nk-pp-title">
       <div class="nk-pp-head relative px-5 pt-6 pb-5 text-center text-white">
         <button type="button" id="nk-pp-close" class="absolute top-2.5 right-2.5 grid h-9 w-9 place-items-center rounded-full bg-white/15 text-xl text-white hover:bg-white/25" aria-label="বন্ধ করুন">×</button>
@@ -658,7 +674,7 @@ const cm0 = defaultCommunity();
       }
 
       // ---- Winners ----
-      // Umrah winners: all shown, stacked newest first. Zamzam/other: one card at a time, auto-sliding.
+      // Winners: a tab per prize, each an endless one-at-a-time slider (see showWinTab)
       let winnersShown = '';
       let slideTimer: ReturnType<typeof setInterval> | undefined;
       const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -692,84 +708,148 @@ const cm0 = defaultCommunity();
         return card;
       }
 
+      // One tab per prize (umrah first). The slider moves one way forever: after the last
+      // winner it slides on to a copy of the first, then quietly jumps back, so it never rewinds.
+      const winTabs = [
+        { key: 'umrah', icon: '🕋', title: 'দুইজনের উমরাহ সফর', short: 'উমরাহ সফর' },
+        { key: 'zamzam', icon: '💧', title: '২০ কার্টন জমজমের পানি', short: 'জমজমের পানি' },
+        { key: 'other', icon: '🎁', title: 'অন্যান্য পুরস্কার', short: 'অন্যান্য' },
+      ] as const;
+      let winGroups: { key: string; icon: string; title: string; short: string; list: Winner[] }[] = [];
+      let winTab = 0;
+      let winIdx = 0;
+      let winPaused = false;
+
       function renderWinners(list: Winner[]) {
         const key = JSON.stringify(list);
         if (key === winnersShown) return;
         winnersShown = key;
         $('nk-winners').classList.toggle('hidden', list.length === 0);
+        clearInterval(slideTimer);
         if (!list.length) return;
 
         const newest = (a: Winner, b: Winner) => (b.date ?? '').localeCompare(a.date ?? '');
-        const umrah = list.filter((w) => w.prize === 'umrah').sort(newest);
-        const slide = list.filter((w) => w.prize !== 'umrah').sort(newest);
-        const zamzam = slide.filter((w) => w.prize === 'zamzam').length;
-        const parts = [umrah.length && `${bn(umrah.length)} জন উমরাহ`, zamzam && `${bn(zamzam)} জন জমজমের পানি`].filter(Boolean);
+        winGroups = winTabs.map((t) => ({ ...t, list: list.filter((w) => w.prize === t.key).sort(newest) })).filter((g) => g.list.length);
+        const umrah = list.filter((w) => w.prize === 'umrah').length;
+        const zamzam = list.filter((w) => w.prize === 'zamzam').length;
+        const parts = [umrah && `${bn(umrah)} জন উমরাহ`, zamzam && `${bn(zamzam)} জন জমজমের পানি`].filter(Boolean);
         $('nk-win-sum').textContent = `মোট ${bn(list.length)} জন বিজয়ী${parts.length ? ` · ${parts.join(', ')}` : ''}`;
 
-        // Umrah: stacked list
-        $('nk-win-umrah').classList.toggle('hidden', umrah.length === 0);
-        $('nk-win-umrah-list').replaceChildren(...umrah.map((w) => { const li = document.createElement('li'); li.append(winnerCard(w)); return li; }));
+        const tabs = $('nk-win-tabs');
+        tabs.replaceChildren(...winGroups.map((g, i) => {
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.setAttribute('role', 'tab');
+          b.dataset.i = String(i);
+          b.innerHTML = `<span aria-hidden="true">${g.icon}</span> <span class="hidden sm:inline">${g.title}</span><span class="sm:hidden">${g.short}</span> <span class="opacity-75">(${bn(g.list.length)})</span>`;
+          b.addEventListener('click', () => showWinTab(i));
+          return b;
+        }));
+        showWinTab(Math.min(winTab, winGroups.length - 1));
+      }
 
-        // Zamzam: slider
-        const box = $('nk-win-slide');
+      function showWinTab(i: number) {
+        winTab = i;
+        [...$('nk-win-tabs').children].forEach((b, j) => {
+          (b as HTMLElement).className = `min-w-0 truncate rounded-full px-2 py-2 text-xs font-bold transition sm:text-sm ${j === i ? 'bg-gold-500 text-emerald-950 shadow' : 'text-emerald-50/85 hover:bg-white/10'}`;
+          b.setAttribute('aria-selected', String(j === i));
+        });
+        const g = winGroups[i];
         const track = $('nk-win-track');
         const dots = $('nk-win-dots');
-        clearInterval(slideTimer);
-        box.classList.toggle('hidden', slide.length === 0);
-        if (!slide.length) return;
-        track.replaceChildren(
-          ...slide.map((w, i) => {
-            const c = winnerCard(w, 'w-full shrink-0 snap-center');
-            c.setAttribute('role', 'group');
-            c.setAttribute('aria-roledescription', 'slide');
-            c.setAttribute('aria-label', `${bn(i + 1)} / ${bn(slide.length)}`);
-            return c;
-          }),
-        );
-        let idx = 0;
-        const setActive = (i: number) => {
-          idx = i;
-          $('nk-win-slide-count').textContent = `${bn(i + 1)} / ${bn(slide.length)}`;
-          [...dots.children].forEach((d, j) => {
-            (d as HTMLElement).className = `h-1.5 rounded-full transition-all ${j === i ? 'w-5 bg-gold-400' : 'w-1.5 bg-white/35'}`;
-            d.setAttribute('aria-current', String(j === i));
-          });
-        };
-        const go = (i: number) => {
-          const n = (i + slide.length) % slide.length;
-          track.scrollTo({ left: n * track.clientWidth });
-          setActive(n);
-        };
-        dots.replaceChildren(
-          ...slide.map((_, i) => {
-            const b = document.createElement('button');
-            b.type = 'button';
-            b.setAttribute('aria-label', `বিজয়ী ${bn(i + 1)}`);
-            b.addEventListener('click', () => { go(i); restart(); });
-            return b;
-          }),
-        );
-        setActive(0);
-        track.scrollLeft = 0;
-        // Keep dots in sync when the visitor swipes
-        let scrollT: ReturnType<typeof setTimeout> | undefined;
-        track.onscroll = () => {
-          clearTimeout(scrollT);
-          scrollT = setTimeout(() => setActive(Math.round(track.scrollLeft / Math.max(1, track.clientWidth))), 80);
-        };
-        // Auto-advance every 3.5s; pause while the visitor touches or hovers it
-        let paused = false;
-        const restart = () => {
-          clearInterval(slideTimer);
-          if (reduceMotion || slide.length < 2) return;
-          slideTimer = setInterval(() => { if (!paused && document.visibilityState === 'visible') go(idx + 1); }, 3500);
-        };
-        track.onpointerenter = () => (paused = true);
-        track.onpointerleave = () => (paused = false);
-        track.ontouchstart = () => (paused = true);
-        track.ontouchend = () => { paused = false; restart(); };
-        restart();
+        const slides = g.list.map((w, k) => {
+          const c = winnerCard(w, 'w-full shrink-0');
+          c.setAttribute('role', 'group');
+          c.setAttribute('aria-roledescription', 'slide');
+          c.setAttribute('aria-label', `${bn(k + 1)} / ${bn(g.list.length)}`);
+          return c;
+        });
+        // A copy of the first card at the end makes the loop seamless
+        if (slides.length > 1) { const clone = winnerCard(g.list[0], 'w-full shrink-0'); clone.setAttribute('aria-hidden', 'true'); slides.push(clone); }
+        track.replaceChildren(...slides);
+        dots.replaceChildren(...g.list.map((_, k) => {
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.setAttribute('aria-label', `বিজয়ী ${bn(k + 1)}`);
+          b.addEventListener('click', () => { winGo(k); winRestart(); });
+          return b;
+        }));
+        dots.classList.toggle('hidden', g.list.length < 2);
+        $('nk-win-all-label').textContent = `সব ${g.short} বিজয়ী দেখুন (${bn(g.list.length)})`;
+        winIdx = 0;
+        winMove(false);
+        winRestart();
       }
+
+      function winMove(animate: boolean) {
+        const g = winGroups[winTab];
+        const track = $('nk-win-track');
+        track.style.transition = animate && !reduceMotion ? 'transform 0.6s ease' : 'none';
+        track.style.transform = `translateX(-${winIdx * 100}%)`;
+        const shown = winIdx % g.list.length;
+        $('nk-win-slide-count').textContent = g.list.length > 1 ? `${bn(shown + 1)} / ${bn(g.list.length)}` : '';
+        [...$('nk-win-dots').children].forEach((d, j) => {
+          (d as HTMLElement).className = `h-1.5 rounded-full transition-all ${j === shown ? 'w-5 bg-gold-400' : 'w-1.5 bg-white/35'}`;
+          d.setAttribute('aria-current', String(j === shown));
+        });
+      }
+      function winGo(k: number) { winIdx = k; winMove(true); }
+      function winNext() {
+        const n = winGroups[winTab]?.list.length ?? 0;
+        if (n < 2) return;
+        winIdx += 1;
+        winMove(true);
+        // Reached the copy of the first card: jump back to the real one without animation
+        if (winIdx === n) setTimeout(() => { if (winIdx === n) { winIdx = 0; winMove(false); } }, reduceMotion ? 0 : 650);
+      }
+      function winPrev() {
+        const n = winGroups[winTab]?.list.length ?? 0;
+        if (n < 2) return;
+        if (winIdx === 0) { winIdx = n; winMove(false); void $('nk-win-track').offsetWidth; }
+        winIdx -= 1;
+        winMove(true);
+      }
+      function winRestart() {
+        clearInterval(slideTimer);
+        if (reduceMotion || (winGroups[winTab]?.list.length ?? 0) < 2) return;
+        slideTimer = setInterval(() => { if (!winPaused && document.visibilityState === 'visible') winNext(); }, 3500);
+      }
+      {
+        const view = $('nk-win-view');
+        let x0: number | null = null;
+        view.addEventListener('pointerenter', () => (winPaused = true));
+        view.addEventListener('pointerleave', () => (winPaused = false));
+        view.addEventListener('touchstart', (e) => { winPaused = true; x0 = e.touches[0].clientX; }, { passive: true });
+        view.addEventListener('touchend', (e) => {
+          const dx = x0 === null ? 0 : e.changedTouches[0].clientX - x0;
+          x0 = null;
+          winPaused = false;
+          if (Math.abs(dx) > 40) { if (dx < 0) winNext(); else winPrev(); }
+          winRestart();
+        });
+      }
+
+      // Full list of the open tab: serial (oldest first), name, date
+      const wlDialog = $<HTMLDialogElement>('nk-wl');
+      $('nk-win-all').addEventListener('click', () => {
+        const g = winGroups[winTab];
+        if (!g) return;
+        const oldest = [...g.list].sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''));
+        $('nk-wl-title').textContent = `${g.icon} ${g.title}`;
+        $('nk-wl-sub').textContent = `মোট ${bn(g.list.length)} জন বাংলাদেশি বিজয়ী`;
+        $('nk-wl-body').replaceChildren(...oldest.map((w, k) => {
+          const tr = document.createElement('tr');
+          tr.className = 'border-b border-emerald-900/5 align-top';
+          const td = (t: string, cls: string) => Object.assign(document.createElement('td'), { textContent: t, className: cls });
+          const name = td(w.prize === 'other' && w.prize_text ? `${w.name} (${w.prize_text})` : w.name, 'py-2 pr-2 font-semibold text-emerald-950 break-words');
+          name.dir = 'auto';
+          tr.append(td(bn(k + 1), 'py-2 text-emerald-900/60'), name, td(bnDate(w.date), 'py-2 text-right whitespace-nowrap text-emerald-900/70'));
+          return tr;
+        }));
+        wlDialog.showModal();
+      });
+      $('nk-wl-close').addEventListener('click', () => wlDialog.close());
+      wlDialog.addEventListener('click', (e) => { if (e.target === wlDialog) wlDialog.close(); });
 
       // ---- Today's winner ----
       function renderToday(content: unknown) {
