@@ -556,16 +556,22 @@ const cm0 = defaultCommunity();
         <div class="flex items-start justify-between gap-3">
           <div>
             <h2 id="nk-fb-title" class="text-lg font-bold text-emerald-900">মতামত / অভিযোগ জানান</h2>
-            <p class="text-sm text-emerald-900/70">আপনার বার্তা অ্যাডমিন পড়বেন। ভালো মতামতগুলো পেজের "ভিজিটরদের মতামত" অংশে দেখানো হতে পারে।</p>
+            <p class="text-sm text-emerald-900/70">অভিযোগ ও পরামর্শ আমাদের কমিউনিটি গ্রুপে জানান। এই ওয়েবসাইট নিয়ে আপনার মতামত এখানেই লিখতে পারেন।</p>
           </div>
           <button type="button" id="nk-fb-close" class="grid h-9 w-9 shrink-0 place-items-center rounded-full text-xl text-emerald-900/60 hover:bg-emerald-50" aria-label="বন্ধ করুন">×</button>
         </div>
-        <fieldset class="grid grid-cols-3 gap-2">
+        <fieldset class="grid grid-cols-2 gap-2">
           <legend class="mb-1 text-sm font-semibold">বিষয় *</legend>
-          <label class="nk-fb-kind"><input type="radio" name="kind" value="complaint" class="peer sr-only" /><span>অভিযোগ</span></label>
-          <label class="nk-fb-kind"><input type="radio" name="kind" value="suggestion" class="peer sr-only" checked /><span>পরামর্শ</span></label>
+          <label class="nk-fb-kind"><input type="radio" name="kind" value="group" class="peer sr-only" checked /><span>অভিযোগ ও পরামর্শ</span></label>
           <label class="nk-fb-kind"><input type="radio" name="kind" value="opinion" class="peer sr-only" /><span>মতামত</span></label>
         </fieldset>
+        <!-- Complaints & suggestions go to the community group -->
+        <div id="nk-fb-group" class="grid gap-3 rounded-xl border border-[#1877f2]/25 bg-[#1877f2]/5 p-4 text-sm leading-relaxed text-emerald-950">
+          <p>আপনার অভিযোগ বা পরামর্শ আমাদের <b>কমিউনিটি গ্রুপে</b> পোস্ট করে জানান। সেখানে আমরা দ্রুত উত্তর দিই, আর অন্যরাও একই সমস্যার সমাধান দেখতে পান।</p>
+          <a id="nk-fb-grouplink" href="https://www.facebook.com/groups/ribatulummah" target="_blank" rel="noopener" class="nk-btn flex w-full items-center justify-center gap-2 bg-[#1877f2] py-3 text-base text-white hover:bg-[#166fe5]"><svg viewBox="0 0 24 24" class="h-5 w-5" fill="currentColor" aria-hidden="true"><path d="M12 12.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zm-6.5.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5zm13 0a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5zM12 14c-3.3 0-6 1.8-6 4v1.5h12V18c0-2.2-2.7-4-6-4z"/></svg>গ্রুপে গিয়ে জানান</a>
+        </div>
+        <!-- Opinion: the form -->
+        <div id="nk-fb-fields" class="grid gap-3" style="display:none">
         <div>
           <label for="nk-fb-name" class="mb-1 block text-sm font-semibold">আপনার নাম *</label>
           <input id="nk-fb-name" name="name" required maxlength="120" autocomplete="name" class="nk-input" />
@@ -588,6 +594,7 @@ const cm0 = defaultCommunity();
         </label>
         <p id="nk-fb-msgbox" class="hidden rounded-xl px-3.5 py-2.5 text-sm" role="alert"></p>
         <button type="submit" class="nk-btn nk-green py-3.5 text-base">পাঠান</button>
+        </div>
       </form>
     </dialog>
 
@@ -1601,11 +1608,23 @@ const cm0 = defaultCommunity();
         fbMsg.textContent = t;
         fbMsg.className = `rounded-xl px-3.5 py-2.5 text-sm ${ok ? 'bg-emerald-100 text-emerald-900' : 'bg-red-50 text-red-800'}`;
       };
+      // "অভিযোগ ও পরামর্শ" (default) shows the group button; "মতামত" shows the form
+      const fbMode = () => {
+        const opinion = (fbForm.elements.namedItem('kind') as RadioNodeList).value === 'opinion';
+        $('nk-fb-group').style.display = opinion ? 'none' : '';
+        $('nk-fb-fields').style.display = opinion ? '' : 'none';
+        return opinion;
+      };
+      fbForm.querySelectorAll<HTMLInputElement>('input[name="kind"]').forEach((r) => r.addEventListener('change', () => { if (fbMode()) $<HTMLInputElement>('nk-fb-name').focus(); }));
       $('nk-fb-open').addEventListener('click', () => {
         fbMsg.className = 'hidden';
+        const group = parseBonus(lastContent).group_url;
+        if (group) $<HTMLAnchorElement>('nk-fb-grouplink').href = group;
+        fbForm.querySelector<HTMLInputElement>('input[name="kind"][value="group"]')!.checked = true;
+        fbMode();
         fbDialog.showModal();
-        $<HTMLInputElement>('nk-fb-name').focus();
       });
+      $('nk-fb-grouplink').addEventListener('click', () => setTimeout(() => fbDialog.close(), 300));
       $('nk-fb-close').addEventListener('click', () => fbDialog.close());
       fbDialog.addEventListener('click', (e) => { if (e.target === fbDialog) fbDialog.close(); }); // tap outside closes
       fbForm.addEventListener('submit', async (e) => {
@@ -1621,12 +1640,13 @@ const cm0 = defaultCommunity();
         btn.disabled = true;
         try {
           const r = await rpc<{ ok: boolean; reason?: string }>('nusuk_feedback_submit', {
-            p_kind: String(fd.get('kind') ?? 'opinion'), p_name: name, p_message: message,
+            p_kind: 'opinion', p_name: name, p_message: message,
             p_phone: phone || null, p_address: String(fd.get('address') ?? '').trim() || null,
             p_public: fd.get('public') === 'on',
           });
           if (r.ok) {
             fbForm.reset();
+            fbForm.querySelector<HTMLInputElement>('input[name="kind"][value="opinion"]')!.checked = true; // stay on the form
             fbSay('ধন্যবাদ! আপনার বার্তা পৌঁছেছে।', true);
             setTimeout(() => fbDialog.close(), 1800);
           } else fbSay(r.reason === 'busy' ? 'এই মুহূর্তে বার্তা নেওয়া যাচ্ছে না, পরে চেষ্টা করুন।' : 'নাম আর বার্তা দুটোই লিখুন।', false);
