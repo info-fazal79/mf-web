@@ -487,6 +487,7 @@ const cm0 = defaultCommunity();
       <div class="grid gap-4 p-5">
         <p id="nk-pp-text" class="nk-pre text-[15px] leading-relaxed text-emerald-950"></p>
         <a id="nk-pp-go" href="#" target="_blank" rel="noopener" class="nk-btn flex w-full items-center justify-center gap-2 bg-[#1877f2] py-3 text-base text-white hover:bg-[#166fe5]"><svg viewBox="0 0 24 24" class="h-5 w-5" fill="currentColor" aria-hidden="true"><path d="M12 12.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zm-6.5.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5zm13 0a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5zM12 14c-3.3 0-6 1.8-6 4v1.5h12V18c0-2.2-2.7-4-6-4z"/></svg><span id="nk-pp-btn"></span></a>
+        <button type="button" id="nk-pp-member" class="nk-btn w-full border border-emerald-700/30 bg-emerald-50 py-2.5 text-sm text-emerald-900 hover:bg-emerald-100">✓ <span id="nk-pp-member-label">আমি আগেই গ্রুপে যুক্ত আছি</span></button>
         <button type="button" id="nk-pp-later" class="text-sm font-semibold text-emerald-900/60 underline underline-offset-2">এখন না</button>
       </div>
     </dialog>
@@ -1040,8 +1041,21 @@ const cm0 = defaultCommunity();
         $('nk-cm-text').textContent = cm.text;
         $('nk-cm').classList.toggle('hidden', !(cm.on && any));
       }
+      // ---- "Already a member" memory (this browser): offers for a page/group they joined are not shown again ----
+      const joinKey = (url: string) => {
+        // facebook.com/groups/x, m.facebook.com/groups/x/ and www.facebook.com/groups/x?ref=… count as the same place
+        let u = url.trim().toLowerCase();
+        try { const x = new URL(url); u = x.hostname.replace(/^(www|m|web|mbasic)\./, '') + x.pathname.toLowerCase().replace(/\/+$/, ''); } catch {}
+        let h = 0;
+        for (const ch of u) h = (h * 31 + ch.charCodeAt(0)) | 0;
+        return `nusuk:joined:${(h >>> 0).toString(36)}`;
+      };
+      const isJoined = (url?: string) => { if (!url) return false; try { return local?.getItem(joinKey(url)) === '1'; } catch { return false; } };
+      const markJoined = (url?: string) => { if (!url) return; try { local?.setItem(joinKey(url), '1'); } catch {} };
+
       // ---- Popup notice on arrival (Nusuk Manager → Popup notice) ----
       const ppDialog = $<HTMLDialogElement>('nk-pp');
+      let ppLink = '';
       let ppShown = false;
       let ppTimer: ReturnType<typeof setInterval> | undefined;
       let ppKey = '';
@@ -1056,7 +1070,7 @@ const cm0 = defaultCommunity();
         ppKey = `nusuk:popup:${(h >>> 0).toString(36)}`;
         let closed = false;
         try { closed = ppStore(p.again)?.getItem(ppKey) === '1'; } catch {}
-        if (ppShown || closed || !link || !popupRunning(p)) {
+        if (ppShown || closed || !link || isJoined(link) || !popupRunning(p)) {
           if (ppDialog.open && !popupRunning(p)) ppDialog.close();
           return;
         }
@@ -1065,6 +1079,9 @@ const cm0 = defaultCommunity();
         $('nk-pp-text').textContent = p.text;
         $('nk-pp-btn').textContent = p.button;
         $<HTMLAnchorElement>('nk-pp-go').href = link;
+        ppLink = link;
+        const pageUrl = parseBonus(content).page_url;
+        $('nk-pp-member-label').textContent = pageUrl && joinKey(pageUrl) === joinKey(link) ? 'আমি আগেই পেজ ফলো করছি' : 'আমি আগেই গ্রুপে যুক্ত আছি';
         const tick = () => {
           if (!p.until) return;
           const left = Date.parse(p.until) - Date.now();
@@ -1088,6 +1105,7 @@ const cm0 = defaultCommunity();
       };
       $('nk-pp-close').addEventListener('click', ppClose);
       $('nk-pp-later').addEventListener('click', ppClose);
+      $('nk-pp-member').addEventListener('click', () => { markJoined(ppLink); ppClose(); });
       $('nk-pp-go').addEventListener('click', () => setTimeout(ppClose, 300));
       ppDialog.addEventListener('click', (e) => { if (e.target === ppDialog) ppClose(); });
       ppDialog.addEventListener('cancel', ppClose);
@@ -1468,6 +1486,9 @@ const cm0 = defaultCommunity();
         try {
           const r = await rpc<{ ok: boolean; reason?: string }>('nusuk_feature_bonus', { p_id: bnReq.id, p_code: bnReq.code, p_page: page, p_group: group, p_fb_name: fbName });
           if (r.ok) {
+            const bb = parseBonus(lastContent);
+            if (page) markJoined(bb.page_url);
+            if (group) markJoined(bb.group_url);
             bnSay('জাযাকাল্লাহু খাইরান! 🤍 যাচাই করে অনুমোদনের সময় আপনার কোডের সাথে বাড়তি Key যোগ করে দেওয়া হবে।', true);
             setTimeout(() => bnDialog.close(), 3500);
             return;
