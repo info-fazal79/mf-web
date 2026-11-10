@@ -37,7 +37,7 @@ export function Wheel({ items, rotation, spinning }: { items: Entry[]; rotation:
   return (
     <div className="relative mx-auto aspect-square w-full max-w-[26rem]">
       <svg viewBox="0 0 400 400" className="h-full w-full drop-shadow-xl">
-        <g style={{ transform: `rotate(${rotation}deg)`, transformOrigin: '200px 200px', transition: spinning ? 'transform 5.5s cubic-bezier(0.12, 0.65, 0.1, 1)' : 'none' }}>
+        <g style={{ transform: `rotate(${rotation}deg)`, transformOrigin: '200px 200px', transition: spinning ? 'transform 9.0s cubic-bezier(0.08, 0.6, 0.02, 1)' : 'none' }}>
           {items.length === 0 && <circle cx={200} cy={200} r={R} fill="#e7e1cf" />}
           {items.map((e, i) => {
             const [x1, y1] = pt(i * a), [x2, y2] = pt((i + 1) * a);
@@ -75,6 +75,9 @@ export default function RafflePage({ toast }: { toast: ToastFn }) {
   const [result, setResult] = useState<Winner | null>(null);
   const [award, setAward] = useState<Record<number, { keys: number; hours: number }>>({});
   const rotRef = useRef(0);
+  // Draw order: 1 → N (first place first) or N → 1 (last place first, first place last)
+  const [order, setOrder] = useState<'asc' | 'desc'>(() => { try { return localStorage.getItem('nusuk:raffle:order') === 'desc' ? 'desc' : 'asc'; } catch { return 'asc'; } });
+  const setOrderTo = (o: 'asc' | 'desc') => { setOrder(o); try { localStorage.setItem('nusuk:raffle:order', o); } catch {} };
 
   const loadGives = useCallback(async () => {
     const { data, error } = await sb!.from('nusuk_giveaways').select('id,title,prize,prizes,ends_at,is_on,created_at').order('id', { ascending: false }).limit(50);
@@ -121,22 +124,34 @@ export default function RafflePage({ toast }: { toast: ToastFn }) {
     loadGives();
   }
 
+  // The next free place in the chosen order (also fills a gap left by "Remove")
+  const taken = new Set(winners.map((w) => w.place));
+  const free = Array.from({ length: count }, (_, i) => i + 1).filter((n) => !taken.has(n));
+  const nextPlace = free.length ? (order === 'asc' ? free[0] : free[free.length - 1]) : null;
+
   async function spin() {
     if (!g || spinning) return;
-    if (winners.length >= count) return toast(`All ${count} winner(s) are drawn. Increase "Winners" to draw more.`, false);
+    if (!nextPlace) return toast(`All ${count} winner(s) are drawn. Increase "Winners" to draw more.`, false);
     if (!wheel.length) return toast('No entries left on the wheel', false);
     setResult(null);
     const { data, error } = await sb!.rpc('nusuk_raffle_spin', { p_giveaway: g.id });
     if (error) return toast(errText(error), false);
     const r = data as { ok: boolean; winner?: Winner };
     if (!r.ok || !r.winner) return toast('No entries left on the wheel', false);
+    // The server numbers winners 1, 2, 3…; put this one on the place we are drawing now
+    if (r.winner.place !== nextPlace) {
+      const pz = prizes[nextPlace - 1];
+      const fix = { place: nextPlace, prize: pz?.prize ?? r.winner.prize, keys: pz?.keys ?? null };
+      await sb!.from('nusuk_raffle_winners').update(fix).eq('id', r.winner.id);
+      r.winner = { ...r.winner, ...fix };
+    }
     const i = Math.max(0, wheel.findIndex((e) => e.id === r.winner!.entry_id));
     const a = 360 / wheel.length;
-    // Land the winner's slice under the pointer (top), after 6 full turns, a little off-centre
+    // Land the winner's slice under the pointer (top), after 8 full turns, a little off-centre
     const jitter = (Math.random() - 0.5) * a * 0.6;
     const target = -(i * a + a / 2 + jitter);
     const base = rotRef.current - (rotRef.current % 360);
-    const next = base + 360 * 6 + ((target % 360) + 360) % 360;
+    const next = base + 360 * 8 + ((target % 360) + 360) % 360;
     rotRef.current = next;
     setSpinning(true);
     setRotation(next);
@@ -144,16 +159,14 @@ export default function RafflePage({ toast }: { toast: ToastFn }) {
       setSpinning(false);
       setResult(r.winner!);
       loadData();
-    }, 5700);
+    }, 9250);
   }
   async function removeWinner(w: Winner) {
-    if (!confirm(`Remove ${w.code} from the winners? They go back on the wheel.`)) return;
+    if (!confirm(`Remove ${w.code} (#${w.place}) from the winners? They go back on the wheel, and #${w.place} is drawn again.`)) return;
     const { error } = await sb!.from('nusuk_raffle_winners').delete().eq('id', w.id);
     if (error) return toast(errText(error), false);
-    // Renumber the rest
-    const rest = winners.filter((x) => x.id !== w.id);
-    for (let k = 0; k < rest.length; k++) if (rest[k].place !== k + 1) await sb!.from('nusuk_raffle_winners').update({ place: k + 1 }).eq('id', rest[k].id);
-    loadData();
+    loadData(); // the freed place is drawn again next
+
   }
   async function giveKeys(w: Winner) {
     if (/^NG-TEST\d{4}$/.test(w.code)) return toast('🧪 This is a test code: no Keys are given (so it never enters the real code list).', false);
@@ -202,8 +215,14 @@ export default function RafflePage({ toast }: { toast: ToastFn }) {
           <Card title={`🎡 Wheel (${wheel.length} on the wheel · ${winners.length}/${count} drawn)`}>
             <Wheel items={wheel} rotation={rotation} spinning={spinning} />
             <div className="mt-4 flex flex-col items-center gap-2">
-              <button type="button" onClick={spin} disabled={spinning || !wheel.length || winners.length >= count}
-                className="nk-btn nk-gold px-8 py-3 text-lg disabled:opacity-50">{spinning ? 'ঘুরছে…' : winners.length >= count ? 'All winners drawn' : `🎲 Spin for winner #${winners.length + 1}`}</button>
+              <button type="button" onClick={spin} disabled={spinning || !wheel.length || !nextPlace}
+                className="nk-btn nk-gold px-8 py-3 text-lg disabled:opacity-50">{spinning ? 'ঘুরছে…' : !nextPlace ? 'All winners drawn' : `🎲 Spin for winner #${nextPlace}`}</button>
+              <div className="flex items-center gap-1 rounded-full bg-emerald-50 p-1 text-xs font-semibold" role="group" aria-label="Draw order">
+                <span className="px-2 text-emerald-900/70">Order:</span>
+                <button type="button" disabled={spinning} onClick={() => setOrderTo('asc')} className={`rounded-full px-3 py-1 ${order === 'asc' ? 'bg-emerald-900 text-gold-100' : 'text-emerald-900'}`}>1 → {count}</button>
+                <button type="button" disabled={spinning} onClick={() => setOrderTo('desc')} className={`rounded-full px-3 py-1 ${order === 'desc' ? 'bg-emerald-900 text-gold-100' : 'text-emerald-900'}`}>{count} → 1</button>
+              </div>
+              <p className="text-center text-xs text-emerald-900/60">{order === 'desc' ? `Last place first: #${count} is drawn first and #1 (the top prize) last, for suspense.` : `#1 (the top prize) is drawn first, then #2, #3…`}</p>
               {result && !spinning && (
                 <div className="w-full max-w-md rounded-2xl bg-emerald-900 px-5 py-4 text-center text-white shadow-lg">
                   <div className="text-sm text-gold-100">🎉 Winner #{result.place}</div>
@@ -217,7 +236,7 @@ export default function RafflePage({ toast }: { toast: ToastFn }) {
 
           <Card title={`🏆 Drawn winners (${winners.length})`} actions={<Btn kind="ghost" onClick={loadData}>Refresh</Btn>}>
             <div className="grid gap-2">
-              {winners.map((w) => {
+              {[...winners].sort((x, y) => x.place - y.place).map((w) => {
                 const a = award[w.id] ?? { keys: w.keys ?? 50, hours: 0 };
                 return (
                   <article key={w.id} className="grid gap-2 rounded-xl border border-gold-500/50 bg-gold-100/30 p-3">
