@@ -285,6 +285,17 @@ export default function PopupPage({ toast, settings, reload }: { toast: ToastFn;
             <input className="nk-input font-normal" value={p.link} onChange={(e) => set({ link: e.target.value })} placeholder="https://www.facebook.com/groups/…" />
           </Field>
         </div>
+        <div className="grid gap-2 rounded-xl border border-[#e7e1cf] bg-cream p-3">
+          <label className="flex items-center gap-2 text-sm font-semibold">
+            <input type="checkbox" className="h-4 w-4 accent-emerald-700" checked={p.member_on} onChange={(e) => set({ member_on: e.target.checked })} />
+            Show the "✓ already a member" button
+          </label>
+          {p.member_on && (
+            <Field label="Its text" hint="Leave empty for automatic: 'আমি আগেই গ্রুপে যুক্ত আছি' (or 'আমি আগেই পেজ ফলো করছি' when the link is your page in Community & bonus). Tapping it hides popups with this link for that visitor.">
+              <input className="nk-input font-normal" maxLength={60} value={p.member} onChange={(e) => set({ member: e.target.value })} placeholder="যেমন: আমি আগেই পেজ ফলো করছি" />
+            </Field>
+          )}
+        </div>
         <Field label="After someone closes it">
           <select className="nk-input font-normal" value={p.again} onChange={(e) => set({ again: e.target.value as Popup['again'] })}>
             <option value="visit">Show again on their next visit</option>
@@ -311,6 +322,7 @@ export default function PopupPage({ toast, settings, reload }: { toast: ToastFn;
           <div className="grid gap-4 bg-white p-5">
             <p className="nk-pre text-[15px] leading-relaxed text-emerald-950">{p.text}</p>
             <span className="nk-btn flex w-full items-center justify-center bg-[#1877f2] py-3 text-base text-white">{p.button}</span>
+            {p.member_on && <span className="nk-btn flex w-full items-center justify-center border border-emerald-700/30 bg-emerald-50 py-2.5 text-sm text-emerald-900">✓ {p.member || 'আমি আগেই গ্রুপে যুক্ত আছি'}</span>}
             <span className="text-center text-sm font-semibold text-emerald-900/60 underline">এখন না</span>
           </div>
         </div>

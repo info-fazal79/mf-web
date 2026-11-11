@@ -14,6 +14,9 @@ export type Popup = {
   link: string;
   /** Deadline (ISO). After it passes the popup stops showing. Empty = no time limit. */
   until?: string;
+  /** "✓ I'm already a member" button: own text ('' = automatic) and whether to show it */
+  member: string;
+  member_on: boolean;
   /** After someone closes it: show again on their next visit, or never again for this offer. */
   again: 'visit' | 'once';
 };
@@ -25,6 +28,8 @@ export const defaultPopup = (): Popup => ({
   text: 'আমাদের কমিউনিটি গ্রুপে যুক্ত হয়ে আপনার নুসুক রেফারেল কোডটি শেয়ার করুন। গ্রুপে কোড শেয়ার করলেই ইনস্ট্যান্ট ১০টি Key পেয়ে যাবেন, ইনশাআল্লাহ!',
   button: 'গ্রুপে গিয়ে কোড শেয়ার করুন',
   link: '',
+  member: '',
+  member_on: true,
   again: 'visit',
 });
 
@@ -45,6 +50,8 @@ export function parsePopup(c: unknown): Popup {
     button: str(p.button, 60) || base.button,
     link: /^https:\/\//i.test(link) ? link : '',
     until,
+    member: str(p.member, 60),
+    member_on: p.member_on !== false,
     again: p.again === 'once' ? 'once' : 'visit',
   };
 }

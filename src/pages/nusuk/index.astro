@@ -1136,7 +1136,8 @@ const cm0 = defaultCommunity();
         $<HTMLAnchorElement>('nk-pp-go').href = link;
         ppLink = link;
         const pageUrl = parseBonus(content).page_url;
-        $('nk-pp-member-label').textContent = pageUrl && joinKey(pageUrl) === joinKey(link) ? 'আমি আগেই পেজ ফলো করছি' : 'আমি আগেই গ্রুপে যুক্ত আছি';
+        $('nk-pp-member-label').textContent = p.member || (pageUrl && joinKey(pageUrl) === joinKey(link) ? 'আমি আগেই পেজ ফলো করছি' : 'আমি আগেই গ্রুপে যুক্ত আছি');
+        $('nk-pp-member').classList.toggle('hidden', !p.member_on);
         const tick = () => {
           if (!p.until) return;
           const left = Date.parse(p.until) - Date.now();
