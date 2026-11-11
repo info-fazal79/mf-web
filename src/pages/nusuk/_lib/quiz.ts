@@ -81,7 +81,7 @@ export function initQuiz() {
 
   // ---------- Section on the page ----------
   async function loadPublic() {
-    try { pub = await rpc<Pub>('nusuk_quiz_public', { p_limit: 5 }); } catch { pub = null; }
+    try { pub = await rpc<Pub>('nusuk_quiz_public', { p_limit: 3 }); } catch { pub = null; }
     if (!pub?.enabled) { sec!.classList.add('hidden'); return; }
     if (pub.now) skew = Date.parse(pub.now) - Date.now();
     sec!.classList.remove('hidden');
