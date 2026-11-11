@@ -212,8 +212,14 @@ export default function ShareCardDialog({ f, content, toast, onClose, onSaved }:
     try { await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]); toast('Picture copied: paste it (Ctrl+V) in the Facebook post box'); }
     catch { download(); toast('Could not copy the picture, so it was downloaded instead'); }
   }
+  const [copied, setCopied] = useState(false);
   async function copyText() {
-    try { await navigator.clipboard.writeText(text); toast('Caption copied'); } catch { toast('Could not copy the caption', false); }
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+      toast('Caption copied: paste it (Ctrl+V) in the Facebook post box');
+    } catch { toast('Could not copy the caption', false); }
   }
   /** One click: copy the caption, download the picture, open the page/group. */
   async function postTo(t: Target) {
@@ -242,6 +248,7 @@ export default function ShareCardDialog({ f, content, toast, onClose, onSaved }:
           <div className="mb-2 flex items-center justify-between"><b>📣 Share card</b><button type="button" className="text-xl text-emerald-900/60 lg:hidden" onClick={() => dlg.current?.close()}>×</button></div>
           {url ? <img src={url} alt="Share card" className="w-full rounded-xl shadow-lg" /> : <div className="grid aspect-[4/5] place-items-center rounded-xl bg-emerald-50 text-sm text-emerald-900/60">Making the picture…</div>}
           <div className="mt-2 flex flex-wrap gap-2">
+            <button type="button" className="nk-btn nk-gold px-3 py-1.5 text-sm" onClick={copyText}>{copied ? '✓ Copied' : '📋 Copy caption'}</button>
             <button type="button" className="nk-btn nk-ghost px-3 py-1.5 text-sm" onClick={copyImage} disabled={!blob}>🖼️ Copy picture</button>
             <button type="button" className="nk-btn nk-ghost px-3 py-1.5 text-sm" onClick={download} disabled={!blob}>⬇️ Download</button>
           </div>
@@ -270,11 +277,14 @@ export default function ShareCardDialog({ f, content, toast, onClose, onSaved }:
             Each button copies the caption, downloads the picture and opens the page or group. There: <b>Create post</b> → <b>Ctrl+V</b> (caption) → <b>Photo/video</b> and pick <b>{fileName}</b> from Downloads → Post.
             Facebook doesn't let websites post to groups for you, so this is the fastest safe way.
           </p>
-          <label className="grid gap-1 text-sm font-semibold">Caption (you can edit it)
-            <textarea rows={11} className="nk-input font-normal" value={text} onChange={(e) => setText(e.target.value)} />
-          </label>
+          <div className="grid gap-1">
+            <div className="flex items-center justify-between gap-2">
+              <label htmlFor="nk-share-caption" className="text-sm font-semibold">Caption (you can edit it)</label>
+              <button type="button" className="nk-btn nk-gold px-3 py-1.5 text-sm" onClick={copyText}>{copied ? '✓ Copied' : '📋 Copy caption'}</button>
+            </div>
+            <textarea id="nk-share-caption" rows={11} className="nk-input font-normal" value={text} onChange={(e) => setText(e.target.value)} />
+          </div>
           <div className="flex flex-wrap gap-2">
-            <button type="button" className="nk-btn nk-gold px-3 py-1.5 text-sm" onClick={copyText}>📋 Copy caption</button>
             <button type="button" className="nk-btn nk-ghost px-3 py-1.5 text-sm" onClick={() => setText(caption(f, cfg, content))}>Reset caption</button>
             <button type="button" className="nk-btn nk-ghost px-3 py-1.5 text-sm" onClick={() => setEditTargets(!editTargets)}>⚙️ Pages, hashtags</button>
           </div>
