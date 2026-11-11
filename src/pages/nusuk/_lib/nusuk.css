@@ -186,3 +186,12 @@ button.nk-qz-opt:disabled { cursor: default; }
 .nk-qz-dot-ok { background: #0e9468; color: #fff; }
 .nk-qz-dot-no { background: #e05252; color: #fff; }
 .nk-qz-dot-miss { background: #d9d6cc; color: #fff; }
+/* Slim green scrollbars in dialogs (quiz, lists) */
+.nk-scroll, dialog[id^="nk-"] { scrollbar-width: thin; scrollbar-color: #0b7a5a transparent; }
+.nk-scroll::-webkit-scrollbar, dialog[id^="nk-"]::-webkit-scrollbar { width: 6px; height: 6px; }
+.nk-scroll::-webkit-scrollbar-track, dialog[id^="nk-"]::-webkit-scrollbar-track { background: transparent; margin: 14px 0; }
+.nk-scroll::-webkit-scrollbar-thumb, dialog[id^="nk-"]::-webkit-scrollbar-thumb { background: #0b7a5a; border-radius: 9999px; }
+.nk-scroll::-webkit-scrollbar-thumb:hover, dialog[id^="nk-"]::-webkit-scrollbar-thumb:hover { background: #075e45; }
+/* Leaderboard rows never push the dialog wider than the screen */
+#nk-qz ol, #nk-quiz-top { grid-template-columns: minmax(0, 1fr); }
+.nk-qz-row { min-width: 0; }
