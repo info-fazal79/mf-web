@@ -1143,7 +1143,8 @@ const cm0 = defaultCommunity();
           if (left <= 0) { clearInterval(ppTimer); ppDialog.close(); return; }
           $('nk-pp-left').textContent = countdownText(left);
         };
-        $('nk-pp-timer').classList.toggle('hidden', !p.until);
+        // A simple notice never shows a countdown (its end time only stops it showing)
+        $('nk-pp-timer').classList.toggle('hidden', !p.until || p.kind === 'notice');
         tick();
         if (p.until) ppTimer = setInterval(tick, 1000);
         const again = p.again, key = ppKey;

@@ -230,7 +230,19 @@ export default function PopupPage({ toast, settings, reload }: { toast: ToastFn;
           </div>
           <Btn onClick={() => save()} disabled={busy || !dirty}>{busy ? 'Saving…' : dirty ? 'Save' : 'Saved'}</Btn>
         </div>
-        <div className={`mt-4 flex flex-wrap items-center gap-3 rounded-xl border p-3.5 ${running ? 'border-emerald-600/40 bg-emerald-50' : 'border-[#e7e1cf] bg-cream'}`}>
+        <div className="mt-4 grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label="Popup type">
+          {([
+            ['offer', '🎁 Offer', 'Shows "অফার শেষ হতে বাকি" with a live countdown when you set a deadline.'],
+            ['notice', '📢 Simple notice', 'Just a message and a button. No timer and no "offer" words are shown.'],
+          ] as const).map(([k, t, h]) => (
+            <button key={k} type="button" role="radio" aria-checked={p.kind === k} onClick={() => set({ kind: k })}
+              className={`rounded-xl border p-3 text-left transition ${p.kind === k ? 'border-emerald-600 bg-emerald-50 ring-2 ring-emerald-600/20' : 'border-[#e7e1cf] bg-white hover:border-emerald-600/40'}`}>
+              <div className="font-bold">{t}{p.kind === k ? ' ✓' : ''}</div>
+              <div className="mt-0.5 text-xs text-emerald-900/65">{h}</div>
+            </button>
+          ))}
+        </div>
+        <div className={`mt-3 flex flex-wrap items-center gap-3 rounded-xl border p-3.5 ${running ? 'border-emerald-600/40 bg-emerald-50' : 'border-[#e7e1cf] bg-cream'}`}>
           <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${running ? 'bg-emerald-600 text-white' : 'bg-gray-200 text-gray-700'}`}>{status}</span>
           <span className="ml-auto flex gap-2">
             {p.on ? <Btn kind="ghost" onClick={() => { const n = { ...p, on: false }; setP(n); save(n); }}>Turn off</Btn>
@@ -240,7 +252,8 @@ export default function PopupPage({ toast, settings, reload }: { toast: ToastFn;
       </section>
 
       <section className="nk-card grid gap-3 p-4 sm:p-5">
-        <h2 className="text-base font-bold text-emerald-950">⏳ Deadline</h2>
+        <h2 className="text-base font-bold text-emerald-950">{p.kind === 'notice' ? '🕒 Show until (optional)' : '⏳ Deadline'}</h2>
+        {p.kind === 'notice' && <p className="-mt-1 text-xs text-emerald-900/65">For a simple notice the time is never shown to visitors. It only stops the popup by itself at that time. Leave empty to keep it on until you turn it off.</p>}
         <div className="flex flex-wrap items-end gap-2">
           <Field label="Start now for">
             <div className="flex items-center gap-2">
@@ -253,7 +266,7 @@ export default function PopupPage({ toast, settings, reload }: { toast: ToastFn;
             {[10, 20, 30, 60].map((m) => <Btn key={m} kind="ghost" className="px-2.5! py-1! text-xs!" onClick={() => startFor(m)} disabled={busy}>{m} min</Btn>)}
           </span>
         </div>
-        <p className="text-xs text-emerald-900/60">"Start now" turns the popup on and saves at once. The countdown starts from that moment.</p>
+        <p className="text-xs text-emerald-900/60">"Start now" turns the popup on and saves at once{p.kind === 'notice' ? '; it switches off by itself after that many minutes' : '. The countdown starts from that moment'}.</p>
         <div className="grid gap-3 sm:grid-cols-2">
           <Field label="…or ends at" hint="Your computer's time. Visitors anywhere see the right time left.">
             <input type="datetime-local" className="nk-input font-normal" value={toLocal(p.until)} onChange={(e) => set({ until: fromLocal(e.target.value) })} />
@@ -275,7 +288,7 @@ export default function PopupPage({ toast, settings, reload }: { toast: ToastFn;
         <Field label="After someone closes it">
           <select className="nk-input font-normal" value={p.again} onChange={(e) => set({ again: e.target.value as Popup['again'] })}>
             <option value="visit">Show again on their next visit</option>
-            <option value="once">Don't show this offer to them again</option>
+            <option value="once">Don't show this popup to them again</option>
           </select>
         </Field>
         <button type="button" className="self-start text-xs font-semibold text-emerald-800 underline" onClick={() => { const d = defaultPopup(); set({ title: d.title, text: d.text, button: d.button }); }}>Reset text to the default</button>
@@ -288,7 +301,7 @@ export default function PopupPage({ toast, settings, reload }: { toast: ToastFn;
         <div className="mx-auto max-w-sm overflow-hidden rounded-[1.25rem] border border-[#e7e1cf] shadow-lg">
           <div className="nk-pp-head px-5 pt-6 pb-5 text-center text-white">
             <div className="text-xl font-bold leading-snug">{p.title}</div>
-            {p.until && left > 0 && (
+            {p.kind !== 'notice' && p.until && left > 0 && (
               <div className="mt-3">
                 <div className="text-xs font-semibold text-gold-100/90">⏳ অফার শেষ হতে বাকি</div>
                 <div className="nk-pp-clock mt-1 inline-block rounded-xl bg-white/15 px-4 py-1.5 font-mono text-2xl font-bold tabular-nums">{countdownText(left)}</div>

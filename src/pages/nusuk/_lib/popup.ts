@@ -5,6 +5,8 @@
  */
 export type Popup = {
   on: boolean;
+  /** offer = shows a live "time left" countdown when there is a deadline; notice = a plain message, never a countdown */
+  kind: 'offer' | 'notice';
   title: string;
   text: string;
   button: string;
@@ -18,6 +20,7 @@ export type Popup = {
 
 export const defaultPopup = (): Popup => ({
   on: false,
+  kind: 'offer',
   title: '🎁 ইনস্ট্যান্ট ১০টি Key পাওয়ার সুযোগ!',
   text: 'আমাদের কমিউনিটি গ্রুপে যুক্ত হয়ে আপনার নুসুক রেফারেল কোডটি শেয়ার করুন। গ্রুপে কোড শেয়ার করলেই ইনস্ট্যান্ট ১০টি Key পেয়ে যাবেন, ইনশাআল্লাহ!',
   button: 'গ্রুপে গিয়ে কোড শেয়ার করুন',
@@ -36,6 +39,7 @@ export function parsePopup(c: unknown): Popup {
   const until = typeof p.until === 'string' && !Number.isNaN(Date.parse(p.until)) ? p.until : undefined;
   return {
     on: p.on === true,
+    kind: p.kind === 'notice' ? 'notice' : 'offer',
     title: str(p.title, 120) || base.title,
     text: str(p.text, 800) || base.text,
     button: str(p.button, 60) || base.button,
