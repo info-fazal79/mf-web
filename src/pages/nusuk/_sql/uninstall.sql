@@ -69,6 +69,7 @@ drop table if exists public.nusuk_active_log;
 drop table if exists public.nusuk_hourly;
 drop table if exists public.nusuk_daily;
 -- update 27 · live charts
+drop function if exists public.nusuk_insights_range(int);
 drop function if exists public.nusuk_insights();
 drop trigger if exists nusuk_hourly_to_10m on public.nusuk_hourly;
 drop function if exists public.nusuk_hourly_to_10m();

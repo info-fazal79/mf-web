@@ -38,13 +38,49 @@ export function initInsights() {
   let timer: ReturnType<typeof setInterval> | undefined;
   let last = 0;
   const preview = new URLSearchParams(location.search).has('insights');
+  // Time range: 1 and 2 hours come from nusuk_insights(); longer ranges from nusuk_insights_range() (update 28)
+  const RANGES = [1, 2, 6, 12, 24] as const;
+  let hours: number = 2;
+  let long: { hours: number; active: Series; copies: Series } | null = null;
+
+  async function loadLong() {
+    if (hours <= 2) { long = null; return; }
+    try { long = await rpc<{ hours: number; active: Series; copies: Series }>('nusuk_insights_range', { p_hours: hours }); } catch { long = null; }
+  }
 
   async function load() {
     if (document.visibilityState !== 'visible') return;
     last = Date.now();
     try { data = await rpc<Data>('nusuk_insights'); } catch { data = null; }
+    await loadLong();
     render();
   }
+
+  // Range buttons under the tabs
+  const rangesEl = document.getElementById('nk-ins-ranges');
+  function renderRanges() {
+    if (!rangesEl) return;
+    rangesEl.innerHTML = RANGES.map((h) => `<button type="button" data-h="${h}" aria-pressed="${h === hours}" class="rounded-full px-2.5 py-0.5 text-xs font-bold transition ${h === hours ? 'bg-gold-400 text-emerald-950' : 'bg-white text-emerald-900/70 ring-1 ring-[#e7e1cf] hover:text-emerald-900'}">${bn(h)} ঘণ্টা</button>`).join('');
+  }
+  rangesEl?.addEventListener('click', async (e) => {
+    const b = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-h]');
+    if (!b) return;
+    const h = Number(b.dataset.h);
+    if (h === hours) return;
+    hours = h;
+    renderRanges();
+    if (hours > 2 && long?.hours !== hours) { await loadLong(); if (hours > 2 && !long) { hours = 2; renderRanges(); } }
+    render();
+  });
+  renderRanges();
+
+  /** Series for the chosen range and tab */
+  function series(kind: 'active' | 'copies'): Series | null {
+    if (!data) return null;
+    if (hours > 2 && long) return kind === 'active' ? long.active : long.copies;
+    return lastHours(kind === 'active' ? data.active : data.copies, Math.min(hours, 2));
+  }
+  const rangeText = () => `গত ${bn(hours)} ঘণ্টা`;
 
   function render() {
     const show = (on || preview) && !!data;
@@ -60,15 +96,16 @@ export function initInsights() {
       $('nk-ins-a-l').textContent = 'এখন অ্যাক্টিভ';
       $('nk-ins-b').textContent = bn(data.peak_today);
       $('nk-ins-b-l').textContent = 'আজ সর্বোচ্চ';
-      $('nk-ins-cap').textContent = 'গত ২ ঘণ্টা · প্রতি মিনিটে একসাথে কতজন ছিলেন';
-      draw(data.active, 'line', C_ACTIVE, 'জন');
+      const s = series('active')!;
+      $('nk-ins-cap').textContent = `${rangeText()} · ${s.step >= 600 ? 'প্রতি ১০ মিনিটে সর্বোচ্চ কতজন একসাথে ছিলেন' : 'প্রতি মিনিটে একসাথে কতজন ছিলেন'}`;
+      draw(s, 'line', C_ACTIVE, 'জন');
     } else {
       $('nk-ins-a').textContent = bn(data.copies_today);
       $('nk-ins-a-l').textContent = 'আজ কপি হয়েছে';
       $('nk-ins-b').textContent = bn(data.copies_hour);
       $('nk-ins-b-l').textContent = 'গত ১ ঘণ্টায়';
-      $('nk-ins-cap').textContent = 'গত ২ ঘণ্টা · প্রতি ১০ মিনিটে কতগুলো কোড কপি হয়েছে';
-      draw(lastHours(data.copies, 2), 'bars', C_COPIES, 'টি কপি');
+      $('nk-ins-cap').textContent = `${rangeText()} · প্রতি ১০ মিনিটে কতগুলো কোড কপি হয়েছে`;
+      draw(series('copies')!, 'bars', C_COPIES, 'টি কপি');
     }
   }
 
