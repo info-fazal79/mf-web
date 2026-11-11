@@ -13,6 +13,14 @@ const hm = (t: number) => new Date(t).toLocaleTimeString('bn-BD', { timeZone: 'A
 const C_ACTIVE = '#0a7a59';
 const C_COPIES = '#a8841f';
 
+/** Keep only the most recent hours of a series (the copies tab shows 2 hours = 12 wide bars). */
+function lastHours(s: Series, hours: number): Series {
+  const keep = Math.max(1, Math.round((hours * 3600) / s.step));
+  const v = s.values ?? [];
+  const cut = Math.max(0, v.length - keep);
+  return { start: new Date(Date.parse(s.start) + cut * s.step * 1000).toISOString(), step: s.step, values: v.slice(cut) };
+}
+
 export function insightsOn(content: unknown) {
   const v = content && typeof content === 'object' ? (content as Record<string, unknown>).insights : null;
   return !!v && typeof v === 'object' && (v as { on?: unknown }).on === true;
@@ -59,8 +67,8 @@ export function initInsights() {
       $('nk-ins-a-l').textContent = 'আজ কপি হয়েছে';
       $('nk-ins-b').textContent = bn(data.copies_hour);
       $('nk-ins-b-l').textContent = 'গত ১ ঘণ্টায়';
-      $('nk-ins-cap').textContent = 'গত ২৪ ঘণ্টা · প্রতি ১০ মিনিটে কতগুলো কোড কপি হয়েছে';
-      draw(data.copies, 'bars', C_COPIES, 'টি কপি');
+      $('nk-ins-cap').textContent = 'গত ২ ঘণ্টা · প্রতি ১০ মিনিটে কতগুলো কোড কপি হয়েছে';
+      draw(lastHours(data.copies, 2), 'bars', C_COPIES, 'টি কপি');
     }
   }
 
@@ -82,9 +90,9 @@ export function initInsights() {
     const grid = [0, 0.5, 1].map((f) => `<line x1="0" x2="${W}" y1="${H - f * (H - 10)}" y2="${H - f * (H - 10)}" stroke="#053d2d" stroke-opacity="0.08" vector-effect="non-scaling-stroke"/>`).join('');
     chart!.innerHTML = `
       <div class="flex gap-2">
-        <div class="flex h-40 shrink-0 flex-col justify-between text-right text-[10px] text-emerald-900/55 tabular-nums"><span>${bn(max)}</span><span>${bn(Math.round(max / 2))}</span><span>০</span></div>
+        <div class="flex h-24 shrink-0 flex-col justify-between text-right text-[10px] text-emerald-900/55 tabular-nums"><span>${bn(max)}</span><span>${bn(Math.round(max / 2))}</span><span>০</span></div>
         <div class="relative min-w-0 flex-1">
-          <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" class="block h-40 w-full touch-none" role="img" aria-label="${esc($('nk-ins-cap').textContent ?? '')}">${grid}${marks}<line id="nk-ins-x" x1="0" x2="0" y1="0" y2="${H}" stroke="#053d2d" stroke-opacity="0" stroke-dasharray="3 3" vector-effect="non-scaling-stroke"/></svg>
+          <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" class="block h-24 w-full touch-none" role="img" aria-label="${esc($('nk-ins-cap').textContent ?? '')}">${grid}${marks}<line id="nk-ins-x" x1="0" x2="0" y1="0" y2="${H}" stroke="#053d2d" stroke-opacity="0" stroke-dasharray="3 3" vector-effect="non-scaling-stroke"/></svg>
           <div class="mt-1 flex justify-between text-[10px] text-emerald-900/55"><span>${hm(t0)}</span><span>এখন</span></div>
         </div>
       </div>`;
