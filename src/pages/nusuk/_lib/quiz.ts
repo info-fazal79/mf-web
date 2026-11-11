@@ -11,12 +11,12 @@ import { adminToken } from './campaign';
 let adminTok: string | null = null;
 const rpc = <T,>(fn: string, args: Record<string, unknown> = {}) => rpcAnon<T>(fn, args, adminTok);
 
-type Row = { rank: number; prev: number | null; id: number; name: string; points: number; correct: number };
+type Row = { rank: number; prev: number | null; id: number; name: string; points: number; correct: number; code?: string };
 type Pub = {
   enabled: boolean; title?: string; per_day?: number; points?: number; now?: string; opens?: string[]; closes?: string; players?: number; board?: Row[];
   published?: boolean; running?: boolean; starts_on?: string | null; ends_on?: string | null;
 };
-type Slot = { slot: number; opens: string; status: 'locked' | 'open' | 'answered' | 'missed'; question?: string; options?: string[]; choice?: number; correct?: number; right?: boolean; points?: number; explanation?: string };
+type Slot = { slot: number; opens: string; ends?: string; status: 'locked' | 'open' | 'answered' | 'missed'; question?: string; options?: string[]; choice?: number; correct?: number; right?: boolean; points?: number; explanation?: string };
 type State = {
   ok: boolean; reason?: string; now: string; id: number; name: string; code: string; points_each: number; closes: string; tomorrow: string | null;
   running?: boolean; starts_on?: string | null; ends_on?: string | null; published?: boolean;
@@ -58,9 +58,10 @@ function move(rank: number, prev: number | null) {
 const medal = (r: number) => (r === 1 ? '🥇' : r === 2 ? '🥈' : r === 3 ? '🥉' : bn(r));
 function boardRows(rows: Row[], meId?: number) {
   return rows
-    .map((r) => `<li class="nk-qz-row ${r.id === meId ? 'nk-qz-me' : ''}">
+    .map((r) => `<li class="nk-qz-row ${r.id === meId ? 'nk-qz-me' : ''}" title="${bn(r.correct)}টি সঠিক উত্তর">
       <span class="nk-qz-rank">${medal(r.rank)}</span>
-      <span class="min-w-0 flex-1"><b class="block truncate">${esc(r.name)}</b><span class="text-xs text-emerald-900/60">আইডি ${r.id} · ${bn(r.correct)}টি সঠিক</span></span>
+      <b class="min-w-0 flex-1 truncate">${esc(r.name)}${r.id === meId ? ' <span class="text-xs font-semibold text-gold-600">(আপনি)</span>' : ''}</b>
+      ${r.code ? `<span class="shrink-0 font-mono text-[10px] text-emerald-900/55 sm:text-[11px]">${esc(r.code)}</span>` : ''}
       ${move(r.rank, r.prev)}
       <b class="nk-qz-pts">${bnNum(r.points)}</b>
     </li>`)
@@ -101,7 +102,24 @@ export function initQuiz() {
 
   // ---------- Dialog views ----------
   function open() { if (!dlg!.open) dlg!.showModal(); }
-  function show(html: string) { clearInterval(tick); body!.innerHTML = html; }
+  function show(html: string) {
+    clearInterval(tick);
+    body!.innerHTML = html;
+    // "পাসওয়ার্ড দেখান" under every form that has password fields
+    body!.querySelectorAll('form').forEach((f) => {
+      const pws = f.querySelectorAll<HTMLInputElement>('input[type="password"]');
+      if (!pws.length) return;
+      const last = pws[pws.length - 1].closest('label') ?? pws[pws.length - 1];
+      const t = document.createElement('label');
+      t.className = 'flex cursor-pointer items-center gap-2 text-sm text-emerald-900/80';
+      t.innerHTML = '<input type="checkbox" class="h-4 w-4 accent-emerald-700"> 👁️ পাসওয়ার্ড দেখান';
+      t.querySelector('input')!.addEventListener('change', (e) => {
+        const on = (e.target as HTMLInputElement).checked;
+        pws.forEach((p) => (p.type = on ? 'text' : 'password'));
+      });
+      last.after(t);
+    });
+  }
   const head = (title: string, sub = '') => `<div class="pr-9"><h2 class="text-lg font-bold text-emerald-950">${title}</h2>${sub ? `<p class="mt-0.5 text-sm text-emerald-900/70">${sub}</p>` : ''}</div>`;
   const msg = (t: string, ok = false) => `<p class="rounded-xl px-3.5 py-2.5 text-sm ${ok ? 'bg-emerald-100 text-emerald-900' : 'bg-red-50 text-red-800'}">${t}</p>`;
 
@@ -112,7 +130,8 @@ export function initQuiz() {
         <button type="button" data-go="login" class="nk-btn nk-ghost py-3 text-base">🔑 আমার আইডি আছে</button>
       </div>
       <ul class="grid gap-1.5 rounded-xl bg-cream p-3.5 text-sm text-emerald-950/85">
-        <li>• প্রতিদিন ${bn(pub?.per_day ?? 5)}টি প্রশ্ন, সকাল থেকে রাত পর্যন্ত একটি একটি করে খোলে।</li>
+        <li>• প্রতিদিন ${bn(pub?.per_day ?? 5)}টি প্রশ্ন, নির্দিষ্ট সময়ে একটি একটি করে খোলে।</li>
+        <li>• প্রতিটি প্রশ্নের উত্তর পরের প্রশ্ন খোলার আগ পর্যন্ত দেওয়া যায়। সময় পেরিয়ে গেলে সেটির উত্তর আর দেওয়া যাবে না।</li>
         <li>• প্রতিটি সঠিক উত্তরে ${bn(pub?.points ?? 10)} পয়েন্ট। লিডারবোর্ডে নিজের অবস্থান দেখুন।</li>
         <li>• একটি প্রশ্নের উত্তর একবারই দেওয়া যায়।</li>
       </ul>`);
@@ -380,6 +399,18 @@ export function initQuiz() {
       run();
       tick = setInterval(run, 1000);
     }
+    // Countdown to the end of the open question's answer window
+    if (open?.ends && !target) {
+      const te = Date.parse(open.ends);
+      const runE = () => {
+        const left = te - serverNow();
+        const el = document.getElementById('nk-qz-left');
+        if (el) el.textContent = countdownText(Math.max(0, left));
+        if (left <= 0) { clearInterval(tick); play(); }
+      };
+      runE();
+      tick = setInterval(runE, 1000);
+    }
     const q = body!.querySelector<HTMLElement>('[data-slot]');
     if (q) {
       q.querySelectorAll<HTMLButtonElement>('button[data-choice]').forEach((b) =>
@@ -394,7 +425,7 @@ export function initQuiz() {
       <div class="text-xs font-bold text-emerald-700">প্রশ্ন ${bn(x.slot + 1)} / ${bn(state!.slots.length)}</div>
       <p class="mt-1 text-[17px] font-bold leading-snug text-emerald-950">${esc(x.question)}</p>
       <div class="mt-3 grid gap-2">${opts}</div>
-      <p class="mt-2.5 text-xs text-emerald-900/55">ভেবে উত্তর দিন, একবারই উত্তর দেওয়া যাবে।</p>
+      <p class="mt-2.5 text-xs text-emerald-900/55">ভেবে উত্তর দিন, একবারই উত্তর দেওয়া যাবে।${x.ends ? ` উত্তর দেওয়া যাবে ${time(x.ends)} পর্যন্ত, বাকি <b id="nk-qz-left" class="font-mono"></b>। এরপর আর দেওয়া যাবে না।` : ''}</p>
     </div>`;
   }
 
@@ -473,6 +504,6 @@ export function initQuiz() {
   $('nk-quiz-board').addEventListener('click', () => { open(); board(); });
 
   // Opened from a shared link: /nusuk#quiz
-  adminToken().then((t) => { adminTok = t; }).catch(() => {}).finally(() => loadPublic().then(() => { if (location.hash === '#quiz' && pub?.enabled) { open(); readMe() ? play() : welcome(); } }));
+  adminToken().then((t) => { adminTok = t; }).catch(() => {}).finally(() => loadPublic().then(() => { if (location.hash === '#quiz' && pub?.enabled) sec!.scrollIntoView({ block: 'start' }); }));
   setInterval(() => { if (document.visibilityState === 'visible' && !dlg.open) loadPublic(); }, 2 * 60_000 * (0.9 + Math.random() * 0.2));
 }

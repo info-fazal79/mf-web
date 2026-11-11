@@ -165,9 +165,9 @@ a.nk-ad:hover { transform: translateY(-1px); box-shadow: 0 10px 24px -14px rgba(
 .nk-quiz-head { background-color: var(--color-emerald-900); background-image: radial-gradient(circle at 100% 0%, rgba(220, 188, 82, 0.32), transparent 55%), linear-gradient(135deg, #0a7a59, #053d2d); }
 .nk-qz-chip { border-radius: 9999px; background: rgba(255, 255, 255, 0.14); padding: 0.1rem 0.55rem; font-size: 0.75rem; font-weight: 600; color: #fff; }
 .nk-quiz .nk-qz-chip { color: #fff; }
-.nk-qz-row { display: flex; align-items: center; gap: 0.6rem; border-radius: 0.85rem; border: 1px solid #e7e1cf; background: #fff; padding: 0.5rem 0.75rem; }
+.nk-qz-row { display: flex; align-items: center; gap: 0.5rem; border-radius: 0.6rem; border: 1px solid #e7e1cf; background: #fff; padding: 0.3rem 0.65rem; font-size: 0.9rem; line-height: 1.35; }
 .nk-qz-me { border-color: var(--color-gold-500); background: #fdf8e8; }
-.nk-qz-rank { display: grid; place-items: center; min-width: 1.75rem; font-weight: 700; color: var(--color-emerald-900); }
+.nk-qz-rank { display: grid; place-items: center; min-width: 1.5rem; font-weight: 700; color: var(--color-emerald-900); }
 .nk-qz-pts { min-width: 2.5rem; text-align: right; font-variant-numeric: tabular-nums; color: var(--color-emerald-900); }
 .nk-qz-mv { border-radius: 9999px; padding: 0 0.4rem; font-size: 0.7rem; font-weight: 700; line-height: 1.25rem; white-space: nowrap; }
 .nk-qz-up { background: #dcf3e8; color: #075e45; }

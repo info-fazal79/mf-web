@@ -341,7 +341,7 @@ function SettingsForm({ s, busy, onSave }: { s: Settings; busy: boolean; onSave:
               ))}
             </div>
           ) : <p className="text-xs text-emerald-900/65">{even.length ? <>Questions open at <b>{even.join(', ')}</b> (one every {Math.floor(gap / 60)}h {gap % 60}m).</> : 'Answers must close after the first question opens.'}</p>}
-          <p className="text-xs text-emerald-900/60">Each question can be answered from its opening time until {f.end} that day.</p>
+          <p className="text-xs text-emerald-900/60">Each question can be answered only until the next question opens; the last one until {f.end}. A missed question can't be answered later. (Needs update_26.)</p>
         </div>
       )}
       {!hasNew && <p className="text-xs text-emerald-900/65">{even.length ? <>Questions open at <b>{even.join(', ')}</b> (one every {Math.floor(gap / 60)}h {gap % 60}m). Each stays open until {f.end}.</> : 'End time must be after the start time.'}</p>}
