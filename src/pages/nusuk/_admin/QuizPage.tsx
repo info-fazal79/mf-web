@@ -3,7 +3,10 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react
 import { supabase as sb } from '@/lib/supabase';
 
 type ToastFn = (t: string, ok?: boolean) => void;
-type Settings = { id: number; enabled: boolean; title: string; start_min: number; end_min: number; per_day: number; points: number; season_start: string };
+type Settings = {
+  id: number; enabled: boolean; title: string; start_min: number; end_min: number; per_day: number; points: number; season_start: string;
+  published?: boolean; starts_on?: string | null; ends_on?: string | null; slot_times?: number[] | null; // update 25
+};
 type Question = { id: number; question: string; options: string[]; correct: number; explanation: string | null; active: boolean; created_at: string };
 type Overview = {
   today: string; players: number; new_today: number; answers_today: number; correct_today: number; questions: number;
@@ -187,8 +190,20 @@ export default function QuizPage({ toast }: { toast: ToastFn }) {
         <div className="grid gap-4">
           <div className="flex items-center gap-3 rounded-xl border border-[#e7e1cf] bg-cream p-3.5">
             <Switch on={s.enabled} onChange={(v) => saveSettings({ enabled: v })} label="Quiz on" />
-            <div><div className="font-semibold">{s.enabled ? 'Quiz is ON' : 'Quiz is OFF'}</div><div className="text-xs text-emerald-900/65">{s.enabled ? 'The quiz section shows on /nusuk.' : 'The section is hidden and nobody can answer.'} · saves at once</div></div>
+            <div><div className="font-semibold">{s.enabled ? 'Quiz is ON' : 'Quiz is OFF'}</div><div className="text-xs text-emerald-900/65">{s.enabled ? (s.published === false ? 'On, in preview (only you see it).' : 'The quiz section shows on /nusuk.') : 'The section is hidden and nobody can answer.'} · saves at once</div></div>
           </div>
+          {s.published !== undefined && (
+            <div className={`flex items-center gap-3 rounded-xl border p-3.5 ${s.published ? 'border-emerald-600/40 bg-emerald-50' : 'border-gold-500/60 bg-gold-100/40'}`}>
+              <Switch on={!!s.published} onChange={(v) => saveSettings({ published: v })} label="Published" />
+              <div>
+                <div className="font-semibold">{s.published ? '🌍 Published: everyone can see and play' : '👁️ Preview: only you can see it'}</div>
+                <div className="text-xs text-emerald-900/65">{s.published
+                  ? 'Switch off to hide it from visitors again (players and points are kept).'
+                  : 'Open /nusuk in this browser (signed in here) to play and check it. Visitors don\'t see the quiz. Publish when it\'s ready.'} · saves at once</div>
+              </div>
+            </div>
+          )}
+          {s.published === undefined && <p className="rounded-xl bg-gold-100/60 px-3.5 py-2.5 text-sm">Run <code className="font-mono">src/pages/nusuk/_sql/update_25_quiz_schedule.sql</code> in Supabase for preview mode, dates and your own question times.</p>}
           <SettingsForm s={s} busy={busy} onSave={saveSettings} />
           <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-red-200 bg-red-50/40 p-3.5">
             <div className="text-sm"><b>New season</b><div className="text-xs text-emerald-900/65">The leaderboard starts again from today. Old answers are kept but no longer counted.</div></div>
@@ -269,22 +284,68 @@ export default function QuizPage({ toast }: { toast: ToastFn }) {
 }
 
 function SettingsForm({ s, busy, onSave }: { s: Settings; busy: boolean; onSave: (p: Partial<Settings>) => void }) {
-  const [f, setF] = useState({ title: s.title, start: hhmm(s.start_min), end: hhmm(s.end_min), per_day: s.per_day, points: s.points });
-  useEffect(() => setF({ title: s.title, start: hhmm(s.start_min), end: hhmm(s.end_min), per_day: s.per_day, points: s.points }), [s]);
+  const init = () => ({
+    title: s.title, start: hhmm(s.start_min), end: hhmm(s.end_min), per_day: s.per_day, points: s.points,
+    starts_on: s.starts_on ?? '', ends_on: s.ends_on ?? '',
+    own: !!(s.slot_times && s.slot_times.length),
+    times: Array.from({ length: s.per_day }, (_, i) => hhmm(s.slot_times?.[i] ?? s.start_min + Math.floor((i * (s.end_min - s.start_min)) / s.per_day))),
+  });
+  const [f, setF] = useState(init);
+  useEffect(() => setF(init()), [s]); // eslint-disable-line react-hooks/exhaustive-deps
   const start = toMin(f.start), end = toMin(f.end);
+  const even = end > start ? Array.from({ length: Math.min(f.per_day, 20) }, (_, i) => hhmm(start + Math.floor((i * (end - start)) / f.per_day))) : [];
   const gap = f.per_day > 0 ? Math.floor((end - start) / f.per_day) : 0;
-  const times = end > start ? Array.from({ length: Math.min(f.per_day, 20) }, (_, i) => hhmm(start + Math.floor((i * (end - start)) / f.per_day))) : [];
+  // keep one time box per question
+  const times = Array.from({ length: f.per_day }, (_, i) => f.times[i] ?? even[i] ?? f.start);
+  const setPerDay = (n: number) => setF({ ...f, per_day: Math.max(1, Math.min(20, n || 1)) });
+  const hasNew = s.published !== undefined;
+
+  function save() {
+    if (end <= start) return alert('Answers must close after the first question opens.');
+    if (f.starts_on && f.ends_on && f.ends_on < f.starts_on) return alert('The last day is before the first day.');
+    let slot_times: number[] | null = null;
+    if (f.own) {
+      slot_times = times.map(toMin);
+      for (let i = 0; i < slot_times.length; i++) {
+        if (slot_times[i] < 0 || slot_times[i] >= end) return alert(`Question ${i + 1} must open before answers close (${f.end}).`);
+        if (i > 0 && slot_times[i] <= slot_times[i - 1]) return alert(`Question ${i + 1} must open after question ${i}.`);
+      }
+    }
+    onSave({
+      title: f.title.trim() || 'দৈনিক ইসলামিক কুইজ', start_min: f.own ? Math.min(start, slot_times![0]) : start, end_min: end, per_day: f.per_day, points: f.points,
+      ...(hasNew && { starts_on: f.starts_on || null, ends_on: f.ends_on || null, slot_times }),
+    });
+  }
   return (
     <div className="grid gap-3">
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="grid gap-1 text-sm font-semibold sm:col-span-2">Section title<input className="nk-input font-normal" maxLength={80} value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} /></label>
-        <label className="grid gap-1 text-sm font-semibold">First question opens (Bangladesh time)<input type="time" className="nk-input font-normal" value={f.start} onChange={(e) => setF({ ...f, start: e.target.value })} /></label>
-        <label className="grid gap-1 text-sm font-semibold">Answers close<input type="time" className="nk-input font-normal" value={f.end} onChange={(e) => setF({ ...f, end: e.target.value })} /></label>
-        <label className="grid gap-1 text-sm font-semibold">Questions per day<input type="number" min={1} max={20} className="nk-input font-normal" value={f.per_day} onChange={(e) => setF({ ...f, per_day: Math.max(1, Math.min(20, +e.target.value || 1)) })} /></label>
+        {hasNew && <>
+          <label className="grid gap-1 text-sm font-semibold">Quiz runs from (date)<input type="date" className="nk-input font-normal" value={f.starts_on} onChange={(e) => setF({ ...f, starts_on: e.target.value })} /><span className="text-xs font-normal text-emerald-900/60">Empty = from now</span></label>
+          <label className="grid gap-1 text-sm font-semibold">…until (last day)<input type="date" className="nk-input font-normal" value={f.ends_on} onChange={(e) => setF({ ...f, ends_on: e.target.value })} /><span className="text-xs font-normal text-emerald-900/60">Empty = no end. With 50 questions and 5 a day, that's 10 days.</span></label>
+        </>}
+        <label className="grid gap-1 text-sm font-semibold">Questions per day<input type="number" min={1} max={20} className="nk-input font-normal" value={f.per_day} onChange={(e) => setPerDay(+e.target.value)} /></label>
         <label className="grid gap-1 text-sm font-semibold">Points per correct answer<input type="number" min={1} max={1000} className="nk-input font-normal" value={f.points} onChange={(e) => setF({ ...f, points: Math.max(1, +e.target.value || 1) })} /></label>
+        <label className="grid gap-1 text-sm font-semibold">First question opens (Bangladesh time)<input type="time" className="nk-input font-normal" value={f.start} onChange={(e) => setF({ ...f, start: e.target.value })} disabled={f.own} /></label>
+        <label className="grid gap-1 text-sm font-semibold">Answers close (every question, that day)<input type="time" className="nk-input font-normal" value={f.end} onChange={(e) => setF({ ...f, end: e.target.value })} /></label>
       </div>
-      <p className="text-xs text-emerald-900/65">{times.length ? <>Questions open at <b>{times.join(', ')}</b> (one every {Math.floor(gap / 60)}h {gap % 60}m). Each stays open until {f.end}.</> : 'End time must be after the start time.'}</p>
-      <div className="flex justify-end"><Btn disabled={busy} onClick={() => onSave({ title: f.title.trim() || 'দৈনিক ইসলামিক কুইজ', start_min: start, end_min: end, per_day: f.per_day, points: f.points })}>{busy ? 'Saving…' : 'Save settings'}</Btn></div>
+      {hasNew && (
+        <div className="grid gap-2 rounded-xl border border-[#e7e1cf] bg-cream p-3">
+          <label className="flex items-center gap-2 text-sm font-semibold"><input type="checkbox" className="h-4 w-4 accent-emerald-700" checked={f.own} onChange={(e) => setF({ ...f, own: e.target.checked, times: e.target.checked ? times : f.times })} /> Set each question's opening time myself</label>
+          {f.own ? (
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+              {times.map((t, i) => (
+                <label key={i} className="grid gap-0.5 text-xs font-semibold">Question {i + 1}
+                  <input type="time" className="nk-input py-1.5! font-normal" value={t} onChange={(e) => setF({ ...f, times: times.map((x, j) => (j === i ? e.target.value : x)) })} />
+                </label>
+              ))}
+            </div>
+          ) : <p className="text-xs text-emerald-900/65">{even.length ? <>Questions open at <b>{even.join(', ')}</b> (one every {Math.floor(gap / 60)}h {gap % 60}m).</> : 'Answers must close after the first question opens.'}</p>}
+          <p className="text-xs text-emerald-900/60">Each question can be answered from its opening time until {f.end} that day.</p>
+        </div>
+      )}
+      {!hasNew && <p className="text-xs text-emerald-900/65">{even.length ? <>Questions open at <b>{even.join(', ')}</b> (one every {Math.floor(gap / 60)}h {gap % 60}m). Each stays open until {f.end}.</> : 'End time must be after the start time.'}</p>}
+      <div className="flex justify-end"><Btn disabled={busy} onClick={save}>{busy ? 'Saving…' : 'Save settings'}</Btn></div>
     </div>
   );
 }

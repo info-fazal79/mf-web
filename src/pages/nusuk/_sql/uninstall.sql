@@ -32,6 +32,8 @@ drop table if exists public.nusuk_giveaway_entries;
 drop table if exists public.nusuk_giveaways;
 drop table if exists public.nusuk_poll_votes;
 drop table if exists public.nusuk_polls;
+drop function if exists public.nusuk_quiz_visible();
+drop function if exists public.nusuk_quiz_running(date);
 drop function if exists public.nusuk_feedback_slider();
 drop function if exists public.nusuk_feedback_submit(text, text, text, text, text, boolean);
 drop function if exists public.nusuk_feedback_submit(text, text, text, text, text);

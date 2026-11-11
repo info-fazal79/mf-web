@@ -59,7 +59,7 @@ const store = {
 };
 
 /** The admin's Supabase session (same site, saved by Nusuk Manager), refreshed if it ran out. */
-async function adminToken(): Promise<string | null> {
+export async function adminToken(): Promise<string | null> {
   if (!URL_ || !KEY) return null;
   const key = `sb-${new URL(URL_).hostname.split('.')[0]}-auth-token`;
   let s: { access_token?: string; refresh_token?: string; expires_at?: number } | null = null;

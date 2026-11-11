@@ -3,14 +3,23 @@
  * The section shows the top 5 and a "কুইজ খেলুন" button; the dialog handles
  * making an ID, signing in, today's questions with countdowns, and the full leaderboard.
  */
-import { rpc } from './rpc';
+import { rpc as rpcAnon } from './rpc';
 import { CODE_RE, countdownText } from './content';
+import { adminToken } from './campaign';
+
+// While the quiz is in preview, only a signed-in admin may see and play it: send the admin session if there is one
+let adminTok: string | null = null;
+const rpc = <T,>(fn: string, args: Record<string, unknown> = {}) => rpcAnon<T>(fn, args, adminTok);
 
 type Row = { rank: number; prev: number | null; id: number; name: string; points: number; correct: number };
-type Pub = { enabled: boolean; title?: string; per_day?: number; points?: number; now?: string; opens?: string[]; closes?: string; players?: number; board?: Row[] };
+type Pub = {
+  enabled: boolean; title?: string; per_day?: number; points?: number; now?: string; opens?: string[]; closes?: string; players?: number; board?: Row[];
+  published?: boolean; running?: boolean; starts_on?: string | null; ends_on?: string | null;
+};
 type Slot = { slot: number; opens: string; status: 'locked' | 'open' | 'answered' | 'missed'; question?: string; options?: string[]; choice?: number; correct?: number; right?: boolean; points?: number; explanation?: string };
 type State = {
-  ok: boolean; reason?: string; now: string; id: number; name: string; code: string; points_each: number; closes: string; tomorrow: string;
+  ok: boolean; reason?: string; now: string; id: number; name: string; code: string; points_each: number; closes: string; tomorrow: string | null;
+  running?: boolean; starts_on?: string | null; ends_on?: string | null; published?: boolean;
   slots: Slot[]; today_points: number; total: number; rank: number | null; prev_rank: number | null; players: number; streak: number;
 };
 type Me = { id: number; token: string; name: string };
@@ -21,6 +30,15 @@ const bnNum = (n: number) => n.toLocaleString('bn-BD');
 const esc = (t = '') => t.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 const time = (iso: string) => new Date(iso).toLocaleTimeString('bn-BD', { timeZone: 'Asia/Dhaka', hour: 'numeric', minute: '2-digit' });
 const LETTERS = ['ক', 'খ', 'গ', 'ঘ', 'ঙ', 'চ'];
+const bnDate = (d: string) => new Date(`${d}T00:00:00`).toLocaleDateString('bn-BD', { day: 'numeric', month: 'long' });
+const todayBD = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Dhaka' });
+/** Why the quiz isn't running today, or '' if it is. */
+function notRunning(p: { running?: boolean; starts_on?: string | null; ends_on?: string | null }) {
+  if (p.running !== false) return '';
+  if (p.starts_on && todayBD() < p.starts_on) return `কুইজ শুরু হবে ${bnDate(p.starts_on)}, ইনশাআল্লাহ।`;
+  if (p.ends_on) return `এই কুইজ ${bnDate(p.ends_on)} শেষ হয়েছে। নতুন কুইজের ঘোষণার অপেক্ষায় থাকুন।`;
+  return 'আজ কুইজ নেই।';
+}
 
 function readMe(): Me | null {
   try { const m = JSON.parse(localStorage.getItem(KEY) ?? 'null'); return m && m.id && m.token ? m : null; } catch { return null; }
@@ -66,10 +84,12 @@ export function initQuiz() {
     if (!pub?.enabled) { sec!.classList.add('hidden'); return; }
     if (pub.now) skew = Date.parse(pub.now) - Date.now();
     sec!.classList.remove('hidden');
-    $('nk-quiz-title').textContent = pub.title ?? 'দৈনিক ইসলামিক কুইজ';
+    $('nk-quiz-title').textContent = (pub.published === false ? '👁️ ' : '') + (pub.title ?? 'দৈনিক ইসলামিক কুইজ');
     $('nk-quiz-sub').textContent = `প্রতিদিন ${bn(pub.per_day ?? 5)}টি প্রশ্ন · প্রতিটি সঠিক উত্তরে ${bn(pub.points ?? 10)} পয়েন্ট${pub.players ? ` · ${bnNum(pub.players)} জন খেলছেন` : ''}`;
     const times = (pub.opens ?? []).map((t) => `<span class="nk-qz-chip">${time(t)}</span>`).join('');
-    $('nk-quiz-times').innerHTML = times ? `<span class="text-xs text-emerald-50/80">আজকের প্রশ্ন খুলবে:</span>${times}` : '';
+    const off = notRunning(pub);
+    $('nk-quiz-times').innerHTML = (pub.published === false ? '<span class="nk-qz-chip">প্রিভিউ: শুধু আপনি (অ্যাডমিন) দেখছেন</span>' : '')
+      + (off ? `<span class="text-xs font-semibold text-gold-100">${off}</span>` : times ? `<span class="text-xs text-emerald-50/80">আজকের প্রশ্ন খুলবে:</span>${times}` : '');
     const rows = pub.board ?? [];
     $('nk-quiz-top').innerHTML = rows.length
       ? boardRows(rows, readMe()?.id)
@@ -283,6 +303,12 @@ export function initQuiz() {
       if (state.reason === 'signed_out') { saveMe(null); return login(msg('এই ফোনে আবার প্রবেশ করতে হবে।')); }
       return show(msg('কুইজ এখন বন্ধ আছে।'));
     }
+    const off = notRunning(state);
+    if (off) {
+      return show(`${head(esc(state.name), `আইডি ${state.id} · মোট পয়েন্ট ${bnNum(state.total)}`)}
+        <div class="rounded-2xl bg-gold-100/70 p-5 text-center"><div class="text-2xl">🕋</div><div class="mt-1 font-bold text-emerald-950">${off}</div></div>
+        <button type="button" data-go="board" class="nk-btn nk-ghost py-3 text-base">🏆 লিডারবোর্ড দেখুন</button>`);
+    }
     skew = Date.parse(state.now) - Date.now();
     let hasPw = true;
     try { hasPw = await rpc<boolean>('nusuk_quiz_has_password', { p_token: me.token }); } catch {}
@@ -323,7 +349,7 @@ export function initQuiz() {
         <div id="nk-qz-cd" class="mt-1 font-mono text-2xl font-bold tabular-nums text-emerald-900">…</div>
       </div>`;
     }
-    const target = !open && next ? next.opens : !open && allDone ? s.tomorrow : '';
+    const target = !open && next ? next.opens : !open && allDone ? s.tomorrow ?? '' : '';
 
     show(`<div class="flex items-start justify-between gap-3 pr-9">
         <div><div class="text-xs font-semibold text-emerald-900/60">আইডি ${s.id} · ${esc(s.code)}</div><h2 class="text-lg font-bold text-emerald-950">${esc(s.name)}</h2></div>
@@ -447,6 +473,6 @@ export function initQuiz() {
   $('nk-quiz-board').addEventListener('click', () => { open(); board(); });
 
   // Opened from a shared link: /nusuk#quiz
-  loadPublic().then(() => { if (location.hash === '#quiz' && pub?.enabled) { open(); readMe() ? play() : welcome(); } });
+  adminToken().then((t) => { adminTok = t; }).catch(() => {}).finally(() => loadPublic().then(() => { if (location.hash === '#quiz' && pub?.enabled) { open(); readMe() ? play() : welcome(); } }));
   setInterval(() => { if (document.visibilityState === 'visible' && !dlg.open) loadPublic(); }, 2 * 60_000 * (0.9 + Math.random() * 0.2));
 }
