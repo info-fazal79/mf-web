@@ -299,14 +299,59 @@ function CodeList({ rows, empty }: { rows: CodeRow[]; empty: string }) {
   );
 }
 
+type Fine = { start: string; step: number; values: number[] };
+/** Per-minute / per-10-minute series (update 27) → chart points */
+const finePts = (f?: Fine | null): Pt[] => (f?.values ?? []).map((n, i) => ({ t: new Date(Date.parse(f!.start) + i * f!.step * 1000).toISOString(), n }));
+
+/** On/off for the live charts card on /nusuk (stored in nusuk_settings.content.insights) */
+function InsightsSwitch({ toast }: { toast: ToastFn }) {
+  const [on, setOn] = useState<boolean | null>(null);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    sb!.from('nusuk_settings').select('content').eq('id', 1).single().then(({ data }) => {
+      const c = (data?.content ?? {}) as Record<string, unknown>;
+      setOn(!!(c.insights && (c.insights as { on?: boolean }).on));
+    });
+  }, []);
+  async function save(v: boolean) {
+    setBusy(true);
+    const { data, error: e1 } = await sb!.from('nusuk_settings').select('content').eq('id', 1).single();
+    if (e1) { setBusy(false); return toast(errText(e1), false); }
+    const content = { ...((data?.content as object) ?? {}), insights: { on: v } };
+    const { error } = await sb!.from('nusuk_settings').update({ content, updated_at: new Date().toISOString() }).eq('id', 1);
+    setBusy(false);
+    if (error) return toast(errText(error), false);
+    setOn(v);
+    toast(v ? 'Live charts are ON on /nusuk' : 'Live charts are hidden on /nusuk');
+  }
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-600/25 bg-emerald-50/50 p-3.5">
+      <div className="flex items-center gap-3">
+        <button type="button" role="switch" aria-checked={!!on} aria-label="Show live charts on /nusuk" disabled={on === null || busy} onClick={() => save(!on)}
+          className={`relative h-6 w-11 shrink-0 rounded-full transition disabled:opacity-50 ${on ? 'bg-emerald-600' : 'bg-gray-300'}`}>
+          <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${on ? 'left-[22px]' : 'left-0.5'}`} />
+        </button>
+        <div>
+          <div className="text-sm font-semibold">Show these live charts on /nusuk {on === null ? '' : on ? '· ON' : '· OFF'}</div>
+          <div className="text-xs text-emerald-900/65">A "লাইভ পরিসংখ্যান" card with Active users (per minute) and Copies (per 10 minutes), between the quiz and the winners. Saves at once.</div>
+        </div>
+      </div>
+      <a href="/nusuk?insights#nk-ins" target="_blank" rel="noopener" className="nk-btn nk-ghost px-3 py-1.5 text-xs">Preview ↗</a>
+    </div>
+  );
+}
+
 function Dashboard({ toast, go }: { toast: ToastFn; go: (r: Route) => void }) {
   const [d, setD] = useState<Dash | null>(null);
+  const [fine, setFine] = useState<{ active: Fine; copies: Fine } | null>(null);
+  const [copyRange, setCopyRange] = useState<'10m' | '1h'>('10m');
   const [old, setOld] = useState<Stats | null>(null);
   const [missing, setMissing] = useState(false);
-  const [range, setRange] = useState<'24h' | '7d'>('24h');
+  const [range, setRange] = useState<'2h' | '24h' | '7d'>('2h');
   const [at, setAt] = useState<Date | null>(null);
   const load = useCallback(async () => {
     const { data, error } = await sb!.rpc('nusuk_admin_dashboard');
+    sb!.rpc('nusuk_insights').then((r) => { if (!r.error) setFine(r.data as { active: Fine; copies: Fine }); });
     if (!error) { setD(data as Dash); setMissing(false); setAt(new Date()); return; }
     // update_11 not run yet: fall back to the basic numbers
     setMissing(true);
@@ -333,7 +378,7 @@ function Dashboard({ toast, go }: { toast: ToastFn; go: (r: Route) => void }) {
   const returning = Math.max(0, v.unique_today - v.new_today);
   const perVisitor = v.unique_today ? (d.copies.today / v.unique_today).toFixed(1) : '—';
   const cutoff = Date.now() - (range === '24h' ? 24 : 168) * 3600e3;
-  const activePts = d.active_log.filter((p) => Date.parse(p.t) >= cutoff);
+  const activePts = range === '2h' ? finePts(fine?.active) : d.active_log.filter((p) => Date.parse(p.t) >= cutoff);
   const days14 = d.daily.slice(-14);
   const tracked = d.tracked_from;
 
@@ -358,15 +403,16 @@ function Dashboard({ toast, go }: { toast: ToastFn; go: (r: Route) => void }) {
       </div>
 
       <div className="grid gap-4 xl:grid-cols-2">
-        <Card title="Active users" actions={<div className="flex rounded-full border border-[#e7e1cf] p-0.5 text-xs font-semibold">{(['24h', '7d'] as const).map((r) => <button key={r} type="button" onClick={() => setRange(r)} className={`rounded-full px-3 py-1 ${range === r ? 'bg-emerald-900 text-white' : 'text-emerald-900'}`}>{r === '24h' ? '24 hours' : '7 days'}</button>)}</div>}>
-          <p className="-mt-2 mb-3 text-xs text-emerald-900/60">Highest number of people on the page at the same time, every 10 minutes.</p>
+        <Card title="Active users" actions={<div className="flex rounded-full border border-[#e7e1cf] p-0.5 text-xs font-semibold">{((fine ? ['2h', '24h', '7d'] : ['24h', '7d']) as ('2h' | '24h' | '7d')[]).map((r) => <button key={r} type="button" onClick={() => setRange(r)} className={`rounded-full px-3 py-1 ${range === r ? 'bg-emerald-900 text-white' : 'text-emerald-900'}`}>{r === '2h' ? '2 hours' : r === '24h' ? '24 hours' : '7 days'}</button>)}</div>}>
+          <p className="-mt-2 mb-3 text-xs text-emerald-900/60">Highest number of people on the page at the same time, {range === '2h' ? 'every minute' : 'every 10 minutes'}.</p>
           <Line pts={activePts} label="Active users" unit="active" />
         </Card>
-        <Card title="Copies per hour (48 h)">
-          <p className="-mt-2 mb-3 text-xs text-emerald-900/60">How many codes were copied in each hour.</p>
-          <Line pts={d.hourly} label="Copies per hour" unit="copies" />
+        <Card title={copyRange === '10m' && fine ? 'Copies per 10 minutes (24 h)' : 'Copies per hour (48 h)'} actions={fine ? <div className="flex rounded-full border border-[#e7e1cf] p-0.5 text-xs font-semibold">{(['10m', '1h'] as const).map((r) => <button key={r} type="button" onClick={() => setCopyRange(r)} className={`rounded-full px-3 py-1 ${copyRange === r ? 'bg-emerald-900 text-white' : 'text-emerald-900'}`}>{r === '10m' ? '10 min' : '1 hour'}</button>)}</div> : undefined}>
+          <p className="-mt-2 mb-3 text-xs text-emerald-900/60">How many codes were copied in each {copyRange === '10m' && fine ? '10 minutes' : 'hour'}.</p>
+          <Line pts={copyRange === '10m' && fine ? finePts(fine.copies) : d.hourly} label="Copies" unit="copies" />
         </Card>
       </div>
+      {fine ? <InsightsSwitch toast={toast} /> : <p className="rounded-xl bg-gold-100 p-3 text-sm">For per-minute charts and the live charts card on /nusuk, run <code className="font-mono">src/pages/nusuk/_sql/update_27_live_insights.sql</code> in Supabase, then refresh.</p>}
 
       <Card title="Visitors per day (30 days)">
         <p className="-mt-2 mb-3 text-xs text-emerald-900/60">New = first visit ever. Returning = came before. Returning visitors are counted from {shortDay(tracked)}; earlier days show new visitors only.</p>
