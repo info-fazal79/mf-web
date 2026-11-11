@@ -8,10 +8,17 @@ import { parseBonus } from '../_lib/bonus';
 type ToastFn = (t: string, ok?: boolean) => void;
 type Target = { label: string; url: string };
 type ShareCfg = { targets: Target[]; hashtags: string; intro: string };
+type Numbers = { counter: number; ids: Record<string, number> };
 export type ShareFeedback = { id: number; name: string; message: string; slider_text?: string | null; slider_name?: string | null };
 
 const SITE = 'https://muhammadfazal.com/nusuk/';
 const errText = (e: unknown) => (e && typeof e === 'object' && 'message' in e ? String((e as { message: string }).message) : String(e));
+
+function readNumbers(content: unknown): Numbers {
+  const raw = content && typeof content === 'object' ? (content as Record<string, unknown>).share_numbers : null;
+  const r = (raw && typeof raw === 'object' ? raw : {}) as Partial<Numbers>;
+  return { counter: Number(r.counter) || 0, ids: r.ids && typeof r.ids === 'object' ? r.ids : {} };
+}
 
 export function shareCfg(content: unknown): ShareCfg {
   const b = parseBonus(content);
@@ -74,7 +81,7 @@ function wrap(ctx: CanvasRenderingContext2D, text: string, maxW: number) {
   }
   return lines;
 }
-export async function drawCard(f: ShareFeedback): Promise<HTMLCanvasElement> {
+export async function drawCard(f: ShareFeedback, num?: number | null): Promise<HTMLCanvasElement> {
   const W = 1080, H = 1350, F = '"Hind Siliguri", sans-serif';
   await Promise.all(['400', '500', '600', '700'].map((w) => document.fonts.load(`${w} 40px "Hind Siliguri"`, 'অআক')));
   const logo = await new Promise<HTMLImageElement | null>((res) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = '/nusuk/ribat-logo.webp'; });
@@ -101,6 +108,15 @@ export async function drawCard(f: ShareFeedback): Promise<HTMLCanvasElement> {
   ctx.fillText('Ribatul Ummah', 225, 125);
   ctx.fillStyle = '#f5d76e'; ctx.font = `500 30px ${F}`;
   ctx.fillText('Nusuk Code Share · উমরাহ প্রতিযোগিতা', 225, 170);
+  // Review number, e.g. #001
+  if (num) {
+    const label = `#${String(num).padStart(3, '0')}`;
+    ctx.font = `700 46px ${F}`;
+    const bw = ctx.measureText(label).width + 56;
+    ctx.fillStyle = 'rgba(0,0,0,0.25)'; rounded(ctx, W - 80 - bw, 92, bw, 78, 39); ctx.fill();
+    ctx.strokeStyle = '#f5d76e'; ctx.lineWidth = 3; rounded(ctx, W - 80 - bw, 92, bw, 78, 39); ctx.stroke();
+    ctx.fillStyle = '#f5d76e'; ctx.textAlign = 'center'; ctx.fillText(label, W - 80 - bw / 2, 147); ctx.textAlign = 'left';
+  }
 
   // Title pill
   ctx.font = `700 40px ${F}`;
@@ -145,7 +161,7 @@ export async function drawCard(f: ShareFeedback): Promise<HTMLCanvasElement> {
   ctx.fillStyle = '#ffffff'; ctx.font = `600 32px ${F}`;
   ctx.fillText('নুসুক উমরাহ রেফারেল কোড পেতে ভিজিট করুন', W / 2, fy);
   ctx.fillStyle = '#f5d76e'; ctx.font = `700 46px ${F}`;
-  ctx.fillText('muhammadfazal.com/nusuk', W / 2, fy + 62);
+  ctx.fillText('www.muhammadfazal.com/nusuk', W / 2, fy + 62);
   ctx.textAlign = 'left';
   return cv;
 }
@@ -155,15 +171,38 @@ export default function ShareCardDialog({ f, content, toast, onClose, onSaved }:
   const [text, setText] = useState(() => caption(f, shareCfg(content), content));
   const [url, setUrl] = useState('');
   const [blob, setBlob] = useState<Blob | null>(null);
+  const [num, setNum] = useState<number | null>(() => readNumbers(content).ids[String(f.id)] ?? null);
+  const [numOn, setNumOn] = useState(() => !!readNumbers(content).ids[String(f.id)]);
+  const [numBusy, setNumBusy] = useState(false);
   const [editTargets, setEditTargets] = useState(false);
   const dlg = useRef<HTMLDialogElement>(null);
 
   useEffect(() => { dlg.current?.showModal(); }, []);
   useEffect(() => {
     let alive = true;
-    drawCard(f).then((cv) => cv.toBlob((b) => { if (!alive || !b) return; setBlob(b); setUrl(URL.createObjectURL(b)); }, 'image/png'));
+    setBlob(null);
+    drawCard(f, numOn ? num : null).then((cv) => cv.toBlob((b) => { if (!alive || !b) return; setBlob(b); setUrl(URL.createObjectURL(b)); }, 'image/png'));
     return () => { alive = false; };
-  }, [f]);
+  }, [f, num, numOn]);
+
+  /** Tick "Add number": the first time a message is numbered it gets the next number (#001, #002…), saved for good. */
+  async function toggleNumber(on: boolean) {
+    if (!on) { setNumOn(false); return; }
+    if (num) { setNumOn(true); return; }
+    setNumBusy(true);
+    const { data, error: e1 } = await sb!.from('nusuk_settings').select('content').eq('id', 1).single();
+    if (e1) { setNumBusy(false); return toast(errText(e1), false); }
+    const cur = readNumbers(data?.content);
+    const n = cur.ids[String(f.id)] ?? cur.counter + 1;
+    const next = { ...((data?.content as object) ?? {}), share_numbers: { counter: Math.max(cur.counter, n), ids: { ...cur.ids, [String(f.id)]: n } } };
+    const { error } = await sb!.from('nusuk_settings').update({ content: next, updated_at: new Date().toISOString() }).eq('id', 1);
+    setNumBusy(false);
+    if (error) return toast(errText(error), false);
+    setNum(n);
+    setNumOn(true);
+    toast(`This card is review #${String(n).padStart(3, '0')}`);
+    onSaved();
+  }
   useEffect(() => () => { if (url) URL.revokeObjectURL(url); }, [url]);
   const fileName = useMemo(() => `feedback-${f.id}.png`, [f.id]);
 
@@ -206,6 +245,10 @@ export default function ShareCardDialog({ f, content, toast, onClose, onSaved }:
             <button type="button" className="nk-btn nk-ghost px-3 py-1.5 text-sm" onClick={copyImage} disabled={!blob}>🖼️ Copy picture</button>
             <button type="button" className="nk-btn nk-ghost px-3 py-1.5 text-sm" onClick={download} disabled={!blob}>⬇️ Download</button>
           </div>
+          <label className="mt-2 flex items-center gap-2 rounded-xl bg-gold-100/50 px-3 py-2 text-sm font-semibold">
+            <input type="checkbox" className="h-4 w-4 accent-emerald-700" checked={numOn} disabled={numBusy} onChange={(e) => toggleNumber(e.target.checked)} />
+            Add review number {num ? <span className="font-mono text-emerald-800">#{String(num).padStart(3, '0')}</span> : <span className="text-xs font-normal text-emerald-900/60">(gets the next number)</span>}
+          </label>
           <p className="mt-2 text-xs text-emerald-900/60">Only the name and message are used. The phone number and address are never shown.</p>
         </div>
         <div className="grid content-start gap-3">
