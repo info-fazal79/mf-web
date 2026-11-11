@@ -8,6 +8,7 @@ import CampaignPage from './CampaignPage';
 import PopupPage from './PopupPage';
 import { GiveawayCard, PollCard } from './LiveCards';
 import RafflePage from './RafflePage';
+import ShareCardDialog from './ShareCard';
 import { extractCodes } from '../_lib/extract';
 import { bonusFor, parseBonus } from '../_lib/bonus';
 import { CODE_RE, COUNTRY_CODES, PINNED_COUNT, contentFields, countryName, defaultContent, flagUrl, mergeContent, parseToday, parseTopBar, parseVideo, parseWinners, youtubeId, subscribeUrl, defaultVideoLabel, defaultTopBarText, defaultTopBarDoneText, countdownText, prizeLabel, type NusukContent, type Prize, type TodayWinner, type TopBar, type VideoMode, type Winner } from '../_lib/content';
@@ -909,8 +910,9 @@ const kindLabel: Record<Feedback['kind'], [string, string]> = {
   suggestion: ['Suggestion · পরামর্শ', 'bg-emerald-100 text-emerald-900'],
   opinion: ['Opinion · মতামত', 'bg-gold-100 text-gold-600'],
 };
-function FeedbackPage({ toast, onChange }: { toast: ToastFn; onChange: () => void }) {
+function FeedbackPage({ toast, onChange, settings, reload }: { toast: ToastFn; onChange: () => void; settings: Settings | null; reload: () => void }) {
   const [rows, setRows] = useState<Feedback[]>([]);
+  const [sharing, setSharing] = useState<Feedback | null>(null);
   const [filter, setFilter] = useState<'open' | 'new' | 'resolved' | 'slider' | 'all'>('open');
   const [loading, setLoading] = useState(false);
   const [missing, setMissing] = useState(false);
@@ -1048,10 +1050,12 @@ function FeedbackPage({ toast, onChange }: { toast: ToastFn; onChange: () => voi
                 ? <Btn kind="ghost" className="px-2.5! py-1!" onClick={() => setSlider(f, false)}>Remove from slider</Btn>
                 : <Btn kind="gold" className="px-2.5! py-1!" title="Show this message (name + message, never phone or address) on /nusuk" onClick={() => setSlider(f, true)}>★ Show on slider</Btn>}
               {editing !== f.id && <Btn kind="ghost" className="px-2.5! py-1!" onClick={() => startEdit(f)}>✎ Edit for slider</Btn>}
+              <Btn kind="gold" className="px-2.5! py-1!" title="Make a picture card of this message (name + message) and post it on Facebook" onClick={() => setSharing(f)}>📣 Share card</Btn>
               <Btn kind="ghost" className="px-2.5! py-1! text-red-700" onClick={() => remove(f.id)}>Delete</Btn>
             </div>
           </article>
         ))}
+        {sharing && <ShareCardDialog f={sharing} content={settings?.content} toast={toast} onClose={() => setSharing(null)} onSaved={reload} />}
         {!rows.length && <p className="rounded-xl bg-emerald-50 p-6 text-center text-sm text-emerald-900/70">{loading ? 'Loading…' : 'No messages here.'}</p>}
       </div>
     </Card>
@@ -1647,7 +1651,7 @@ export default function NusukAdmin() {
         {route === 'video' && settings && <VideoPage toast={toast} settings={settings} reload={loadSettings} />}
         {route === 'notice' && settings && <TopNoticePage toast={toast} settings={settings} reload={loadSettings} />}
         {route === 'today' && settings && <TodayWinnerPage toast={toast} settings={settings} reload={loadSettings} />}
-        {route === 'feedback' && <FeedbackPage toast={toast} onChange={loadUnread} />}
+        {route === 'feedback' && <FeedbackPage toast={toast} onChange={loadUnread} settings={settings} reload={loadSettings} />}
         {route === 'features' && <FeatureRequestsPage toast={toast} onChange={loadUnread} settings={settings} />}
         {route === 'winners' && settings && <WinnersPage toast={toast} settings={settings} reload={loadSettings} />}
         {route === 'settings' && settings && <SettingsPage toast={toast} settings={settings} reload={loadSettings} />}
