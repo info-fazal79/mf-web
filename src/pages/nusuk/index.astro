@@ -51,7 +51,7 @@ const cm0 = defaultCommunity();
       <div class="mx-auto flex max-w-xl flex-wrap items-center justify-center gap-x-2.5 gap-y-1 px-4 py-2 text-center text-sm font-bold leading-snug sm:text-[15px]">
         <Fragment set:html={lucide('gift', 'h-4 w-4 shrink-0', 2.4)} />
         <span id="nk-clubbar-text"></span>
-        <a id="nk-clubbar-btn" href="/nusuk/club" class="shrink-0 rounded-full bg-emerald-900 px-3 py-0.5 text-xs font-bold text-gold-100 hover:bg-emerald-800"></a>
+        <a id="nk-clubbar-btn" href="/nusuk/account" class="shrink-0 rounded-full bg-emerald-900 px-3 py-0.5 text-xs font-bold text-gold-100 hover:bg-emerald-800"></a>
       </div>
     </div>
     <!-- ===== Temporary announcement bar (Nusuk Manager → Top notice) ===== -->
@@ -79,7 +79,7 @@ const cm0 = defaultCommunity();
             </span>
           </a>
           <div class="flex shrink-0 items-center gap-1.5">
-            <a id="nk-login" href="/nusuk/club" class="flex items-center gap-1.5 whitespace-nowrap rounded-full border border-gold-400/50 px-2.5 py-1.5 text-[13px] font-semibold text-gold-100 hover:bg-white/10 sm:px-3.5 sm:text-sm" aria-label="লগইন / রেজিস্টার">
+            <a id="nk-login" href="/nusuk/account" class="flex items-center gap-1.5 whitespace-nowrap rounded-full border border-gold-400/50 px-2.5 py-1.5 text-[13px] font-semibold text-gold-100 hover:bg-white/10 sm:px-3.5 sm:text-sm" aria-label="লগইন / রেজিস্টার">
               <span id="nk-login-ico"><Fragment set:html={lucide('logIn', 'h-4 w-4', 2.2)} /></span>
               <span id="nk-login-text" class="hidden min-[400px]:inline">লগইন / রেজিস্টার</span>
             </a>
@@ -102,7 +102,7 @@ const cm0 = defaultCommunity();
           <span class="font-bold text-emerald-950">মেনু</span>
           <button id="nk-menu-close" type="button" class="grid h-9 w-9 place-items-center rounded-full text-emerald-900 hover:bg-emerald-50" aria-label="মেনু বন্ধ করুন"><Fragment set:html={lucide('x', 'h-5 w-5')} /></button>
         </div>
-        <a id="nk-menu-login" href="/nusuk/club" class="mx-3 mt-3 flex items-center gap-3 rounded-xl bg-emerald-900 px-3 py-3 font-bold text-white hover:bg-emerald-800">
+        <a id="nk-menu-login" href="/nusuk/account" class="mx-3 mt-3 flex items-center gap-3 rounded-xl bg-emerald-900 px-3 py-3 font-bold text-white hover:bg-emerald-800">
           <span class="text-gold-400"><Fragment set:html={lucide('logIn', 'h-5 w-5')} /></span><span id="nk-menu-login-text">লগইন / রেজিস্টার</span>
         </a>
         <ul class="grid gap-0.5 p-3 text-[15px]">
@@ -1841,7 +1841,7 @@ const cm0 = defaultCommunity();
         $('nk-login-text').textContent = 'আমার অ্যাকাউন্ট';
         $('nk-login-ico').innerHTML = lucide('userCheck', 'h-4 w-4', 2.2);
         $('nk-login').setAttribute('aria-label', 'আমার অ্যাকাউন্ট');
-        $('nk-menu-login-text').textContent = 'আমার অ্যাকাউন্ট (রিওয়ার্ড ক্লাব)';
+        $('nk-menu-login-text').textContent = 'আমার অ্যাকাউন্ট';
       }
       const menu = $('nk-menu');
       const menuOpen = () => {

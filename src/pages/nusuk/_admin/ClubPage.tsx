@@ -126,7 +126,7 @@ export default function ClubPage({ toast }: { toast: ToastFn }) {
 
   if (!loaded) return <section className="nk-card p-5 text-sm text-emerald-900/60">Loading…</section>;
   const s = data?.stats;
-  const url = `${typeof location !== 'undefined' ? location.origin : ''}/nusuk/club`;
+  const url = `${typeof location !== 'undefined' ? location.origin : ''}/nusuk/account`;
   const pages = data ? Math.max(1, Math.ceil(data.total / PAGE)) : 1;
 
   return (
@@ -136,7 +136,7 @@ export default function ClubPage({ toast }: { toast: ToastFn }) {
           <div>
             <h2 className="flex items-center gap-2 text-base font-bold text-emerald-950"><Ticket className="h-5 w-5" aria-hidden /> Ribat Reward Club</h2>
             <p className="mt-1 max-w-3xl text-sm text-emerald-900/75">
-              Visitors sign in with Google at /nusuk/club, fill a profile and collect tickets: 1 for joining, +1 if they joined with someone's code
+              Visitors sign in with Google at /nusuk/account, fill a profile and collect tickets: 1 for joining, +1 if they joined with someone's code
               (the code owner also gets 1), and 1 a day for copying a code inside the time window. Their Nusuk code is their referral code.
               Each ticket is dated (Bangladesh time) for that day's draw.
             </p>
@@ -196,7 +196,7 @@ export default function ClubPage({ toast }: { toast: ToastFn }) {
           <div className="grid gap-3 sm:grid-cols-[1fr_12rem]">
             <label><span className="mb-1 block text-xs font-semibold">Announcement</span>
               <input className="nk-input" value={c.notice_text} placeholder={DEFAULT_NOTICE} maxLength={200} onChange={(e) => set({ notice_text: e.target.value })} /></label>
-            <label><span className="mb-1 block text-xs font-semibold">Button (opens /nusuk/club)</span>
+            <label><span className="mb-1 block text-xs font-semibold">Button (opens /nusuk/account)</span>
               <input className="nk-input" value={c.notice_btn} placeholder={DEFAULT_NOTICE_BTN} maxLength={30} onChange={(e) => set({ notice_btn: e.target.value })} /></label>
           </div>
           <p className="text-xs text-emerald-900/60">Signed-in members see the button as "আমার অ্যাকাউন্ট". Leave empty for the default text.</p>

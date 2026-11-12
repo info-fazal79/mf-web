@@ -1,9 +1,9 @@
-/* /nusuk/club · Ribat Reward Club: Google sign-in, profile, ticket dashboard, photo card + caption. */
+/* /nusuk/account · member account: Google sign-in, profile, competitions, tickets, photo card + caption. */
 import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { ArrowLeft, Check, Clock, Copy, Download, Gift, History, LogOut, PenLine, Share2, Sparkles, Ticket, Trophy, UserPlus, Users } from 'lucide-react';
+import { ArrowLeft, Check, Clock, UserRound, Copy, Download, Gift, History, LogOut, PenLine, Share2, Sparkles, Ticket, Trophy, UserPlus, Users } from 'lucide-react';
 import {
-  CODE_RE, DEFAULT_RULES, DEFAULT_TITLE, KIND_LABEL, SAVE_ERR, bn, bnDate, bnTime, contestRules, fillCaption, memberClient, rememberRef, savedRef,
+  CODE_RE, KIND_LABEL, SAVE_ERR, bn, bnDate, bnTime, contestRules, fillCaption, memberClient, rememberRef, savedRef,
   type ClubMe, type Contest, type Member, type SaveResult,
 } from '../_lib/club';
 import { drawCard, cardBlob } from '../_lib/clubcard';
@@ -26,7 +26,7 @@ function Shell({ children }: { children: ReactNode }) {
       <header className="bg-gradient-to-br from-emerald-900 to-[#032b20] text-white">
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-4">
           <a href="/nusuk" className="flex items-center gap-2.5">
-            <img src="/nusuk/ribat-logo-96.webp" alt="" width={40} height={40} className="h-10 w-10 rounded-full bg-white" />
+            <img src="/nusuk/ribat-logo-96.webp" alt="" width={40} height={40} className="h-10 w-10 rounded-full bg-[#e9ef9f] object-cover ring-2 ring-gold-400/60" />
             <div className="leading-tight">
               <div className="font-bold">Ribatul Ummah</div>
               <div className="text-xs text-emerald-100/80">নুসুক কোড শেয়ার</div>
@@ -39,20 +39,6 @@ function Shell({ children }: { children: ReactNode }) {
       </header>
       <main className="mx-auto grid max-w-3xl gap-4 px-4 py-5">{children}</main>
     </div>
-  );
-}
-
-function Rules({ text }: { text: string }) {
-  const lines = (text.trim() || DEFAULT_RULES).split('\n').map((l) => l.trim()).filter(Boolean);
-  return (
-    <section className="nk-card p-4 sm:p-5">
-      <h2 className="flex items-center gap-2 text-lg font-bold"><Ticket className="h-5 w-5 text-emerald-700" aria-hidden /> টিকিটের নিয়ম</h2>
-      <ul className="mt-3 grid gap-2 text-[15px] leading-relaxed">
-        {lines.map((l, i) => (
-          <li key={i} className="flex gap-2.5"><Check className="mt-1 h-4 w-4 shrink-0 text-emerald-600" aria-hidden />{l}</li>
-        ))}
-      </ul>
-    </section>
   );
 }
 
@@ -87,32 +73,24 @@ export default function ClubApp() {
   if (error) return <Shell><section className="nk-card p-5 text-sm text-red-800">লোড করা যায়নি: {error}</section></Shell>;
   if (!sb || !me) return <Shell><section className="nk-card p-5 text-sm text-emerald-900/60">লোড হচ্ছে…</section></Shell>;
 
-  const title = me.cfg.title.trim() || DEFAULT_TITLE;
   const reload = () => load(sb);
 
   return (
     <Shell>
-      <section className="rounded-2xl bg-gradient-to-br from-emerald-800 to-emerald-950 p-5 text-white shadow-lg">
-        <div className="flex items-center gap-2 text-sm font-semibold text-gold-400"><Gift className="h-4 w-4" aria-hidden /> রিবাতের সৌজন্যে</div>
-        <h1 className="mt-1 text-2xl font-bold sm:text-3xl">{title}</h1>
-        <p className="mt-2 text-[15px] leading-relaxed text-emerald-50/90">
-          নুসুক কোড কপি করুন, বন্ধুদের যুক্ত করুন, টিকিট জমান। যত বেশি টিকিট, রিবাতের ইসলামিক পণ্য জেতার লাকি ড্রতে তত বেশি সুযোগ। অংশগ্রহণ সম্পূর্ণ ফ্রি।
-        </p>
-      </section>
+      <h1 className="flex items-center gap-2 text-2xl font-bold"><UserRound className="h-6 w-6 text-emerald-700" aria-hidden /> {me.member ? 'আমার অ্যাকাউন্ট' : me.signed_in ? 'অ্যাকাউন্ট সম্পূর্ণ করুন' : 'লগইন / রেজিস্টার'}</h1>
 
       {me.cfg.test && me.cfg.on && (
         <p className="rounded-xl border border-gold-500/60 bg-gold-400/15 px-3.5 py-2.5 text-sm font-semibold">
-          টেস্ট মোড চলছে: শুধু তালিকায় থাকা ইমেইল দিয়ে ক্লাব ব্যবহার করা যাচ্ছে। সবার জন্য এখনো খোলা হয়নি।
+          টেস্ট মোড: শুধু তালিকায় থাকা ইমেইলগুলো এখন ব্যবহার করতে পারছে। সবার জন্য এখনো খোলা হয়নি।
         </p>
       )}
       {!me.signed_in && <SignIn sb={sb} cfg={me.cfg} />}
       {me.signed_in && !me.member && (me.cfg.on
         ? <ProfileForm sb={sb} email={me.email} onDone={reload} />
-        : <section className="nk-card p-5 text-[15px]">রিওয়ার্ড ক্লাব শীঘ্রই চালু হবে, ইনশাআল্লাহ। একটু পরে আবার দেখুন।{me.email && <span className="mt-1 block text-xs text-emerald-900/60">লগইন: {me.email}</span>}</section>)}
+        : <section className="nk-card p-5 text-[15px]">নতুন অ্যাকাউন্ট খোলা শীঘ্রই চালু হবে, ইনশাআল্লাহ। একটু পরে আবার দেখুন।{me.email && <span className="mt-1 block text-xs text-emerald-900/60">লগইন: {me.email}</span>}</section>)}
       {me.member && !editing && <Dashboard me={me} onEdit={() => setEditing(true)} />}
       {me.member && editing && <ProfileForm sb={sb} member={me.member} email={me.member.email ?? undefined} onDone={async () => { setEditing(false); await reload(); }} onCancel={() => setEditing(false)} />}
 
-      {!me.member && (me.contests?.length ? <ContestsPreview contests={me.contests} /> : <Rules text={me.cfg.rules} />)}
       <p className="text-center text-xs text-emerald-900/60">লগইন করে আপনি আমাদের <a href="/nusuk/privacy" className="font-semibold underline">গোপনীয়তা নীতি</a> মেনে নিচ্ছেন।</p>
       {me.signed_in && (
         <button type="button" onClick={() => sb.auth.signOut()} className="mx-auto flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-emerald-900/70 hover:bg-emerald-900/5">
@@ -154,9 +132,9 @@ function SignIn({ sb, cfg }: { sb: SupabaseClient; cfg: ClubMe['cfg'] }) {
           <UserPlus className="h-4 w-4 shrink-0" aria-hidden /> {inviter.name} (SL {bn(inviter.sl)}) আপনাকে আমন্ত্রণ জানিয়েছেন। যুক্ত হলেই পাবেন ২টি টিকিট!
         </p>
       )}
-      {!cfg.on && <p className="mb-3 text-sm text-emerald-900/70">রিওয়ার্ড ক্লাব শীঘ্রই চালু হবে। আগে থেকেই লগইন করে রাখতে পারেন।</p>}
-      <h2 className="text-lg font-bold">যুক্ত হতে লগইন করুন</h2>
-      <p className="mt-1 text-sm text-emerald-900/70">এক ক্লিকে Google অ্যাকাউন্ট দিয়ে। কোনো পাসওয়ার্ড লাগবে না।</p>
+      <h2 className="text-lg font-bold">Google দিয়ে লগইন বা নতুন অ্যাকাউন্ট</h2>
+      <p className="mt-1 text-sm text-emerald-900/70">এক ক্লিকেই হয়ে যাবে। কোনো পাসওয়ার্ড লাগবে না।</p>
+      {!cfg.on && <p className="mt-2 text-sm text-emerald-900/70">নতুন অ্যাকাউন্ট খোলা শীঘ্রই চালু হবে, ইনশাআল্লাহ।</p>}
       <button type="button" onClick={go} disabled={busy}
         className="mx-auto mt-4 flex items-center gap-3 rounded-full border border-[#dadce0] bg-white px-6 py-3 font-semibold text-[#3c4043] shadow-sm transition hover:shadow-md disabled:opacity-60">
         <GoogleMark /> {busy ? 'অপেক্ষা করুন…' : 'Google দিয়ে লগইন'}

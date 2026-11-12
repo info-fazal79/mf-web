@@ -1,23 +1,16 @@
 ---
-// Ribat Reward Club · muhammadfazal.com/nusuk/club (Google sign-in, tickets, photo card)
-import './_lib/nusuk.css';
-import ClubApp from './_club/ClubApp';
+// Old link + Google sign-in return address (allowed in Supabase): forwards to /nusuk/account,
+// keeping ?code=… / ?ref=… so the sign-in finishes there.
 ---
 
 <!doctype html>
 <html lang="bn">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>রিবাত রিওয়ার্ড ক্লাব | নুসুক কোড শেয়ার</title>
-    <meta name="description" content="নুসুক কোড কপি করুন, বন্ধুদের যুক্ত করুন, টিকিট জমান। রিবাতের ইসলামিক পণ্য জেতার লাকি ড্র, সম্পূর্ণ ফ্রি।" />
-    <meta name="theme-color" content="#053d2d" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" />
+    <meta name="robots" content="noindex" />
+    <title>আমার অ্যাকাউন্ট | নুসুক কোড শেয়ার</title>
+    <script is:inline>location.replace('/nusuk/account' + location.search + location.hash);</script>
+    <noscript><meta http-equiv="refresh" content="0; url=/nusuk/account" /></noscript>
   </head>
-  <body class="min-h-screen font-sans antialiased">
-    <ClubApp client:only="react" />
-  </body>
+  <body><a href="/nusuk/account">আমার অ্যাকাউন্ট</a></body>
 </html>
