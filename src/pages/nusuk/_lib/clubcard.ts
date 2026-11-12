@@ -82,12 +82,22 @@ export async function drawCard(canvas: HTMLCanvasElement, d: CardData) {
   rr(ctx, 30, 30, CARD_W - 60, CARD_H - 60, 36); ctx.stroke();
 
   // top: logo + name (left), SL (right)
-  if (logo) {
+  {
+    const cx = 130, cy = 130, r = 62;
     ctx.save();
-    ctx.beginPath(); ctx.arc(130, 130, 62, 0, Math.PI * 2); ctx.fillStyle = '#ffffff'; ctx.fill();
-    ctx.clip();
-    ctx.drawImage(logo, 74, 74, 112, 112);
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fillStyle = '#e9ef9f'; // the logo's own background, so no white edge shows
+    ctx.fill();
+    if (logo) {
+      ctx.clip();
+      // cover the circle, centred (like CSS object-fit: cover)
+      const s = Math.max((r * 2) / logo.naturalWidth, (r * 2) / logo.naturalHeight);
+      const w = logo.naturalWidth * s, h = logo.naturalHeight * s;
+      ctx.drawImage(logo, cx - w / 2, cy - h / 2, w, h);
+    }
     ctx.restore();
+    ctx.strokeStyle = '#f2c94c'; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke();
   }
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';

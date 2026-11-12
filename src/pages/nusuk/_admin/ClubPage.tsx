@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Download, ExternalLink, RefreshCw, Search, Ticket, Trophy, Users } from 'lucide-react';
 import { supabase as sb } from '@/lib/supabase';
-import { DEFAULT_CAPTION, DEFAULT_CARD_LINE, DEFAULT_RULES, DEFAULT_TITLE, parseClub, type ClubCfg } from '../_lib/club';
+import { DEFAULT_CAPTION, DEFAULT_CARD_LINE, DEFAULT_NOTICE, DEFAULT_NOTICE_BTN, DEFAULT_RULES, DEFAULT_TITLE, parseClub, type ClubCfg } from '../_lib/club';
 
 type ToastFn = (t: string, ok?: boolean) => void;
 const errText = (e: unknown) => (e && typeof e === 'object' && 'message' in e ? String((e as { message: string }).message) : String(e));
@@ -183,6 +183,19 @@ export default function ClubPage({ toast }: { toast: ToastFn }) {
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-base font-bold text-emerald-950">Settings</h2>
           <button type="button" className="nk-btn nk-green px-4 py-2 text-sm" disabled={busy || !dirty} onClick={() => save()}>{busy ? 'Saving…' : dirty ? 'Save' : 'Saved'}</button>
+        </div>
+        <div className="grid gap-3 rounded-xl border border-gold-500/40 bg-gold-400/10 p-3">
+          <label className="flex items-center gap-2.5 text-sm font-semibold">
+            <input type="checkbox" className="h-4 w-4 accent-emerald-700" checked={c.notice_on} onChange={(e) => set({ notice_on: e.target.checked })} />
+            Top notice bar on /nusuk (shows while the club is open; in test mode only testers see it)
+          </label>
+          <div className="grid gap-3 sm:grid-cols-[1fr_12rem]">
+            <label><span className="mb-1 block text-xs font-semibold">Announcement</span>
+              <input className="nk-input" value={c.notice_text} placeholder={DEFAULT_NOTICE} maxLength={200} onChange={(e) => set({ notice_text: e.target.value })} /></label>
+            <label><span className="mb-1 block text-xs font-semibold">Button (opens /nusuk/club)</span>
+              <input className="nk-input" value={c.notice_btn} placeholder={DEFAULT_NOTICE_BTN} maxLength={30} onChange={(e) => set({ notice_btn: e.target.value })} /></label>
+          </div>
+          <p className="text-xs text-emerald-900/60">Signed-in members see the button as "আমার অ্যাকাউন্ট". Leave empty for the default text.</p>
         </div>
         <div className="grid gap-4 sm:grid-cols-3">
           <label className="sm:col-span-1"><span className="mb-1 block text-sm font-semibold">Name of the club</span>

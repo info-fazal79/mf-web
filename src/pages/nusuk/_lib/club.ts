@@ -23,9 +23,14 @@ export type ClubCfg = {
   rules: string;
   caption: string;
   card_line: string;
+  notice_on: boolean; // Reward Club bar at the top of /nusuk
+  notice_text: string;
+  notice_btn: string;
 };
 
 export const DEFAULT_TITLE = 'রিবাত রিওয়ার্ড ক্লাব';
+export const DEFAULT_NOTICE = 'অ্যাকাউন্টে লগইন করে প্রোফাইল সম্পূর্ণ করলেই ফ্রিতে পাবেন ৫০টি Nusuk Key!';
+export const DEFAULT_NOTICE_BTN = 'লগইন করুন';
 export const DEFAULT_CARD_LINE = 'এই কোড দিয়ে যুক্ত হলে আপনিও পাবেন ১টি বাড়তি টিকিট';
 export const DEFAULT_RULES = [
   'Google দিয়ে লগইন করে প্রোফাইল পূরণ করলেই ১টি টিকিট।',
@@ -66,6 +71,9 @@ export function parseClub(raw: unknown): ClubCfg {
     rules: s('rules', 3000),
     caption: s('caption', 3000),
     card_line: s('card_line', 120),
+    notice_on: r.notice_on !== false,
+    notice_text: s('notice_text', 200),
+    notice_btn: s('notice_btn', 30),
   };
 }
 

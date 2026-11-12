@@ -46,6 +46,14 @@ const cm0 = defaultCommunity();
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=JetBrains+Mono:wght@600;700&display=swap" />
   </head>
   <body class="min-h-screen font-sans antialiased">
+    <!-- ===== Reward Club announcement (Nusuk Manager → Reward Club → Top notice bar) ===== -->
+    <div id="nk-clubbar" class="hidden bg-gradient-to-r from-gold-400 via-[#f2d77a] to-gold-400 text-emerald-950">
+      <div class="mx-auto flex max-w-xl flex-wrap items-center justify-center gap-x-2.5 gap-y-1 px-4 py-2 text-center text-sm font-bold leading-snug sm:text-[15px]">
+        <Fragment set:html={lucide('gift', 'h-4 w-4 shrink-0', 2.4)} />
+        <span id="nk-clubbar-text"></span>
+        <a id="nk-clubbar-btn" href="/nusuk/club" class="shrink-0 rounded-full bg-emerald-900 px-3 py-0.5 text-xs font-bold text-gold-100 hover:bg-emerald-800"></a>
+      </div>
+    </div>
     <!-- ===== Temporary announcement bar (Nusuk Manager → Top notice) ===== -->
     <div id="nk-topbar" class="nk-topbar hidden text-white" role="status" aria-live="polite">
       <div class="mx-auto flex max-w-xl flex-wrap items-center justify-center gap-x-2.5 gap-y-1 px-4 py-2.5 text-center text-sm font-semibold leading-snug sm:text-[15px]">
@@ -70,15 +78,51 @@ const cm0 = defaultCommunity();
               <span class="block text-[11px] leading-snug text-gold-100/85">Nusuk Code Share - উমরাহ প্রতিযোগিতা</span>
             </span>
           </a>
-          <a href="#submit" class="shrink-0 whitespace-nowrap rounded-full border border-gold-400/50 px-3 py-1.5 text-[13px] font-semibold text-gold-100 hover:bg-white/10 sm:px-3.5 sm:text-sm">কোড জমা দিন</a>
+          <div class="flex shrink-0 items-center gap-1.5">
+            <a id="nk-login" href="/nusuk/club" class="flex items-center gap-1.5 whitespace-nowrap rounded-full border border-gold-400/50 px-2.5 py-1.5 text-[13px] font-semibold text-gold-100 hover:bg-white/10 sm:px-3.5 sm:text-sm" aria-label="লগইন / রেজিস্টার">
+              <span id="nk-login-ico"><Fragment set:html={lucide('logIn', 'h-4 w-4', 2.2)} /></span>
+              <span id="nk-login-text" class="hidden min-[400px]:inline">লগইন / রেজিস্টার</span>
+            </a>
+            <button id="nk-menu-open" type="button" class="grid h-9 w-9 place-items-center rounded-full border border-gold-400/50 text-gold-100 hover:bg-white/10" aria-label="মেনু" aria-haspopup="dialog" aria-controls="nk-menu">
+              <Fragment set:html={lucide('menu', 'h-5 w-5', 2.2)} />
+            </button>
+          </div>
         </nav>
         <h1 class="mt-5 text-center text-2xl font-bold sm:text-3xl" data-k="title">{c.title}</h1>
         <p class="mx-auto mt-1.5 max-w-md text-center text-sm text-emerald-100/85" data-k="subtitle">{c.subtitle}</p>
       </div>
     </header>
 
+
+    <!-- ===== Site menu (header ☰): every section of the page + login ===== -->
+    <div id="nk-menu" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true" aria-label="মেনু">
+      <div id="nk-menu-bg" class="absolute inset-0 bg-emerald-950/50"></div>
+      <nav class="absolute top-0 right-0 flex h-full w-[min(20rem,88vw)] flex-col overflow-y-auto bg-white shadow-2xl">
+        <div class="flex items-center justify-between gap-2 border-b border-[#eee7d3] px-4 py-3">
+          <span class="font-bold text-emerald-950">মেনু</span>
+          <button id="nk-menu-close" type="button" class="grid h-9 w-9 place-items-center rounded-full text-emerald-900 hover:bg-emerald-50" aria-label="মেনু বন্ধ করুন"><Fragment set:html={lucide('x', 'h-5 w-5')} /></button>
+        </div>
+        <a id="nk-menu-login" href="/nusuk/club" class="mx-3 mt-3 flex items-center gap-3 rounded-xl bg-emerald-900 px-3 py-3 font-bold text-white hover:bg-emerald-800">
+          <span class="text-gold-400"><Fragment set:html={lucide('logIn', 'h-5 w-5')} /></span><span id="nk-menu-login-text">লগইন / রেজিস্টার</span>
+        </a>
+        <ul class="grid gap-0.5 p-3 text-[15px]">
+            <li><a href="#copy" data-menu="copy" class="flex items-center gap-3 rounded-xl px-3 py-2.5 font-semibold text-emerald-950 hover:bg-emerald-50"><span class="text-emerald-700"><Fragment set:html={lucide('copy', 'h-5 w-5')} /></span>কোড কপি করুন</a></li>
+            <li><a href="#feature" data-menu="feature" class="flex items-center gap-3 rounded-xl px-3 py-2.5 font-semibold text-emerald-950 hover:bg-emerald-50"><span class="text-emerald-700"><Fragment set:html={lucide('star', 'h-5 w-5')} /></span>কোড ফিচার করুন</a></li>
+            <li><a href="#nk-today" data-menu="nk-today" class="flex items-center gap-3 rounded-xl px-3 py-2.5 font-semibold text-emerald-950 hover:bg-emerald-50"><span class="text-emerald-700"><Fragment set:html={lucide('crown', 'h-5 w-5')} /></span>সর্বশেষ বিজয়ী</a></li>
+            <li><a href="#nk-quiz" data-menu="nk-quiz" class="flex items-center gap-3 rounded-xl px-3 py-2.5 font-semibold text-emerald-950 hover:bg-emerald-50"><span class="text-emerald-700"><Fragment set:html={lucide('target', 'h-5 w-5')} /></span>দৈনিক ইসলামিক কুইজ</a></li>
+            <li><a href="#nk-ins" data-menu="nk-ins" class="flex items-center gap-3 rounded-xl px-3 py-2.5 font-semibold text-emerald-950 hover:bg-emerald-50"><span class="text-emerald-700"><Fragment set:html={lucide('chartLine', 'h-5 w-5')} /></span>লাইভ পরিসংখ্যান</a></li>
+            <li><a href="#nk-winners" data-menu="nk-winners" class="flex items-center gap-3 rounded-xl px-3 py-2.5 font-semibold text-emerald-950 hover:bg-emerald-50"><span class="text-emerald-700"><Fragment set:html={lucide('trophy', 'h-5 w-5')} /></span>বাংলাদেশি বিজয়ীরা</a></li>
+            <li><a href="#faq" data-menu="faq" class="flex items-center gap-3 rounded-xl px-3 py-2.5 font-semibold text-emerald-950 hover:bg-emerald-50"><span class="text-emerald-700"><Fragment set:html={lucide('circleHelp', 'h-5 w-5')} /></span>জরুরি প্রশ্ন ও উত্তর</a></li>
+            <li><a href="#submit" data-menu="submit" class="flex items-center gap-3 rounded-xl px-3 py-2.5 font-semibold text-emerald-950 hover:bg-emerald-50"><span class="text-emerald-700"><Fragment set:html={lucide('send', 'h-5 w-5')} /></span>কোড জমা দিন</a></li>
+            <li><a href="#feedback" data-menu="feedback" class="flex items-center gap-3 rounded-xl px-3 py-2.5 font-semibold text-emerald-950 hover:bg-emerald-50"><span class="text-emerald-700"><Fragment set:html={lucide('messageSquareWarning', 'h-5 w-5')} /></span>পরামর্শ / অভিযোগ</a></li>
+            <li><a href="#nk-rv" data-menu="nk-rv" class="flex items-center gap-3 rounded-xl px-3 py-2.5 font-semibold text-emerald-950 hover:bg-emerald-50"><span class="text-emerald-700"><Fragment set:html={lucide('quote', 'h-5 w-5')} /></span>ভিজিটরদের মতামত</a></li>
+            <li><a href="#nk-cm" data-menu="nk-cm" class="flex items-center gap-3 rounded-xl px-3 py-2.5 font-semibold text-emerald-950 hover:bg-emerald-50"><span class="text-emerald-700"><Fragment set:html={lucide('usersRound', 'h-5 w-5')} /></span>কমিউনিটি</a></li>
+        </ul>
+      </nav>
+    </div>
+
     <main class="mx-auto -mt-20 max-w-xl px-4 pb-10 sm:-mt-24">
-      <section class="nk-card p-5 sm:p-6" aria-labelledby="nk-code-h">
+      <section id="copy" class="nk-card scroll-mt-4 p-5 sm:p-6" aria-labelledby="nk-code-h">
         <div id="nk-notice" class="mb-4 hidden rounded-xl bg-gold-100 px-3.5 py-2.5 text-sm text-emerald-950"></div>
 
         <div class="grid grid-cols-3 gap-2 text-center sm:gap-3">
@@ -109,16 +153,6 @@ const cm0 = defaultCommunity();
           <button id="nk-skip" type="button" class="font-semibold text-emerald-700 underline-offset-4 hover:underline disabled:opacity-40" disabled>অন্য কোড দেখুন</button>
           <span id="nk-status" class="text-emerald-800/80" role="status"></span>
         </div>
-
-        <!-- Ribat Reward Club (Nusuk Manager → Reward Club). Hidden until the club is turned on. -->
-        <a id="nk-club" href="/nusuk/club" class="mt-4 hidden items-center gap-3 rounded-xl bg-gradient-to-r from-emerald-800 to-emerald-950 px-3.5 py-3 text-white shadow-md transition hover:brightness-110">
-          <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-gold-400 text-emerald-950" aria-hidden="true"><Fragment set:html={lucide('gift', 'h-5 w-5', 2.2)} /></span>
-          <span class="min-w-0 flex-1 text-left">
-            <span id="nk-club-title" class="block text-[15px] font-bold leading-tight">রিবাত রিওয়ার্ড ক্লাব: টিকিট জমান, পুরস্কার জিতুন</span>
-            <span id="nk-club-sub" class="block text-xs text-emerald-50/80">কোড কপি করলেই প্রতিদিন ১টি টিকিট · বন্ধুকে যুক্ত করলে আরও · সম্পূর্ণ ফ্রি</span>
-          </span>
-          <span id="nk-club-cta" class="shrink-0 rounded-full bg-gold-400 px-2.5 py-1 text-xs font-bold text-emerald-950">যুক্ত হোন ›</span>
-        </a>
 
         <!-- Tutorial video (Nusuk Manager → Video). Hidden until a YouTube link is set. -->
         <a id="nk-video-open" href="#" target="_blank" rel="noopener" class="nk-video-btn mt-4 hidden items-center gap-3 rounded-xl px-3.5 py-2.5">
@@ -258,7 +292,7 @@ const cm0 = defaultCommunity();
       </section>
 
       <!-- ===== Info as questions & answers (text from Nusuk Manager → Settings → Page text) ===== -->
-      <section class="mt-8" aria-labelledby="nk-faq-h">
+      <section id="faq" class="mt-8 scroll-mt-4" aria-labelledby="nk-faq-h">
         <h2 id="nk-faq-h" class="mb-2.5 px-1 text-base font-bold text-emerald-900">❓ জরুরি প্রশ্ন ও উত্তর</h2>
         <div class="nk-card divide-y divide-emerald-900/10 overflow-hidden p-0">
           {tabs.map((t) => (
@@ -326,7 +360,7 @@ const cm0 = defaultCommunity();
       </section>
 
       <!-- ===== Feedback ===== -->
-      <section class="nk-card mt-8 flex flex-col items-center gap-3 p-5 text-center sm:flex-row sm:text-left" aria-labelledby="nk-fb-h">
+      <section id="feedback" class="nk-card mt-8 flex scroll-mt-4 flex-col items-center gap-3 p-5 text-center sm:flex-row sm:text-left" aria-labelledby="nk-fb-h">
         <div class="flex-1">
           <h2 id="nk-fb-h" class="font-bold text-emerald-900">অভিযোগ, মতামত বা পরামর্শ আছে?</h2>
           <p class="mt-0.5 text-sm text-emerald-900/70">এই ওয়েবসাইট নিয়ে কিছু জানাতে চাইলে আমাদের লিখুন।</p>
@@ -673,7 +707,8 @@ const cm0 = defaultCommunity();
     <script>
       import { rpc, rpcReady, type Boot, type Claim, type CodeCheck, type CodeRef, type FeatureReq, type FeaturedItem, type FeaturedList, type SliderItem, type Submit } from './_lib/rpc';
       import { initQuiz } from './_lib/quiz';
-      import { clubOf, hasMemberSession, memberToken, rememberRef, DEFAULT_TITLE } from './_lib/club';
+      import { lucide } from './_lib/lucide';
+      import { clubOf, hasMemberSession, memberToken, rememberRef, DEFAULT_NOTICE, DEFAULT_NOTICE_BTN } from './_lib/club';
       import { initInsights, insightsOn } from './_lib/insights';
       import { adHtml, defaultAds, liveAds, parseAds, sampleDuaAd } from './_lib/ads';
       import { bonusReady, parseBonus, parseCommunity } from './_lib/bonus';
@@ -1187,12 +1222,13 @@ const cm0 = defaultCommunity();
         const member = hasMemberSession();
         // test mode: only signed-in members see it here (the server checks the testers list)
         clubOn = c.on || (c.test && member);
-        const el = $('nk-club');
-        el.classList.toggle('hidden', !clubOn);
-        el.classList.toggle('flex', clubOn);
-        if (!clubOn) return;
-        $('nk-club-title').textContent = `${c.title.trim() || DEFAULT_TITLE}: টিকিট জমান, পুরস্কার জিতুন`;
-        $('nk-club-cta').textContent = member ? 'ড্যাশবোর্ড ›' : 'যুক্ত হোন ›';
+        // Reward Club bar at the very top
+        const showBar = clubOn && c.notice_on;
+        $('nk-clubbar').classList.toggle('hidden', !showBar);
+        if (showBar) {
+          $('nk-clubbar-text').textContent = c.notice_text.trim() || DEFAULT_NOTICE;
+          $('nk-clubbar-btn').textContent = member ? 'আমার অ্যাকাউন্ট →' : `${c.notice_btn.trim() || DEFAULT_NOTICE_BTN} →`;
+        }
       }
       const CLUB_DAY = 'nusuk:club:copied';
       const dhakaDay = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Dhaka' });
@@ -1799,6 +1835,35 @@ const cm0 = defaultCommunity();
         } catch { /* counter not installed yet: stay hidden */ }
       }
       document.addEventListener('visibilitychange', ping);
+
+      // ---- Header: login / account button + site menu ----
+      if (hasMemberSession()) {
+        $('nk-login-text').textContent = 'আমার অ্যাকাউন্ট';
+        $('nk-login-ico').innerHTML = lucide('userCheck', 'h-4 w-4', 2.2);
+        $('nk-login').setAttribute('aria-label', 'আমার অ্যাকাউন্ট');
+        $('nk-menu-login-text').textContent = 'আমার অ্যাকাউন্ট (রিওয়ার্ড ক্লাব)';
+      }
+      const menu = $('nk-menu');
+      const menuOpen = () => {
+        // hide links to sections that are not on the page right now
+        menu.querySelectorAll<HTMLAnchorElement>('[data-menu]').forEach((a) => {
+          const t = a.dataset.menu!;
+          const target = t === 'feature' ? $('nk-ft-open') : document.getElementById(t);
+          a.parentElement!.classList.toggle('hidden', !target || target.classList.contains('hidden') || target.closest('.hidden') !== null);
+        });
+        menu.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+        ($('nk-menu-close') as HTMLButtonElement).focus();
+      };
+      const menuClose = () => { menu.classList.add('hidden'); document.body.style.overflow = ''; };
+      $('nk-menu-open').addEventListener('click', menuOpen);
+      $('nk-menu-close').addEventListener('click', menuClose);
+      $('nk-menu-bg').addEventListener('click', menuClose);
+      document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !menu.classList.contains('hidden')) menuClose(); });
+      menu.querySelectorAll<HTMLAnchorElement>('[data-menu]').forEach((a) => a.addEventListener('click', (e) => {
+        menuClose();
+        if (a.dataset.menu === 'feature') { e.preventDefault(); ($('nk-ft-open') as HTMLButtonElement).click(); }
+      }));
 
       // ---- Start ----
       renderMine();
