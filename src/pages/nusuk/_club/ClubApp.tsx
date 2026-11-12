@@ -108,6 +108,7 @@ export default function ClubApp() {
       {me.member && editing && <ProfileForm sb={sb} member={me.member} email={me.member.email ?? undefined} onDone={async () => { setEditing(false); await reload(); }} onCancel={() => setEditing(false)} />}
 
       <Rules text={me.cfg.rules} />
+      <p className="text-center text-xs text-emerald-900/60">লগইন করে আপনি আমাদের <a href="/nusuk/privacy" className="font-semibold underline">গোপনীয়তা নীতি</a> মেনে নিচ্ছেন।</p>
       {me.signed_in && (
         <button type="button" onClick={() => sb.auth.signOut()} className="mx-auto flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-emerald-900/70 hover:bg-emerald-900/5">
           <LogOut className="h-4 w-4" aria-hidden /> লগআউট
