@@ -43,6 +43,8 @@ export function initLiveScreen() {
   const params = new URLSearchParams(location.search);
   const hide = new Set((params.get('hide') ?? '').split(',').map((s) => s.trim()).filter(Boolean));
   document.querySelectorAll<HTMLElement>('[data-panel]').forEach((el) => { if (hide.has(el.dataset.panel!)) el.setAttribute('data-hidden', ''); });
+  const theme = params.get('theme');
+  if (theme === 'cream' || theme === 'navy') document.body.classList.add(`theme-${theme}`);
   const title = params.get('title');
   if (title) $('ls-title').textContent = title.slice(0, 80);
 
@@ -100,9 +102,9 @@ export function initLiveScreen() {
       const bw = W / n;
       marks = v.map((val, i) => (val ? `<rect x="${(i * bw + bw * 0.14).toFixed(1)}" y="${y(val).toFixed(1)}" width="${(bw * 0.72).toFixed(1)}" height="${(H - y(val)).toFixed(1)}" rx="4" fill="${color}"/>` : '')).join('');
     }
-    const grid = [0, 0.5, 1].map((f) => `<line x1="0" x2="${W}" y1="${H - f * (H - 16)}" y2="${H - f * (H - 16)}" stroke="#fff" stroke-opacity="0.1" vector-effect="non-scaling-stroke"/>`).join('');
+    const grid = [0, 0.5, 1].map((f) => `<line x1="0" x2="${W}" y1="${H - f * (H - 16)}" y2="${H - f * (H - 16)}" style="stroke: var(--grid)" vector-effect="non-scaling-stroke"/>`).join('');
     el.innerHTML = `<div class="flex h-full gap-3">
-      <div class="flex shrink-0 flex-col justify-between text-right text-base text-emerald-100/60 ls-num"><span>${bn(max)}</span><span>${bn(max / 2)}</span><span>০</span></div>
+      <div class="flex shrink-0 flex-col justify-between text-right text-base ls-muted ls-num"><span>${bn(max)}</span><span>${bn(max / 2)}</span><span>০</span></div>
       <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" class="h-full w-full">${grid}${marks}</svg>
     </div>`;
   }
@@ -118,12 +120,12 @@ export function initLiveScreen() {
     $('ls-feed').innerHTML = items.length
       ? items.slice(0, 11).map((f, i) => {
           const [icon, text] = (FEED[f.kind] ?? (() => ['•', '']))(f.label);
-          return `<li class="${fresh && i === 0 ? 'ls-feed-item ' : ''}flex items-center gap-3 rounded-2xl bg-white/[0.06] px-4 py-2.5 text-xl">
-            <span class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/10 text-2xl">${icon}</span>
+          return `<li class="${fresh && i === 0 ? 'ls-feed-item ' : ''}flex items-center gap-3 rounded-2xl ls-chip px-4 py-2.5 text-xl">
+            <span class="grid h-10 w-10 shrink-0 place-items-center rounded-xl ls-icon text-2xl">${icon}</span>
             <span class="min-w-0 flex-1 truncate">${text}</span>
-            <span class="shrink-0 text-base text-emerald-100/60">${ago(f.at, t)}</span></li>`;
+            <span class="shrink-0 text-base ls-muted">${ago(f.at, t)}</span></li>`;
         }).join('')
-      : '<li class="text-xl text-emerald-100/60">নতুন কিছু ঘটলেই এখানে দেখা যাবে…</li>';
+      : '<li class="text-xl ls-muted">নতুন কিছু ঘটলেই এখানে দেখা যাবে…</li>';
   }
 
   // ---------- Winner ----------
@@ -131,21 +133,21 @@ export function initLiveScreen() {
   function renderWinner(raw: unknown, count: number) {
     clearInterval(winTimer);
     const w = parseToday({ today_winner: raw });
-    if (!w) { $('ls-win').innerHTML = `<div class="text-xl text-emerald-100/70">বাংলাদেশি বিজয়ী এ পর্যন্ত: <b class="text-gold-400">${bn(count)}</b> জন</div>`; return; }
+    if (!w) { $('ls-win').innerHTML = `<div class="text-xl ls-muted">বাংলাদেশি বিজয়ী এ পর্যন্ত: <b class="ls-accent">${bn(count)}</b> জন</div>`; return; }
     $('ls-win').innerHTML = `
       <div class="flex items-center gap-4">
-        <img src="${flagUrl(w.country, 160)}" alt="" class="h-16 w-24 rounded-lg object-cover ring-2 ring-white/20" />
-        <div class="min-w-0"><div class="truncate text-3xl font-bold">${esc(w.name)}</div><div class="text-lg text-emerald-100/80">${esc(countryName(w.country, 'bn'))} · ${esc(prizeLong[w.prize] ?? '')}</div></div>
+        <img src="${flagUrl(w.country, 160)}" alt="" class="h-16 w-24 rounded-lg object-cover ring-2 ring-black/10" />
+        <div class="min-w-0"><div class="truncate text-3xl font-bold">${esc(w.name)}</div><div class="text-lg ls-muted">${esc(countryName(w.country, 'bn'))} · ${esc(prizeLong[w.prize] ?? '')}</div></div>
       </div>
       <div id="ls-next" class="mt-3 text-xl"></div>
-      <div class="mt-1 text-base text-emerald-100/70">বাংলাদেশি বিজয়ী এ পর্যন্ত: <b class="text-gold-400">${bn(count)}</b> জন</div>`;
+      <div class="mt-1 text-base ls-muted">বাংলাদেশি বিজয়ী এ পর্যন্ত: <b class="ls-accent">${bn(count)}</b> জন</div>`;
     const end = w.next_at ? Date.parse(w.next_at) : NaN;
     const tick = () => {
       const el = document.getElementById('ls-next');
       if (!el) return;
       if (Number.isNaN(end) || now() - end > 6 * 3600e3) { el.textContent = ''; return; }
       const left = end - now();
-      el.innerHTML = left > 0 ? `⏳ পরবর্তী বিজয়ী ঘোষণা: <b class="ls-num font-mono text-gold-400">${countdownText(left)}</b>` : '🎉 নতুন বিজয়ী এখনই ঘোষণা হচ্ছে!';
+      el.innerHTML = left > 0 ? `⏳ পরবর্তী বিজয়ী ঘোষণা: <b class="ls-num font-mono ls-accent">${countdownText(left)}</b>` : '🎉 নতুন বিজয়ী এখনই ঘোষণা হচ্ছে!';
     };
     tick();
     winTimer = setInterval(tick, 1000);
@@ -181,8 +183,9 @@ export function initLiveScreen() {
   async function loadCharts() {
     let d: Ins;
     try { d = await rpc<Ins>('nusuk_insights'); } catch { return; }
-    chart($('c-active'), d.active, 'line', '#7ee2b8');
-    chart($('c-copies'), last(d.copies, 24), 'bars', '#dcbc52');
+    const css = getComputedStyle($('ls-stage'));
+    chart($('c-active'), d.active, 'line', css.getPropertyValue('--line').trim() || '#7ee2b8');
+    chart($('c-copies'), last(d.copies, 24), 'bars', css.getPropertyValue('--bar').trim() || '#f2c94c');
   }
 
   async function loadQuiz() {
@@ -192,8 +195,8 @@ export function initLiveScreen() {
     const rows = d.enabled ? d.board ?? [] : [];
     const medal = (r: number) => (r === 1 ? '🥇' : r === 2 ? '🥈' : r === 3 ? '🥉' : bn(r));
     $('ls-quiz').innerHTML = rows.length
-      ? rows.map((r) => `<li class="flex items-center gap-3 text-lg leading-snug"><span class="w-8 text-center text-xl">${medal(r.rank)}</span><b class="min-w-0 flex-1 truncate">${esc(r.name)}</b><span class="font-mono text-base text-emerald-100/60">${esc(r.code ?? '')}</span><b class="ls-num w-16 text-right text-gold-400">${bn(r.points)}</b></li>`).join('')
-      : '<li class="text-xl text-emerald-100/60">আজকের কুইজের ফল এখানে দেখা যাবে</li>';
+      ? rows.map((r) => `<li class="flex items-center gap-3 text-lg leading-snug"><span class="w-8 text-center text-xl">${medal(r.rank)}</span><b class="min-w-0 flex-1 truncate">${esc(r.name)}</b><span class="font-mono text-base ls-muted">${esc(r.code ?? '')}</span><b class="ls-num w-16 text-right ls-accent">${bn(r.points)}</b></li>`).join('')
+      : '<li class="text-xl ls-muted">আজকের কুইজের ফল এখানে দেখা যাবে</li>';
   }
 
   let feat: Feat['running'] = [];
@@ -204,8 +207,8 @@ export function initLiveScreen() {
   }
   function renderFeat() {
     $('ls-feat').innerHTML = feat.length
-      ? feat.slice(0, 5).map((f) => `<li class="flex items-center gap-3 text-lg leading-snug"><span class="text-gold-400">★</span><b class="font-mono flex-1">${esc(f.code)}</b><span class="ls-num font-mono text-lg text-emerald-100/80">⏳ ${countdownText(Math.max(0, Date.parse(f.ends) - now()))}</span></li>`).join('')
-      : '<li class="text-xl text-emerald-100/60">এখন কোনো কোড ফিচার করা নেই</li>';
+      ? feat.slice(0, 5).map((f) => `<li class="flex items-center gap-3 text-lg leading-snug"><span class="ls-accent">★</span><b class="font-mono flex-1">${esc(f.code)}</b><span class="ls-num font-mono text-lg ls-muted">⏳ ${countdownText(Math.max(0, Date.parse(f.ends) - now()))}</span></li>`).join('')
+      : '<li class="text-xl ls-muted">এখন কোনো কোড ফিচার করা নেই</li>';
   }
 
   loadScreen(); loadCharts(); loadQuiz(); loadFeatured();

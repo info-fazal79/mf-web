@@ -13,13 +13,15 @@ const PANELS: { key: string; label: string }[] = [
 export default function LiveScreenPage({ toast }: { toast: ToastFn }) {
   const [hidden, setHidden] = useState<Set<string>>(new Set());
   const [title, setTitle] = useState('');
+  const [theme, setTheme] = useState<'green' | 'cream' | 'navy'>('green');
   const url = useMemo(() => {
     const q = new URLSearchParams();
     if (hidden.size) q.set('hide', [...hidden].join(','));
+    if (theme !== 'green') q.set('theme', theme);
     if (title.trim()) q.set('title', title.trim());
     const s = q.toString();
     return `${location.origin}/nusuk/live${s ? `?${s}` : ''}`;
-  }, [hidden, title]);
+  }, [hidden, title, theme]);
   const toggle = (k: string) => setHidden((h) => { const n = new Set(h); n.has(k) ? n.delete(k) : n.add(k); return n; });
 
   return (
@@ -42,6 +44,22 @@ export default function LiveScreenPage({ toast }: { toast: ToastFn }) {
 
       <div className="grid gap-4 lg:grid-cols-2">
         <section className="nk-card p-4 sm:p-5">
+          <h2 className="mb-3 text-base font-bold text-emerald-950">Theme</h2>
+          <div className="mb-5 grid grid-cols-3 gap-2" role="radiogroup" aria-label="Theme">
+            {([
+              ['green', 'সবুজ', 'linear-gradient(135deg,#0a4a37,#032b20)', '#f2c94c'],
+              ['cream', 'ক্রিম', 'linear-gradient(135deg,#fffaf0,#f1e8d2)', '#0a7a59'],
+              ['navy', 'রাতের নীল', 'linear-gradient(135deg,#18264a,#060b17)', '#4fe3d0'],
+            ] as const).map(([k, label, bg, dot]) => (
+              <button key={k} type="button" role="radio" aria-checked={theme === k} onClick={() => setTheme(k)}
+                className={`overflow-hidden rounded-xl border-2 text-left transition ${theme === k ? 'border-emerald-600 ring-2 ring-emerald-600/20' : 'border-[#e7e1cf] hover:border-emerald-600/40'}`}>
+                <span className="flex h-12 items-end gap-1 p-2" style={{ background: bg }}>
+                  <span className="h-3 w-6 rounded-sm" style={{ background: dot }} /><span className="h-5 w-3 rounded-sm" style={{ background: dot, opacity: 0.7 }} /><span className="h-7 w-3 rounded-sm" style={{ background: dot }} />
+                </span>
+                <span className="block px-2 py-1.5 text-sm font-semibold">{label}{theme === k ? ' ✓' : ''}</span>
+              </button>
+            ))}
+          </div>
           <h2 className="mb-3 text-base font-bold text-emerald-950">What to show</h2>
           <div className="grid gap-2">
             {PANELS.map((p) => (
