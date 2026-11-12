@@ -1184,12 +1184,13 @@ const cm0 = defaultCommunity();
       let clubOn = false;
       function renderClub(content: unknown) {
         const c = clubOf(content);
-        clubOn = c.on;
-        const el = $('nk-club');
-        el.classList.toggle('hidden', !c.on);
-        el.classList.toggle('flex', c.on);
-        if (!c.on) return;
         const member = hasMemberSession();
+        // test mode: only signed-in members see it here (the server checks the testers list)
+        clubOn = c.on || (c.test && member);
+        const el = $('nk-club');
+        el.classList.toggle('hidden', !clubOn);
+        el.classList.toggle('flex', clubOn);
+        if (!clubOn) return;
         $('nk-club-title').textContent = `${c.title.trim() || DEFAULT_TITLE}: টিকিট জমান, পুরস্কার জিতুন`;
         $('nk-club-cta').textContent = member ? 'ড্যাশবোর্ড ›' : 'যুক্ত হোন ›';
       }

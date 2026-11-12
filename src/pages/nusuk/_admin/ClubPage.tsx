@@ -72,9 +72,31 @@ export default function ClubPage({ toast }: { toast: ToastFn }) {
     setBusy(false);
     if (error) return toast(errText(error), false);
     setDirty(false);
-    toast(next.on ? 'Saved · Reward Club is ON' : 'Saved · Reward Club is OFF');
+    toast(next.on ? 'Saved · Reward Club is ON for everyone' : next.test ? 'Saved · test mode (listed emails only)' : 'Saved · Reward Club is OFF');
   }
-  async function toggleOn() { const next = { ...c, on: !c.on }; setC(next); await save(next); }
+  type Mode = 'off' | 'test' | 'on';
+  const mode: Mode = c.on ? 'on' : c.test ? 'test' : 'off';
+  async function setMode(m: Mode) {
+    if (m === 'on' && !confirm('Open the Reward Club for EVERYONE? The banner will show on /nusuk.\n\nTip: delete the test data first (bottom of this page) so the real club starts from SL 1001.')) return;
+    const next = { ...c, on: m === 'on', test: m === 'test' };
+    setC(next);
+    await save(next);
+  }
+  const [testersText, setTestersText] = useState('');
+  useEffect(() => { if (loaded) setTestersText(c.testers.join('\n')); }, [loaded]); // eslint-disable-line react-hooks/exhaustive-deps
+  const setTesters = (t: string) => { setTestersText(t); set({ testers: t.split(/[\s,;]+/).map((x) => x.trim().toLowerCase()).filter((x) => x.includes('@')).slice(0, 50) }); };
+  async function resetAll() {
+    const typed = prompt('This deletes ALL Reward Club members and tickets, and SL numbers start again from 1001.\nGoogle logins stay; people can make their profile again.\n\nType DELETE to continue:');
+    if (typed !== 'DELETE') return;
+    const { data: d, error } = await sb!.rpc('nusuk_admin_club_reset', { p_confirm: 'DELETE' });
+    if (error) return toast(errText(error).includes('nusuk_admin_club_reset') ? 'Run update_32_club_test_mode.sql in Supabase first' : errText(error), false);
+    const r = d as { ok: boolean; members?: number; tickets?: number };
+    if (!r.ok) return toast('Nothing deleted', false);
+    toast(`Deleted ${r.members} members and ${r.tickets} tickets`);
+    setPage(0);
+    loadData(q, 0);
+    setDayRows(null);
+  }
 
   async function exportMembers() {
     const { data: d, error } = await sb!.rpc('nusuk_admin_club', { p_search: q, p_limit: 5000, p_offset: 0 });
@@ -116,11 +138,29 @@ export default function ClubPage({ toast }: { toast: ToastFn }) {
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <button type="button" onClick={toggleOn} disabled={busy}
-              className={`nk-btn px-4 py-2 text-sm ${c.on ? 'nk-green' : 'nk-ghost'}`}>{c.on ? 'Club is ON' : 'Club is OFF · turn on'}</button>
             <a href={url} target="_blank" rel="noopener" className="nk-btn nk-ghost flex items-center gap-1.5 px-4 py-2 text-sm"><ExternalLink className="h-4 w-4" aria-hidden /> Open page</a>
           </div>
         </div>
+        <div className="mt-4 grid gap-2 sm:grid-cols-3" role="radiogroup" aria-label="Club status">
+          {([
+            ['off', 'Off', 'Closed for everyone. Banner hidden.'],
+            ['test', 'Test mode', 'Only the emails listed below can use it. Everyone else sees it closed.'],
+            ['on', 'On for everyone', 'Open to all. Banner shows on /nusuk.'],
+          ] as const).map(([k, t, h]) => (
+            <button key={k} type="button" role="radio" aria-checked={mode === k} disabled={busy} onClick={() => mode !== k && setMode(k)}
+              className={`rounded-xl border p-3 text-left transition ${mode === k ? 'border-emerald-600 bg-emerald-50 ring-2 ring-emerald-600/20' : 'border-[#e7e1cf] bg-white hover:border-emerald-600/40'}`}>
+              <div className="font-bold">{t}{mode === k ? ' ✓' : ''}</div>
+              <div className="mt-0.5 text-xs text-emerald-900/65">{h}</div>
+            </button>
+          ))}
+        </div>
+        {mode === 'test' && (
+          <label className="mt-3 block">
+            <span className="mb-1 block text-sm font-semibold">Tester Google emails (one per line)</span>
+            <textarea className="nk-input font-mono text-sm" rows={4} value={testersText} onChange={(e) => setTesters(e.target.value)} placeholder={'you@gmail.com\nfriend@gmail.com'} />
+            <span className="mt-1 block text-xs text-emerald-900/60">{c.testers.length} tester{c.testers.length === 1 ? '' : 's'} · press Save after changing. Referral tickets only count from a different phone/browser than the inviter's.</span>
+          </label>
+        )}
         {s && (
           <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
             {([
@@ -235,6 +275,14 @@ export default function ClubPage({ toast }: { toast: ToastFn }) {
             <button type="button" className="nk-btn nk-ghost px-3 py-1" disabled={page + 1 >= pages} onClick={() => { setPage(page + 1); loadData(q, page + 1); }}>Next ›</button>
           </div>
         )}
+      </section>
+
+      <section className="nk-card flex flex-wrap items-center justify-between gap-3 border-red-200 p-4 sm:p-5">
+        <div className="text-sm">
+          <h2 className="text-base font-bold text-red-800">Delete all test data</h2>
+          <p className="mt-0.5 text-emerald-900/70">Before opening the club for everyone: removes every member and ticket, SL starts again from 1001.</p>
+        </div>
+        <button type="button" onClick={resetAll} className="nk-btn border border-red-300 bg-white px-4 py-2 text-sm text-red-700 hover:bg-red-50">Delete all test data…</button>
       </section>
 
       <section className="nk-card p-4 text-sm text-emerald-900/80 sm:p-5">

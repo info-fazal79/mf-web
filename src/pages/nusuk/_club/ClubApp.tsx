@@ -100,10 +100,15 @@ export default function ClubApp() {
         </p>
       </section>
 
+      {me.cfg.test && me.cfg.on && (
+        <p className="rounded-xl border border-gold-500/60 bg-gold-400/15 px-3.5 py-2.5 text-sm font-semibold">
+          টেস্ট মোড চলছে: শুধু তালিকায় থাকা ইমেইল দিয়ে ক্লাব ব্যবহার করা যাচ্ছে। সবার জন্য এখনো খোলা হয়নি।
+        </p>
+      )}
       {!me.signed_in && <SignIn sb={sb} cfg={me.cfg} />}
       {me.signed_in && !me.member && (me.cfg.on
         ? <ProfileForm sb={sb} email={me.email} onDone={reload} />
-        : <section className="nk-card p-5 text-[15px]">রিওয়ার্ড ক্লাব শীঘ্রই চালু হবে, ইনশাআল্লাহ। একটু পরে আবার দেখুন।</section>)}
+        : <section className="nk-card p-5 text-[15px]">রিওয়ার্ড ক্লাব শীঘ্রই চালু হবে, ইনশাআল্লাহ। একটু পরে আবার দেখুন।{me.email && <span className="mt-1 block text-xs text-emerald-900/60">লগইন: {me.email}</span>}</section>)}
       {me.member && !editing && <Dashboard me={me} onEdit={() => setEditing(true)} />}
       {me.member && editing && <ProfileForm sb={sb} member={me.member} email={me.member.email ?? undefined} onDone={async () => { setEditing(false); await reload(); }} onCancel={() => setEditing(false)} />}
 

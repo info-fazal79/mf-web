@@ -13,7 +13,10 @@ export const MEMBER_KEY = 'nusuk-member-auth';
 export const REF_KEY = 'nusuk:ref';
 
 export type ClubCfg = {
-  on: boolean;
+  on: boolean; // open for everyone (from the server: open for the person asking)
+  test: boolean; // test mode: open only for the emails in `testers`
+  testers: string[]; // admin only, never sent to visitors
+  public?: boolean; // from the server: open for everyone
   copy_from: string; // "HH:MM" Bangladesh time
   copy_to: string;
   title: string;
@@ -55,6 +58,8 @@ export function parseClub(raw: unknown): ClubCfg {
   const s = (k: string, max: number) => (typeof r[k] === 'string' ? (r[k] as string).slice(0, max) : '');
   return {
     on: r.on === true,
+    test: r.test === true,
+    testers: Array.isArray(r.testers) ? (r.testers as unknown[]).filter((x): x is string => typeof x === 'string' && x.includes('@')).slice(0, 50) : [],
     copy_from: isTime(r.copy_from) ? r.copy_from : '09:00',
     copy_to: isTime(r.copy_to) ? r.copy_to : '17:00',
     title: s('title', 80),
