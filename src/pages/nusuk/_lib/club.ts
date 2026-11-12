@@ -104,6 +104,7 @@ export type Contest = {
   info: string;
   card: ContestCard;
   caption: string;
+  prizes?: { place: number; prize: string }[];
   sort?: number;
   in_window?: boolean;
   my?: { total: number; today: number; referrals: number; copied_today: boolean; rank: number | null } | null;

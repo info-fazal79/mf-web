@@ -7,6 +7,7 @@ import {
   type ClubMe, type Contest, type Member, type SaveResult,
 } from '../_lib/club';
 import { drawCard, cardBlob } from '../_lib/clubcard';
+import { bnPlace } from '../_lib/clubdraw';
 
 const DISTRICTS = 'ঢাকা,গাজীপুর,নারায়ণগঞ্জ,নরসিংদী,মুন্সিগঞ্জ,মানিকগঞ্জ,টাঙ্গাইল,কিশোরগঞ্জ,ফরিদপুর,গোপালগঞ্জ,মাদারীপুর,শরীয়তপুর,রাজবাড়ী,চট্টগ্রাম,কক্সবাজার,কুমিল্লা,ফেনী,নোয়াখালী,লক্ষ্মীপুর,চাঁদপুর,ব্রাহ্মণবাড়িয়া,খাগড়াছড়ি,রাঙ্গামাটি,বান্দরবান,রাজশাহী,নাটোর,নওগাঁ,চাঁপাইনবাবগঞ্জ,পাবনা,সিরাজগঞ্জ,বগুড়া,জয়পুরহাট,খুলনা,যশোর,সাতক্ষীরা,বাগেরহাট,ঝিনাইদহ,মাগুরা,নড়াইল,কুষ্টিয়া,চুয়াডাঙ্গা,মেহেরপুর,বরিশাল,পটুয়াখালী,ভোলা,পিরোজপুর,ঝালকাঠি,বরগুনা,সিলেট,মৌলভীবাজার,হবিগঞ্জ,সুনামগঞ্জ,রংপুর,দিনাজপুর,ঠাকুরগাঁও,পঞ্চগড়,নীলফামারী,লালমনিরহাট,কুড়িগ্রাম,গাইবান্ধা,ময়মনসিংহ,জামালপুর,শেরপুর,নেত্রকোনা,দেশের বাইরে'.split(',');
 
@@ -319,8 +320,8 @@ function Dashboard({ me, onEdit }: { me: ClubMe; onEdit: () => void }) {
             </div>
           ) : (
             <div className="grid grid-cols-3 gap-2">
-              <Stat icon={<Sparkles className="h-4 w-4" aria-hidden />} label="আজকের টিকিট" value={c.my?.today ?? 0} />
-              <Stat icon={<Ticket className="h-4 w-4" aria-hidden />} label="মোট টিকিট" value={c.my?.total ?? 0} />
+              <Stat icon={<Sparkles className="h-4 w-4" aria-hidden />} label="আজকের ড্রয়ের টিকিট" value={c.my?.today ?? 0} />
+              <Stat icon={<Ticket className="h-4 w-4" aria-hidden />} label="মোট টিকিট" value={c.my?.total ?? 0} hint="পুরো প্রতিযোগিতায়" />
               <Stat icon={<Users className="h-4 w-4" aria-hidden />} label="আপনার কোডে যুক্ত" value={c.my?.referrals ?? 0} />
             </div>
           )}
@@ -345,6 +346,15 @@ function Dashboard({ me, onEdit }: { me: ClubMe; onEdit: () => void }) {
                   </li>
                 ))}
               </ol>
+            </div>
+          )}
+          {c.prizes && c.prizes.some((p) => p.prize.trim()) && (
+            <div className="rounded-xl bg-gold-400/15 p-3">
+              <h3 className="mb-1.5 flex items-center gap-2 font-bold"><Gift className="h-4 w-4" aria-hidden /> পুরস্কার</h3>
+              <ul className="grid gap-1 text-[15px]">
+                {c.prizes.filter((p) => p.prize.trim()).slice(0, 20).map((p) => <li key={p.place}><b>{bnPlace(p.place)}:</b> {p.prize}</li>)}
+                {c.prizes.length > 20 && <li className="text-sm text-emerald-900/60">আরও {bn(c.prizes.length - 20)}টি পুরস্কার</li>}
+              </ul>
             </div>
           )}
           <details className="rounded-xl border border-[#eee7d3] p-3">

@@ -4,6 +4,7 @@ import { Download, ExternalLink, RefreshCw, Search, Ticket, Trophy, Users } from
 import { supabase as sb } from '@/lib/supabase';
 import { DEFAULT_NOTICE, DEFAULT_NOTICE_BTN, DEFAULT_TITLE, parseClub, type ClubCfg, type Contest } from '../_lib/club';
 import ContestsPanel from './ContestsPanel';
+import ClubDrawPanel from './ClubDrawPanel';
 
 type ToastFn = (t: string, ok?: boolean) => void;
 const errText = (e: unknown) => (e && typeof e === 'object' && 'message' in e ? String((e as { message: string }).message) : String(e));
@@ -290,6 +291,8 @@ export default function ClubPage({ toast }: { toast: ToastFn }) {
           </div>
         )}
       </section>
+
+      <ClubDrawPanel contests={contests} toast={toast} />
 
       <section className="nk-card flex flex-wrap items-center justify-between gap-3 border-red-200 p-4 sm:p-5">
         <div className="text-sm">

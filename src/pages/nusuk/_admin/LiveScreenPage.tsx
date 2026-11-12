@@ -42,6 +42,23 @@ export default function LiveScreenPage({ toast }: { toast: ToastFn }) {
   const [busy, setBusy] = useState(false);
   const [now, setNow] = useState(Date.now());
   const [previewKey, setPreviewKey] = useState(0);
+  // Normal live or the Reward Club raffle draw (nusuk_club_draw_state, update 34)
+  const [draw, setDraw] = useState<{ mode: 'normal' | 'raffle'; contest_id: number | null; scope: string; title?: string } | null>(null);
+  const loadDraw = async () => {
+    const { data, error } = await sb!.from('nusuk_club_draw_state').select('mode,contest_id,scope').eq('id', 1).maybeSingle();
+    if (error || !data) return setDraw(null);
+    let title = '';
+    if (data.contest_id) { const { data: c } = await sb!.from('nusuk_club_contests').select('title').eq('id', data.contest_id).maybeSingle(); title = c?.title ?? ''; }
+    setDraw({ ...(data as { mode: 'normal' | 'raffle'; contest_id: number | null; scope: string }), title });
+  };
+  useEffect(() => { loadDraw(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  async function setDrawMode(mode: 'normal' | 'raffle') {
+    if (mode === 'raffle' && !draw?.contest_id) return toast('First pick the draw in Reward Club → Raffle draw → "Show this draw on the live screen"', false);
+    const { error } = await sb!.from('nusuk_club_draw_state').update({ mode, updated_at: new Date().toISOString() }).eq('id', 1);
+    if (error) return toast(errText(error), false);
+    await loadDraw();
+    toast(mode === 'raffle' ? 'Live screen: raffle draw (changes within 2 seconds)' : 'Live screen: normal');
+  }
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 15000); return () => clearInterval(t); }, []);
   useEffect(() => {
     sb!.from('nusuk_settings').select('content').eq('id', 1).single().then(({ data }) => {
@@ -177,7 +194,23 @@ export default function LiveScreenPage({ toast }: { toast: ToastFn }) {
 
       <div className="grid gap-4 lg:grid-cols-[1fr_22rem]">
         <section className="nk-card p-4 sm:p-5">
-          <h2 className="mb-3 text-base font-bold text-emerald-950">Preview {dirty && <span className="text-xs font-normal text-gold-600">(save to update)</span>}</h2>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-base font-bold text-emerald-950">Preview {dirty && <span className="text-xs font-normal text-gold-600">(save to update)</span>}</h2>
+            {draw && (
+              <div className="flex gap-1 rounded-xl border border-[#e7e1cf] bg-white p-1" role="tablist" aria-label="What the live screen shows">
+                {([['normal', 'Normal live'], ['raffle', 'Raffle draw live']] as const).map(([k, t]) => (
+                  <button key={k} type="button" role="tab" aria-selected={draw.mode === k} onClick={() => draw.mode !== k && setDrawMode(k)}
+                    className={`rounded-lg px-3.5 py-1.5 text-sm font-semibold ${draw.mode === k ? (k === 'raffle' ? 'bg-red-600 text-white' : 'bg-emerald-900 text-white') : 'text-emerald-900 hover:bg-emerald-50'}`}>{t}</button>
+                ))}
+              </div>
+            )}
+          </div>
+          {draw && (
+            <p className="mb-3 text-xs text-emerald-900/65">
+              {draw.contest_id ? <>Raffle draw: <b>{draw.title}</b> · {draw.scope === 'all' ? 'whole competition' : draw.scope}. </> : 'No draw chosen yet. '}
+              Choose the competition, prizes, countdown and spin in <a href="#/club" className="font-semibold underline">Reward Club → Raffle draw</a>.
+            </p>
+          )}
           <div className="relative w-full overflow-hidden rounded-xl border border-[#e7e1cf] bg-black" style={{ aspectRatio: '16 / 9' }}>
             <iframe key={previewKey} src={url} title="Live screen preview" className="absolute inset-0 h-full w-full border-0" />
           </div>
