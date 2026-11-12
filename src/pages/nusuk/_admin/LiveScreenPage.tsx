@@ -16,6 +16,7 @@ const PANELS: { key: string; label: string }[] = [
 ];
 const SWATCH: Record<Theme, [string, string]> = {
   green: ['linear-gradient(135deg,#0a4a37,#032b20)', '#f2c94c'],
+  mint: ['linear-gradient(135deg,#eef8f2,#cfeadb)', '#0b5a43'],
   cream: ['linear-gradient(135deg,#fffaf0,#f1e8d2)', '#0a7a59'],
   navy: ['linear-gradient(135deg,#18264a,#060b17)', '#4fe3d0'],
 };
@@ -116,7 +117,7 @@ export default function LiveScreenPage({ toast }: { toast: ToastFn }) {
         </div>
 
         {c.mode === 'fixed' && (
-          <div className="grid max-w-xl grid-cols-3 gap-2" role="radiogroup" aria-label="Theme">
+          <div className="grid max-w-2xl grid-cols-2 gap-2 sm:grid-cols-4" role="radiogroup" aria-label="Theme">
             {THEMES.map((t) => <ThemeCard key={t.key} t={t.key} on={c.theme === t.key} onClick={() => set({ theme: t.key })} />)}
           </div>
         )}
@@ -128,7 +129,7 @@ export default function LiveScreenPage({ toast }: { toast: ToastFn }) {
                 <label className="flex items-center gap-2 text-sm font-semibold">From
                   <input type="time" className="nk-input w-32 py-1.5! font-normal" value={s.from} onChange={(e) => e.target.value && setSlot(i, { from: e.target.value })} />
                 </label>
-                <div className="grid flex-1 grid-cols-3 gap-2" role="radiogroup" aria-label={`Theme from ${s.from}`}>
+                <div className="grid flex-1 grid-cols-2 gap-2 sm:grid-cols-4" role="radiogroup" aria-label={`Theme from ${s.from}`}>
                   {THEMES.map((t) => <ThemeCard key={t.key} small t={t.key} on={s.theme === t.key} onClick={() => setSlot(i, { theme: t.key })} />)}
                 </div>
                 {c.schedule.length > 1 && <button type="button" className="nk-btn nk-ghost px-2.5 py-1 text-xs text-red-700" onClick={() => set({ schedule: c.schedule.filter((_, j) => j !== i) })}>Remove</button>}
@@ -151,7 +152,7 @@ export default function LiveScreenPage({ toast }: { toast: ToastFn }) {
             </label>
             <div>
               <div className="mb-1.5 text-sm font-semibold">Themes to use</div>
-              <div className="grid max-w-xl grid-cols-3 gap-2">
+              <div className="grid max-w-2xl grid-cols-2 gap-2 sm:grid-cols-4">
                 {THEMES.map((t) => <ThemeCard key={t.key} t={t.key} on={c.rotate_themes.includes(t.key)} onClick={() => toggleRotate(t.key)} />)}
               </div>
             </div>

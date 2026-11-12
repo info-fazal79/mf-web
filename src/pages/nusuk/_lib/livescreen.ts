@@ -52,9 +52,9 @@ export function initLiveScreen() {
   let hide = new Set<string>();
   let shownTheme = '';
   function applyCfg() {
-    const theme = urlTheme === 'green' || urlTheme === 'cream' || urlTheme === 'navy' ? urlTheme : themeAt(cfg, now());
+    const theme = urlTheme === 'green' || urlTheme === 'mint' || urlTheme === 'cream' || urlTheme === 'navy' ? urlTheme : themeAt(cfg, now());
     if (theme !== shownTheme) {
-      document.body.classList.remove('theme-cream', 'theme-navy');
+      document.body.classList.remove('theme-mint', 'theme-cream', 'theme-navy');
       if (theme !== 'green') document.body.classList.add(`theme-${theme}`);
       const first = !shownTheme;
       shownTheme = theme;

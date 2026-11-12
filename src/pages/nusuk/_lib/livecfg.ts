@@ -2,9 +2,10 @@
  * Live screen settings (nusuk_settings.content.livescreen), edited in Nusuk Manager → Live screen
  * and read by /nusuk/live every 10 seconds (update_30_live_screen_settings.sql).
  */
-export type Theme = 'green' | 'cream' | 'navy';
+export type Theme = 'green' | 'mint' | 'cream' | 'navy';
 export const THEMES: { key: Theme; name: string }[] = [
   { key: 'green', name: 'সবুজ' },
+  { key: 'mint', name: 'হালকা সবুজ' },
   { key: 'cream', name: 'ক্রিম' },
   { key: 'navy', name: 'রাতের নীল' },
 ];
@@ -33,7 +34,7 @@ export const defaultLiveCfg = (): LiveCfg => ({
   title: '',
 });
 
-const isTheme = (t: unknown): t is Theme => t === 'green' || t === 'cream' || t === 'navy';
+const isTheme = (t: unknown): t is Theme => t === 'green' || t === 'mint' || t === 'cream' || t === 'navy';
 const isTime = (t: unknown): t is string => typeof t === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(t);
 
 export function parseLiveCfg(raw: unknown): LiveCfg {
@@ -73,7 +74,7 @@ export function themeAt(c: LiveCfg, t: number): Theme {
     return cur?.theme ?? c.theme;
   }
   if (c.mode === 'rotate') {
-    const list = c.rotate_themes.length ? c.rotate_themes : (['green', 'cream', 'navy'] as Theme[]);
+    const list = c.rotate_themes.length ? c.rotate_themes : (['green', 'mint', 'cream', 'navy'] as Theme[]);
     const step = Math.floor(t / 60000 / c.rotate_min);
     return list[step % list.length];
   }

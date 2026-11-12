@@ -46,8 +46,19 @@ import './_lib/nusuk.css';
         --live: #ff3b4e; --live-text: #fff; --ticker: #ffb547; --ticker-text: #0b1324; --shadow: none;
         background: radial-gradient(circle at 80% 0%, rgba(79, 227, 208, 0.12), transparent 45%), linear-gradient(160deg, var(--bg), var(--bg2));
       }
+      body.theme-mint #ls-stage {
+        --bg: #eef8f2; --bg2: #d9efe3; --text: #0b3d2c; --muted: #4c6a5d;
+        --panel: #ffffff; --panel-border: #bfe3cf; --hero: #0b5a43; --hero-border: #0b5a43;
+        --hero-text: #ffffff; --hero-muted: rgba(220, 243, 232, 0.85); --hero-accent: #f6d365;
+        --accent: #0a7a59; --good: #0a7a59; --chip: #f2faf5; --icon: #e1f3e9;
+        --grid: rgba(11, 61, 44, 0.1); --line: #0e9468; --bar: #d4a017;
+        --live: #e11d2e; --live-text: #fff; --ticker: #0b5a43; --ticker-text: #ffffff; --shadow: 0 12px 30px -20px rgba(11, 61, 44, 0.45);
+        background: radial-gradient(circle at 88% 0%, rgba(14, 148, 104, 0.16), transparent 42%), radial-gradient(circle at 0% 100%, rgba(212, 160, 23, 0.1), transparent 40%), linear-gradient(160deg, var(--bg), var(--bg2));
+      }
       .ls-panel { background: var(--panel); border: 1.5px solid var(--panel-border); border-radius: 22px; box-shadow: var(--shadow); }
-      .ls-panel-hero { background: var(--hero); border-color: var(--hero-border) !important; border-width: 2px; }
+      .ls-panel-hero { background: var(--hero); border-color: var(--hero-border) !important; border-width: 2px; color: var(--hero-text, var(--text)); }
+      .ls-panel-hero .ls-muted { color: var(--hero-muted, var(--muted)); }
+      .ls-panel-hero .ls-accent, .ls-panel-hero .ls-label-hero { color: var(--hero-accent, var(--accent)); }
       .ls-muted { color: var(--muted); }
       .ls-label-hero { color: var(--accent); font-weight: 600; }
       .ls-accent { color: var(--accent); }
