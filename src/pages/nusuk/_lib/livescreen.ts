@@ -7,6 +7,7 @@
  */
 import { rpc } from './rpc';
 import { countdownText, countryName, flagUrl, parseToday, prizeLong } from './content';
+import { parseLiveCfg, themeAt, type LiveCfg } from './livecfg';
 
 type Series = { start: string; step: number; values: number[] };
 type Screen = {
@@ -40,13 +41,37 @@ const FEED: Record<string, (l: string | null) => [string, string]> = {
 
 export function initLiveScreen() {
   const $ = (id: string) => document.getElementById(id)!;
+  // Settings: links that carry ?theme / ?hide / ?title keep them (older OBS links);
+  // otherwise everything follows Nusuk Manager → Live screen, checked every 10 s.
   const params = new URLSearchParams(location.search);
-  const hide = new Set((params.get('hide') ?? '').split(',').map((s) => s.trim()).filter(Boolean));
-  document.querySelectorAll<HTMLElement>('[data-panel]').forEach((el) => { if (hide.has(el.dataset.panel!)) el.setAttribute('data-hidden', ''); });
-  const theme = params.get('theme');
-  if (theme === 'cream' || theme === 'navy') document.body.classList.add(`theme-${theme}`);
-  const title = params.get('title');
-  if (title) $('ls-title').textContent = title.slice(0, 80);
+  const urlTheme = params.get('theme');
+  const urlHide = params.get('hide');
+  const urlTitle = params.get('title');
+  const defaultTitle = $('ls-title').textContent ?? '';
+  let cfg: LiveCfg = parseLiveCfg(null);
+  let hide = new Set<string>();
+  let shownTheme = '';
+  function applyCfg() {
+    const theme = urlTheme === 'green' || urlTheme === 'cream' || urlTheme === 'navy' ? urlTheme : themeAt(cfg, now());
+    if (theme !== shownTheme) {
+      document.body.classList.remove('theme-cream', 'theme-navy');
+      if (theme !== 'green') document.body.classList.add(`theme-${theme}`);
+      const first = !shownTheme;
+      shownTheme = theme;
+      if (!first) loadCharts(); // chart colors follow the theme
+    }
+    const h = urlHide !== null ? urlHide.split(',') : cfg.hide;
+    const next = new Set(h.map((x) => x.trim()).filter(Boolean));
+    const changed = [...next].join() !== [...hide].join();
+    hide = next;
+    document.querySelectorAll<HTMLElement>('[data-panel]').forEach((el) => el.toggleAttribute('data-hidden', hide.has(el.dataset.panel!)));
+    if (changed) { loadQuiz(); loadFeatured(); }
+    $('ls-title').textContent = (urlTitle ?? cfg.title).trim().slice(0, 80) || defaultTitle;
+  }
+  async function loadCfg() {
+    try { cfg = parseLiveCfg(await rpc<unknown>('nusuk_live_screen_cfg')); } catch { /* update 30 not run yet: defaults */ }
+    applyCfg();
+  }
 
   // Fit the 1920×1080 stage into any window (OBS uses exactly 1920×1080)
   const stage = $('ls-stage');
@@ -211,7 +236,10 @@ export function initLiveScreen() {
       : '<li class="text-xl ls-muted">এখন কোনো কোড ফিচার করা নেই</li>';
   }
 
-  loadScreen(); loadCharts(); loadQuiz(); loadFeatured();
+  applyCfg();
+  loadCfg(); loadScreen(); loadCharts(); loadQuiz(); loadFeatured();
+  setInterval(loadCfg, 10_000); // admin changes (theme, panels, headline) show within 10 s
+  setInterval(applyCfg, 30_000); // scheduled / rotating themes switch on time
   setInterval(loadScreen, 10_000);
   setInterval(loadCharts, 30_000);
   setInterval(loadQuiz, 60_000);
