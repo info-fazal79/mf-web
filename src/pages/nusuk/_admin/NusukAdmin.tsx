@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
+import { CircleHelp, ClipboardCheck, ClipboardPaste, Crown, Dices, ExternalLink, Gift, LayoutDashboard, ListChecks, LogOut, Megaphone, MessageSquare, MessageSquareMore, MonitorPlay, PanelTop, Play, Rocket, Settings, Star, Tags, Trophy, Video, type LucideIcon } from 'lucide-react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import AdsPage from './AdsPage';
@@ -1395,7 +1396,7 @@ function VideoPage({ toast, settings, reload }: { toast: ToastFn; settings: Sett
       </Card>
       <Card title={`Preview${live ? ' · live now' : ''}`}>
         <div className="nk-video-btn flex items-center gap-3 rounded-xl px-3.5 py-2.5">
-          <span className="nk-video-play" aria-hidden><svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="currentColor"><path d="M8 5v14l11-7z" /></svg></span>
+          <span className="nk-video-play" aria-hidden><Play className="h-3.5 w-3.5" fill="currentColor" aria-hidden /></span>
           <span className="min-w-0 flex-1 text-left">
             <span className="block truncate text-[15px] font-bold leading-tight">{f.label.trim() || defaultVideoLabel}</span>
             <span className="block truncate text-xs opacity-70">নুসুক কী, কোড কীভাবে ব্যবহার করবেন, ধাপে ধাপে</span>
@@ -1556,26 +1557,32 @@ function WinnersPage({ toast, settings, reload }: { toast: ToastFn; settings: Se
 
 /* ---------------- Shell ---------------- */
 type Route = 'dashboard' | 'live' | 'codes' | 'review' | 'features' | 'bonus' | 'campaign' | 'quiz' | 'popup' | 'raffle' | 'upload' | 'notice' | 'video' | 'ads' | 'today' | 'winners' | 'feedback' | 'settings';
-const nav: { r: Route; label: string; icon: string }[] = [
-  { r: 'dashboard', label: 'Dashboard', icon: 'M3 13h8V3H3zm10 8h8V11h-8zM3 21h8v-6H3zm10-18v6h8V3z' },
-  { r: 'live', label: 'Live screen', icon: 'M2 7a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2zM8 21h8M10 9l5 3-5 3z' },
-  { r: 'codes', label: 'Codes', icon: 'M4 6h16M4 12h16M4 18h10' },
-  { r: 'review', label: 'Review', icon: 'M9 12l2 2 4-4M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z' },
-  { r: 'features', label: 'Feature requests', icon: 'M12 2l3 6.5 7 .8-5.2 4.8 1.5 7L12 17.6 5.7 21.1l1.5-7L2 9.3l7-.8z' },
-  { r: 'quiz', label: 'Quiz', icon: 'M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z' },
-  { r: 'campaign', label: 'Campaign', icon: 'M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4' },
-  { r: 'bonus', label: 'Community & bonus', icon: 'M20 12v9H4v-9M2 7h20v5H2zM12 21V7M12 7H7.5a2.5 2.5 0 1 1 0-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 1 0 0-5C13 2 12 7 12 7z' },
-  { r: 'upload', label: 'Paste codes', icon: 'M12 16V4m0 0l-4 4m4-4l4 4M4 20h16' },
-  { r: 'notice', label: 'Top notice', icon: 'M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1zM15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13' },
-  { r: 'raffle', label: 'Raffle draw', icon: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 3v9l6.4 6.4M12 12 5.6 18.4M12 12H3' },
-  { r: 'popup', label: 'Popup notice', icon: 'M4 5h16v11H8l-4 4zM12 8v3M12 13.5v.5' },
-  { r: 'ads', label: 'Ads', icon: 'M3 11l18-5v12L3 14v-3zM11.6 16.8a3 3 0 1 1-5.8-1.6' },
-  { r: 'video', label: 'Video', icon: 'M2.5 7.5a2.5 2.5 0 0 1 2.5-2.5h14a2.5 2.5 0 0 1 2.5 2.5v9a2.5 2.5 0 0 1-2.5 2.5H5a2.5 2.5 0 0 1-2.5-2.5zM10 9.5v5l4.5-2.5z' },
-  { r: 'today', label: "Today's winner", icon: 'M12 2l3 6.5 7 .8-5.2 4.8 1.5 7L12 17.6 5.7 21.1l1.5-7L2 9.3l7-.8z' },
-  { r: 'feedback', label: 'Feedback', icon: 'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z' },
-  { r: 'winners', label: 'Winners', icon: 'M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4' },
-  { r: 'settings', label: 'Settings', icon: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z' },
+type NavItem = { r: Route; label: string; Icon: LucideIcon };
+const nav: NavItem[] = [
+  { r: 'dashboard', label: 'Dashboard', Icon: LayoutDashboard },
+  { r: 'live', label: 'Live screen', Icon: MonitorPlay },
+  { r: 'codes', label: 'Codes', Icon: ListChecks },
+  { r: 'review', label: 'Review', Icon: ClipboardCheck },
+  { r: 'features', label: 'Feature requests', Icon: Star },
+  { r: 'quiz', label: 'Quiz', Icon: CircleHelp },
+  { r: 'campaign', label: 'Campaign', Icon: Rocket },
+  { r: 'bonus', label: 'Community & bonus', Icon: Gift },
+  { r: 'notice', label: 'Notice', Icon: Megaphone },
+  { r: 'raffle', label: 'Raffle draw', Icon: Dices },
+  { r: 'ads', label: 'Ads', Icon: Tags },
+  { r: 'video', label: 'Video', Icon: Video },
+  { r: 'winners', label: 'Winners', Icon: Trophy },
+  { r: 'feedback', label: 'Feedback', Icon: MessageSquareMore },
+  { r: 'settings', label: 'Settings', Icon: Settings },
 ];
+/** Menu items that hold several pages as tabs (old links like #/upload still open the right tab). */
+const GROUPS: Partial<Record<Route, { r: Route; label: string; Icon: LucideIcon }[]>> = {
+  codes: [{ r: 'codes', label: 'All codes', Icon: ListChecks }, { r: 'upload', label: 'Paste codes', Icon: ClipboardPaste }],
+  notice: [{ r: 'notice', label: 'Top notice', Icon: PanelTop }, { r: 'popup', label: 'Popup notice', Icon: MessageSquare }],
+  winners: [{ r: 'winners', label: 'All winners', Icon: Trophy }, { r: 'today', label: "Today's winner", Icon: Crown }],
+};
+/** The menu item a page belongs to */
+const menuOf = (r: Route): Route => (Object.keys(GROUPS) as Route[]).find((g) => GROUPS[g]!.some((t) => t.r === r)) ?? r;
 
 export default function NusukAdmin() {
   const [session, setSession] = useState<Session | null | undefined>(undefined);
@@ -1660,32 +1667,42 @@ export default function NusukAdmin() {
         </div>
         <nav className="nk-side-nav flex gap-1 overflow-x-auto px-2 pb-2 lg:min-h-0 lg:flex-1 lg:flex-col lg:gap-0.5 lg:overflow-x-hidden lg:overflow-y-auto lg:px-3" aria-label="Nusuk admin">
           {nav.map((n) => (
-            <a key={n.r} href={`#/${n.r}`} onClick={() => setRouteState(n.r)} aria-current={route === n.r ? 'page' : undefined}
-              className={`flex shrink-0 items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-semibold lg:py-1.5 ${route === n.r ? 'bg-gold-500 text-emerald-950' : 'text-emerald-50 hover:bg-white/10'}`}>
-              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d={n.icon} /></svg>
+            <a key={n.r} href={`#/${n.r}`} onClick={() => setRouteState(n.r)} aria-current={menuOf(route) === n.r ? 'page' : undefined}
+              className={`flex shrink-0 items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-semibold lg:py-1.5 ${menuOf(route) === n.r ? 'bg-gold-500 text-emerald-950' : 'text-emerald-50 hover:bg-white/10'}`}>
+              <n.Icon className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
               {n.label}
               {n.r === 'feedback' && unread > 0 && <span className="ml-auto rounded-full bg-red-600 px-1.5 text-[11px] font-bold leading-5 text-white">{unread}</span>}
-              {n.r === 'notice' && parseTopBar(settings?.content)?.on && <span className="ml-auto rounded-full bg-gold-400 px-1.5 text-[11px] font-bold leading-5 text-emerald-950">ON</span>}
+              {n.r === 'notice' && (parseTopBar(settings?.content)?.on || ((settings?.content as Record<string, { on?: boolean }> | null)?.popup?.on)) && <span className="ml-auto rounded-full bg-gold-400 px-1.5 text-[11px] font-bold leading-5 text-emerald-950">ON</span>}
               {n.r === 'review' && reviewWaiting > 0 && <span className="ml-auto rounded-full bg-red-600 px-1.5 text-[11px] font-bold leading-5 text-white">{reviewWaiting}</span>}
               {n.r === 'features' && featWaiting > 0 && <span className="ml-auto rounded-full bg-red-600 px-1.5 text-[11px] font-bold leading-5 text-white">{featWaiting}</span>}
             </a>
           ))}
         </nav>
         <div className="hidden shrink-0 gap-0.5 border-t border-white/10 px-3 py-3 lg:grid">
-          <a href="/nusuk" target="_blank" rel="noopener" className="rounded-lg px-3 py-2 text-sm text-emerald-50 hover:bg-white/10">View public page ↗</a>
-          <button type="button" onClick={() => sb.auth.signOut()} className="rounded-lg px-3 py-2 text-left text-sm text-emerald-50 hover:bg-white/10">Sign out</button>
+          <a href="/nusuk" target="_blank" rel="noopener" className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-emerald-50 hover:bg-white/10"><ExternalLink className="h-4 w-4" aria-hidden />View public page</a>
+          <button type="button" onClick={() => sb.auth.signOut()} className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-emerald-50 hover:bg-white/10"><LogOut className="h-4 w-4" aria-hidden />Sign out</button>
         </div>
       </aside>
 
       <main className="mx-auto w-full max-w-6xl flex-1 p-4 sm:p-6">
         <div className="mb-4 flex items-center justify-between gap-3">
-          <h1 className="text-xl font-bold text-emerald-950">{nav.find((n) => n.r === route)?.label ?? 'Dashboard'}</h1>
+          <h1 className="text-xl font-bold text-emerald-950">{nav.find((n) => n.r === menuOf(route))?.label ?? 'Dashboard'}</h1>
           <div className="flex items-center gap-2">
             <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${settings?.enabled ? 'bg-emerald-100 text-emerald-900' : 'bg-red-100 text-red-700'}`}>{settings?.enabled ? 'Page ON' : 'Page OFF'}</span>
             <a href="/nusuk" target="_blank" rel="noopener" className="text-sm font-semibold text-emerald-700 lg:hidden">View ↗</a>
             <button type="button" onClick={() => sb.auth.signOut()} className="text-sm text-emerald-900/70 lg:hidden">Sign out</button>
           </div>
         </div>
+        {GROUPS[menuOf(route)] && (
+          <div className="mb-4 flex gap-1 overflow-x-auto rounded-xl border border-[#e7e1cf] bg-white p-1" role="tablist" aria-label="Sections">
+            {GROUPS[menuOf(route)]!.map((t) => (
+              <a key={t.r} href={`#/${t.r}`} onClick={() => setRouteState(t.r)} role="tab" aria-selected={route === t.r}
+                className={`flex shrink-0 items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition ${route === t.r ? 'bg-emerald-900 text-white' : 'text-emerald-900 hover:bg-emerald-50'}`}>
+                <t.Icon className="h-4 w-4" aria-hidden />{t.label}
+              </a>
+            ))}
+          </div>
+        )}
         {route === 'dashboard' && <Dashboard toast={toast} go={go} />}
         {route === 'live' && <LiveScreenPage toast={toast} />}
         {route === 'codes' && <CodesPage key="codes" toast={toast} settings={settings} />}

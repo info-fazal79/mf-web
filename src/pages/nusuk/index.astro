@@ -4,6 +4,7 @@
 import './_lib/nusuk.css';
 import { defaultContent as c } from './_lib/content';
 import Icon from '@/components/Icon.astro';
+import { lucide } from './_lib/lucide';
 import { getContent } from '@/lib/content';
 
 // Same social links as the main site footer (edited in the main admin)
@@ -101,7 +102,7 @@ const cm0 = defaultCommunity();
         </div>
 
         <button id="nk-copy" type="button" class="nk-btn nk-gold mt-4 w-full py-4 text-lg shadow-lg shadow-gold-500/25" disabled>
-          <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15V6a2 2 0 0 1 2-2h9" /></svg>
+          <Fragment set:html={lucide('copy', 'h-5 w-5', 2.2)} />
           <span id="nk-copy-label">Copy Code</span>
         </button>
         <div class="mt-3 flex items-center justify-between text-sm">
@@ -111,7 +112,7 @@ const cm0 = defaultCommunity();
 
         <!-- Tutorial video (Nusuk Manager → Video). Hidden until a YouTube link is set. -->
         <a id="nk-video-open" href="#" target="_blank" rel="noopener" class="nk-video-btn mt-4 hidden items-center gap-3 rounded-xl px-3.5 py-2.5">
-          <span class="nk-video-play" aria-hidden="true"><svg viewBox="0 0 24 24" class="h-3.5 w-3.5" fill="currentColor"><path d="M8 5v14l11-7z" /></svg></span>
+          <span class="nk-video-play" aria-hidden="true"><Fragment set:html={lucide('play', 'h-3.5 w-3.5', 2, true)} /></span>
           <span class="min-w-0 flex-1 text-left">
             <span id="nk-video-label" class="block text-[15px] font-bold leading-tight">কীভাবে কাজ করে? ভিডিও দেখুন</span>
             <span class="block truncate text-xs text-[#7a0f0f]/70">নুসুক কী, কোড কীভাবে ব্যবহার করবেন, ধাপে ধাপে</span>
@@ -217,7 +218,7 @@ const cm0 = defaultCommunity();
         <div class="nk-pattern overflow-hidden rounded-[1.25rem] p-5 text-white">
           <div class="flex items-center gap-3">
             <span class="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-gold-500 text-emerald-950" aria-hidden="true">
-              <svg viewBox="0 0 24 24" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4" /></svg>
+              <Fragment set:html={lucide('trophy', 'h-6 w-6', 2)} />
             </span>
             <div>
               <h2 id="nk-win-h" class="flex items-center gap-2 text-lg font-bold">বাংলাদেশি বিজয়ীরা
@@ -255,7 +256,7 @@ const cm0 = defaultCommunity();
               <summary class="flex cursor-pointer list-none items-center gap-3 px-4 py-3.5 font-semibold text-emerald-900 transition hover:bg-emerald-50/60 sm:px-5">
                 <span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-emerald-50 text-sm font-bold text-emerald-700 group-open:bg-emerald-700 group-open:text-white" aria-hidden="true">?</span>
                 <span class="min-w-0 flex-1" data-k={t.tk}>{t.title}</span>
-                <svg viewBox="0 0 24 24" class="h-5 w-5 shrink-0 text-emerald-700 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+                <Fragment set:html={lucide('chevronDown', 'h-5 w-5 shrink-0 text-emerald-700 transition-transform group-open:rotate-180', 2.4)} />
               </summary>
               <div class="px-4 pb-4 sm:px-5 sm:pl-[3.75rem]">
                 <p class="nk-pre text-[15px] leading-relaxed text-emerald-950/90" data-k={t.bk}>{t.body}</p>
@@ -279,7 +280,7 @@ const cm0 = defaultCommunity();
         <h2 id="nk-sub-h" class="text-lg font-bold text-emerald-900">আপনার রেফারেল কোড জমা দিন</h2>
         <p class="nk-pre mt-2 rounded-xl bg-emerald-50 p-3.5 text-sm leading-relaxed text-emerald-950" data-k="submit_rules">{c.submit_rules}</p>
         <a id="nk-sv" href={c.submit_video_url} target="_blank" rel="noopener" class="nk-video-btn mt-3 flex items-center gap-3 rounded-xl px-3.5 py-2.5" style={c.submit_video_url ? undefined : 'display:none'}>
-          <span class="nk-video-play" aria-hidden="true"><svg viewBox="0 0 24 24" class="h-3.5 w-3.5" fill="currentColor"><path d="M8 5v14l11-7z" /></svg></span>
+          <span class="nk-video-play" aria-hidden="true"><Fragment set:html={lucide('play', 'h-3.5 w-3.5', 2, true)} /></span>
           <span class="min-w-0 flex-1 text-left">
             <span class="block text-[15px] font-bold leading-tight">নুসুক অ্যাপে আপনার কোড কোথায় পাবেন?</span>
             <span class="block text-xs text-[#7a0f0f]/70">ভিডিও দেখুন: কোড খুঁজে বের করা ও এখানে জমা দেওয়া</span>
@@ -301,7 +302,7 @@ const cm0 = defaultCommunity();
         <!-- Is my code listed? -->
         <div class="mt-6 border-t border-dashed border-emerald-900/15 pt-5">
           <h3 class="flex items-center gap-2 font-bold text-emerald-900">
-            <svg viewBox="0 0 24 24" class="h-5 w-5 text-emerald-700" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+            <Fragment set:html={lucide('search', 'h-5 w-5 text-emerald-700', 2.2)} />
             আপনার কোড কি তালিকায় আছে?
           </h3>
           <p class="mt-0.5 text-sm text-emerald-900/70">কোডটি লিখে খুঁজুন, জানিয়ে দেব এটি আমাদের তালিকায় আছে কিনা।</p>
@@ -321,7 +322,7 @@ const cm0 = defaultCommunity();
           <p class="mt-0.5 text-sm text-emerald-900/70">এই ওয়েবসাইট নিয়ে কিছু জানাতে চাইলে আমাদের লিখুন।</p>
         </div>
         <button id="nk-fb-open" type="button" class="nk-btn nk-ghost w-full shrink-0 px-4 py-2.5 text-sm sm:w-auto">
-          <svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+          <Fragment set:html={lucide('messageSquare', 'h-4 w-4', 2)} />
           মতামত / অভিযোগ জানান
         </button>
       </section>
@@ -353,7 +354,7 @@ const cm0 = defaultCommunity();
             <span class="min-w-0 text-left leading-tight"><span class="block text-sm font-bold">ফেসবুক পেজ</span><span class="block text-xs text-white/80">ফলো করুন</span></span>
           </a>
           <a id="nk-cm-group" href="#" target="_blank" rel="noopener" style="display:none" class="nk-cm-btn flex items-center gap-3 rounded-xl px-3.5 py-3 text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md bg-[#0b5fcf]">
-            <span class="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white/20"><svg viewBox="0 0 24 24" class="h-5 w-5" fill="currentColor" aria-hidden="true"><path d="M12 12.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zm-6.5.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5zm13 0a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5zM12 14c-3.3 0-6 1.8-6 4v1.5h12V18c0-2.2-2.7-4-6-4z"/></svg></span>
+            <span class="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white/20"><Fragment set:html={lucide('users', 'h-5 w-5', 2)} /></span>
             <span class="min-w-0 text-left leading-tight"><span class="block text-sm font-bold">কমিউনিটি গ্রুপ</span><span class="block text-xs text-white/80">যুক্ত হোন</span></span>
           </a>
           <a id="nk-cm-wa" href="#" target="_blank" rel="noopener" style="display:none" class="nk-cm-btn flex items-center gap-3 rounded-xl px-3.5 py-3 text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md bg-[#1fa855]">
@@ -369,7 +370,7 @@ const cm0 = defaultCommunity();
       <div class="mx-auto max-w-xl px-4 pt-9 pb-8">
         <div id="nk-visitors" class="mb-4 hidden flex-wrap items-center justify-center gap-2 text-sm" aria-live="polite">
           <span class="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 font-semibold text-white ring-1 ring-white/15 backdrop-blur-sm">
-            <svg viewBox="0 0 24 24" class="h-4 w-4 text-gold-400" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" /></svg>
+            <Fragment set:html={lucide('users', 'h-4 w-4 text-gold-400', 2)} />
             মোট ভিজিটর <b id="nk-v-total" class="tabular-nums text-gold-100">০</b>
           </span>
           <span class="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 font-semibold text-white ring-1 ring-white/15 backdrop-blur-sm">
@@ -412,7 +413,7 @@ const cm0 = defaultCommunity();
       </div>
       <div class="flex flex-wrap items-center justify-center gap-2 px-4 py-3">
         <a id="nk-vd-yt" href="#" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-sm font-bold text-emerald-950 hover:bg-gold-100">
-          <span class="nk-video-play" style="width:1.5rem;height:1.05rem" aria-hidden="true"><svg viewBox="0 0 24 24" class="h-3 w-3" fill="currentColor"><path d="M8 5v14l11-7z" /></svg></span>
+          <span class="nk-video-play" style="width:1.5rem;height:1.05rem" aria-hidden="true"><Fragment set:html={lucide('play', 'h-3 w-3', 2, true)} /></span>
           YouTube-এ দেখুন
         </a>
         <a id="nk-vd-sub" href="#" target="_blank" rel="noopener" class="hidden items-center gap-1.5 rounded-full bg-[#ff0000] px-3.5 py-2 text-sm font-bold text-white hover:bg-[#d90000]">🔔 চ্যানেল সাবস্ক্রাইব করুন</a>
@@ -539,7 +540,7 @@ const cm0 = defaultCommunity();
       </div>
       <div class="grid gap-4 p-5">
         <p id="nk-pp-text" class="nk-pre text-[15px] leading-relaxed text-emerald-950"></p>
-        <a id="nk-pp-go" href="#" target="_blank" rel="noopener" class="nk-btn flex w-full items-center justify-center gap-2 bg-[#1877f2] py-3 text-base text-white hover:bg-[#166fe5]"><svg viewBox="0 0 24 24" class="h-5 w-5" fill="currentColor" aria-hidden="true"><path d="M12 12.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zm-6.5.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5zm13 0a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5zM12 14c-3.3 0-6 1.8-6 4v1.5h12V18c0-2.2-2.7-4-6-4z"/></svg><span id="nk-pp-btn"></span></a>
+        <a id="nk-pp-go" href="#" target="_blank" rel="noopener" class="nk-btn flex w-full items-center justify-center gap-2 bg-[#1877f2] py-3 text-base text-white hover:bg-[#166fe5]"><Fragment set:html={lucide('users', 'h-5 w-5', 2)} /><span id="nk-pp-btn"></span></a>
         <button type="button" id="nk-pp-member" class="nk-btn w-full border border-emerald-700/30 bg-emerald-50 py-2.5 text-sm text-emerald-900 hover:bg-emerald-100">✓ <span id="nk-pp-member-label">আমি আগেই গ্রুপে যুক্ত আছি</span></button>
         <button type="button" id="nk-pp-later" class="text-sm font-semibold text-emerald-900/60 underline underline-offset-2">এখন না</button>
       </div>
@@ -581,7 +582,7 @@ const cm0 = defaultCommunity();
           </div>
           <div id="nk-bn-group" class="rounded-xl bg-white p-2.5 shadow-sm">
             <div class="flex items-center gap-3">
-              <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#1877f2] text-white"><svg viewBox="0 0 24 24" class="h-5 w-5" fill="currentColor" aria-hidden="true"><path d="M12 12.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zm-6.5.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5zm13 0a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5zM12 14c-3.3 0-6 1.8-6 4v1.5h12V18c0-2.2-2.7-4-6-4z"/></svg></span>
+              <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#1877f2] text-white"><Fragment set:html={lucide('users', 'h-5 w-5', 2)} /></span>
               <span class="min-w-0 flex-1">
                 <span class="block text-sm font-bold leading-tight text-emerald-950">কমিউনিটি গ্রুপ</span>
                 <span id="nk-bn-group-reward" class="mt-1 inline-block rounded-full bg-gold-100 px-2 py-0.5 text-xs font-bold whitespace-nowrap text-emerald-950 ring-1 ring-gold-500/50"></span>
@@ -625,7 +626,7 @@ const cm0 = defaultCommunity();
         <!-- Complaints & suggestions go to the community group -->
         <div id="nk-fb-group" class="grid gap-3 rounded-xl border border-[#1877f2]/25 bg-[#1877f2]/5 p-4 text-sm leading-relaxed text-emerald-950">
           <p>আপনার অভিযোগ বা পরামর্শ আমাদের <b>কমিউনিটি গ্রুপে</b> পোস্ট করে জানান। সেখানে অন্যরাও একই সমস্যার সমাধান দেখতে পান।</p>
-          <a id="nk-fb-grouplink" href="https://www.facebook.com/groups/ribatulummah" target="_blank" rel="noopener" class="nk-btn flex w-full items-center justify-center gap-2 bg-[#1877f2] py-3 text-base text-white hover:bg-[#166fe5]"><svg viewBox="0 0 24 24" class="h-5 w-5" fill="currentColor" aria-hidden="true"><path d="M12 12.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zm-6.5.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5zm13 0a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5zM12 14c-3.3 0-6 1.8-6 4v1.5h12V18c0-2.2-2.7-4-6-4z"/></svg>গ্রুপে গিয়ে জানান</a>
+          <a id="nk-fb-grouplink" href="https://www.facebook.com/groups/ribatulummah" target="_blank" rel="noopener" class="nk-btn flex w-full items-center justify-center gap-2 bg-[#1877f2] py-3 text-base text-white hover:bg-[#166fe5]"><Fragment set:html={lucide('users', 'h-5 w-5', 2)} />গ্রুপে গিয়ে জানান</a>
         </div>
         <!-- Opinion: the form -->
         <div id="nk-fb-fields" class="grid gap-3" style="display:none">

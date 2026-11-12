@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { fmtDuration, type Lesson } from '@/lib/tutorials';
 import { readCourse, readNote, writeCourse, writeNote } from '@/lib/progress';
+import { Download } from 'lucide-react';
 
 type YTPlayer = { loadVideoById: (id: string) => void; cueVideoById: (id: string) => void; destroy: () => void };
 type YTNamespace = { Player: new (el: HTMLElement, opts: unknown) => YTPlayer; PlayerState: { ENDED: number } };
@@ -184,7 +185,7 @@ export default function CoursePlayer({ slug, lessons }: { slug: string; lessons:
               {lesson.resources.map((r) => (
                 <li key={r.url}>
                   <a href={r.url} target="_blank" rel="noopener" download className="flex items-center gap-3 rounded-xl border border-line px-4 py-3 text-sm transition hover:border-accent hover:text-accent">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14" /></svg>
+                    <Download size={16} strokeWidth={1.8} aria-hidden="true" />
                     <span className="truncate">{r.name || r.url.split('/').pop()}</span>
                   </a>
                 </li>

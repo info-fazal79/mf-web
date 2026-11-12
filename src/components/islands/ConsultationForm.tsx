@@ -1,3 +1,4 @@
+import { Check } from 'lucide-react';
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { supabase } from '@/lib/supabase';
 import {
@@ -144,7 +145,7 @@ export default function ConsultationForm(props: Props) {
     return (
       <div className="flex flex-col items-center py-10 text-center">
         <div className="grid h-16 w-16 place-items-center rounded-full bg-accent-soft text-accent">
-          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+          <Check size={30} strokeWidth={2.2} aria-hidden="true" />
         </div>
         <h3 className="mt-5 text-lg font-bold">Request received!</h3>
         <p className="mt-2 max-w-xs text-sm text-muted">

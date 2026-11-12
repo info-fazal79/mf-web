@@ -2,44 +2,43 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState, ty
 import { supabase } from '@/lib/supabase';
 import { deleteMedia, formatBytes, uploadMedia, type MediaItem } from './media';
 import { CropEditor, isCroppable } from './crop';
+import { Calendar, Check, ChevronDown, ChevronUp, Copy, Crop, ExternalLink, Eye, FileText, House, Image, Layers, LayoutDashboard, Link, LogOut, Mail, Menu, Plus, Quote, RefreshCw, Send, Settings, Trash2, Upload, User, Users, X, type LucideIcon } from 'lucide-react';
 
 /* ---------------- Icons ---------------- */
-const paths: Record<string, string> = {
-  dashboard: 'M3 3h7v9H3zM14 3h7v5h-7zM14 12h7v9h-7zM3 16h7v5H3z',
-  settings: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z',
-  home: 'M3 10.5 12 3l9 7.5V21h-6v-6H9v6H3z',
-  user: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM4 21a8 8 0 0 1 16 0',
-  image: 'M3 5h18v14H3zM3 16l5-5 4 4 3-3 6 6M15.5 9.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z',
-  quote: 'M3 21c3 0 7-1 7-8V5H3v8h4c0 3-1 5-4 5M14 21c3 0 7-1 7-8V5h-7v8h4c0 3-1 5-4 5',
-  mail: 'M3 5h18v14H3zM3 7l9 6 9-6',
-  calendar: 'M3 4h18v18H3zM16 2v4M8 2v4M3 10h18',
-  users: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8',
-  plus: 'M12 5v14M5 12h14',
-  trash: 'M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6',
-  up: 'm18 15-6-6-6 6',
-  down: 'm6 9 6 6 6-6',
-  close: 'M18 6 6 18M6 6l12 12',
-  upload: 'M12 15V3M7 8l5-5 5 5M5 21h14',
-  copy: 'M9 9h12v12H9zM5 15H3V3h12v2',
-  logout: 'M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9',
-  external: 'M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6',
-  menu: 'M4 6h16M4 12h16M4 18h16',
-  check: 'M20 6 9 17l-5-5',
-  link: 'M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7',
-  layers: 'm12 2 10 5-10 5L2 7l10-5ZM2 17l10 5 10-5M2 12l10 5 10-5',
-  eye: 'M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12ZM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z',
-  file: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6',
-  send: 'm22 2-7 20-4-9-9-4 20-7ZM22 2 11 13',
-  refresh: 'M3 12a9 9 0 0 1 15.5-6.3L21 8M21 3v5h-5M21 12a9 9 0 0 1-15.5 6.3L3 16M3 21v-5h5',
-  crop: 'M6 2v14a2 2 0 0 0 2 2h14M18 22V8a2 2 0 0 0-2-2H2',
+const icons: Record<string, LucideIcon> = {
+  dashboard: LayoutDashboard,
+  settings: Settings,
+  home: House,
+  user: User,
+  image: Image,
+  quote: Quote,
+  mail: Mail,
+  calendar: Calendar,
+  users: Users,
+  plus: Plus,
+  trash: Trash2,
+  up: ChevronUp,
+  down: ChevronDown,
+  close: X,
+  upload: Upload,
+  copy: Copy,
+  logout: LogOut,
+  external: ExternalLink,
+  menu: Menu,
+  check: Check,
+  link: Link,
+  layers: Layers,
+  eye: Eye,
+  file: FileText,
+  send: Send,
+  refresh: RefreshCw,
+  crop: Crop,
 };
 
+/** Lucide icon by short name (kept so existing <I n="..." /> calls keep working) */
 export function I({ n, s = 18, className = '' }: { n: string; s?: number; className?: string }) {
-  return (
-    <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
-      <path d={paths[n] ?? paths.layers} />
-    </svg>
-  );
+  const C = icons[n] ?? Layers;
+  return <C size={s} strokeWidth={1.8} className={className} aria-hidden="true" />;
 }
 
 /* ---------------- Toasts ---------------- */

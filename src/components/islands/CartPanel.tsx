@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { readCart, removeFromCart, type CartItem } from '@/lib/cart';
+import { ShoppingCart } from 'lucide-react';
 
 const taka = (n: number) => `৳${Number.isInteger(n) ? n : n.toFixed(2)}`;
 
@@ -37,7 +38,7 @@ export default function CartPanel() {
     return (
       <div className="flex flex-col items-center py-16 text-center">
         <span className="grid h-16 w-16 place-items-center rounded-2xl bg-accent-soft text-accent">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="9" cy="20" r="1.5" /><circle cx="18" cy="20" r="1.5" /><path d="M2 3h3l2.7 12.4a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.6L21 7H6" /></svg>
+          <ShoppingCart size={28} strokeWidth={1.8} aria-hidden="true" />
         </span>
         <p className="mt-5 font-semibold">Your cart is empty</p>
         <p className="mt-1 text-sm text-muted">Browse e-books and add them to your cart.</p>

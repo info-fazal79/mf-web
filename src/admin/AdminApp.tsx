@@ -12,6 +12,7 @@ import { Customers, EbookCategories, EbookReviewsAdmin, Ebooks } from './ebooks'
 import { Coupons, Orders } from './orders';
 import { EmailSettings, Newsletter } from './email';
 import { I, ToastProvider } from './ui';
+import { ChevronRight } from 'lucide-react';
 
 type NavEntry = { route: string; label: string; icon: string };
 const navGroups: { title: string; items: NavEntry[] }[] = [
@@ -228,7 +229,7 @@ function SideNav({ route }: { route: string }) {
               className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 font-mono text-[11px] font-semibold tracking-widest uppercase transition hover:bg-surface-2 ${hasActive ? 'text-accent' : 'text-muted hover:text-fg'}`}
             >
               <span className="flex-1 text-left">{g.title}</span>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`transition-transform ${isOpen ? 'rotate-90' : ''}`} aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
+              <ChevronRight size={14} strokeWidth={2} className={`transition-transform ${isOpen ? 'rotate-90' : ''}`} aria-hidden="true" />
             </button>
             {isOpen && <ul className="mt-0.5 mb-2 grid gap-0.5 border-l border-line pl-2 ml-3">{g.items.map((it) => <li key={it.route}>{link(it)}</li>)}</ul>}
           </div>

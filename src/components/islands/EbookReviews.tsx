@@ -2,13 +2,14 @@ import { useEffect, useState, type FormEvent } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { AuthForm } from './AccountApp';
+import { Star } from 'lucide-react';
 
 type Review = { id: string; name: string; rating: number; body: string | null; created_at: string; status: string; user_id: string | null };
 
 const Stars = ({ n, size = 14 }: { n: number; size?: number }) => (
   <span className="inline-flex text-yellow-400" aria-label={`${n} out of 5`}>
     {[1, 2, 3, 4, 5].map((i) => (
-      <svg key={i} width={size} height={size} viewBox="0 0 24 24" fill={i <= Math.round(n) ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><polygon points="12 2 15.1 8.3 22 9.3 17 14.1 18.2 21 12 17.8 5.8 21 7 14.1 2 9.3 8.9 8.3 12 2" /></svg>
+      <Star key={i} size={size} fill={i <= Math.round(n) ? 'currentColor' : 'none'} strokeWidth={1.5} aria-hidden="true" />
     ))}
   </span>
 );

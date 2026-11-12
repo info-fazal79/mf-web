@@ -1,3 +1,4 @@
+import { Bookmark, ChevronLeft, Lock, Maximize, PenLine, Search, TextAlignStart, Type, Volume2, X, type LucideIcon } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { marked } from 'marked';
 import type { Session } from '@supabase/supabase-js';
@@ -30,20 +31,18 @@ type Toc = { id: string; title: string; chapter_position: number; is_preview: bo
 type Chapter = { id: string; title: string; content: string; position: number };
 type Panel = 'toc' | 'notes' | 'search' | null;
 
-const I = ({ d, s = 18 }: { d: string; s?: number }) => (
-  <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={d} /></svg>
-);
+const I = ({ d: C, s = 18 }: { d: LucideIcon; s?: number }) => <C size={s} strokeWidth={1.8} aria-hidden="true" />;
 const ICON = {
-  back: 'm15 18-6-6 6-6',
-  toc: 'M4 6h16M4 12h10M4 18h14',
-  notes: 'M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z',
-  search: 'M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14ZM21 21l-4.3-4.3',
-  type: 'M4 7V4h16v3M9 20h6M12 4v16',
-  bookmark: 'M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z',
-  speak: 'M11 5 6 9H2v6h4l5 4V5ZM15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14',
-  full: 'M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3',
-  close: 'M18 6 6 18M6 6l12 12',
-  lock: 'M5 11h14v10H5zM8 11V7a4 4 0 0 1 8 0v4',
+  back: ChevronLeft,
+  toc: TextAlignStart,
+  notes: PenLine,
+  search: Search,
+  type: Type,
+  bookmark: Bookmark,
+  speak: Volume2,
+  full: Maximize,
+  close: X,
+  lock: Lock,
 };
 
 export default function Reader() {

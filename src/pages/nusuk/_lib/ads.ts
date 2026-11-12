@@ -4,6 +4,7 @@
  * The same adHtml() renders the public page and the admin preview, so they always match.
  */
 import { youtubeId } from './content';
+import { lucide } from './lucide';
 
 export type AdType = 'app' | 'image' | 'card' | 'text' | 'video' | 'social';
 export type Ad = {
@@ -133,9 +134,9 @@ const wrap = (ad: Ad, cls: string, inner: string) =>
   ad.link
     ? `<a href="${esc(ad.link)}" target="_blank" rel="noopener sponsored" class="${cls}" data-ad="${esc(ad.id)}">${inner}</a>`
     : `<div class="${cls}">${inner}</div>`;
-const arrow = '<svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
+const arrow = lucide('arrowRight', 'h-4 w-4', 2.4);
 const fbLogo = '<svg viewBox="0 0 24 24" class="h-5 w-5" fill="currentColor" aria-hidden="true"><path d="M14 8.5V6.8c0-.8.5-1 .9-1H17V2.1L14.1 2C10.9 2 10.2 4.4 10.2 6v2.5H8V12h2.2v10H14V12h2.7l.4-3.5z"/></svg>';
-const fbGroup = '<svg viewBox="0 0 24 24" class="h-5 w-5" fill="currentColor" aria-hidden="true"><path d="M12 12.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zm-6.5.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5zm13 0a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5zM12 14c-3.3 0-6 1.8-6 4v1.5h12V18c0-2.2-2.7-4-6-4zm-7.6.6C2 14.9 0 16.2 0 18v1.5h4.5V18c0-1.3.6-2.5 1.6-3.4-.5-.1-1.1 0-1.7 0zm15.2 0c-.6 0-1.2 0-1.7.1 1 .9 1.6 2.1 1.6 3.4v1.5H24V18c0-1.8-2-3.1-4.4-3.4z"/></svg>';
+const fbGroup = lucide('users', 'h-5 w-5');
 const playBadge = '<svg viewBox="0 0 24 24" class="h-5 w-5" aria-hidden="true"><path fill="#00d7fe" d="M3.6 1.8 13.4 12 3.6 22.2c-.4-.2-.6-.7-.6-1.2V3c0-.5.2-1 .6-1.2z"/><path fill="#ffce00" d="m16.8 8.6-3.4 3.4 3.4 3.4 3.9-2.2c.8-.5.8-1.7 0-2.2z"/><path fill="#ff3a44" d="M13.4 12 3.6 22.2c.4.2.9.2 1.4-.1l11.8-6.7z"/><path fill="#00f076" d="M3.6 1.8c.5-.3 1-.3 1.4-.1l11.8 6.9-3.4 3.4z"/></svg>';
 
 /** The markup of one ad (Tailwind classes; all text is escaped). */
