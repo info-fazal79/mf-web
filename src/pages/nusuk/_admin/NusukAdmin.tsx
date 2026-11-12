@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
-import { CircleHelp, ClipboardCheck, ClipboardPaste, Crown, Dices, ExternalLink, Gift, LayoutDashboard, ListChecks, LogOut, Megaphone, MessageSquare, MessageSquareMore, MonitorPlay, PanelTop, Play, Rocket, Settings, Star, Tags, Trophy, Video, type LucideIcon } from 'lucide-react';
+import { CircleHelp, ClipboardCheck, ClipboardPaste, Crown, Dices, ExternalLink, Gift, LayoutDashboard, ListChecks, LogOut, Megaphone, MessageSquare, MessageSquareMore, MonitorPlay, PanelTop, Play, Rocket, Settings, Star, Tags, Ticket, Trophy, Video, type LucideIcon } from 'lucide-react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import AdsPage from './AdsPage';
 import LiveScreenPage from './LiveScreenPage';
+import ClubPage from './ClubPage';
 import QuizPage from './QuizPage';
 import BonusPage from './BonusPage';
 import CampaignPage from './CampaignPage';
@@ -1556,7 +1557,7 @@ function WinnersPage({ toast, settings, reload }: { toast: ToastFn; settings: Se
 }
 
 /* ---------------- Shell ---------------- */
-type Route = 'dashboard' | 'live' | 'codes' | 'review' | 'features' | 'bonus' | 'campaign' | 'quiz' | 'popup' | 'raffle' | 'upload' | 'notice' | 'video' | 'ads' | 'today' | 'winners' | 'feedback' | 'settings';
+type Route = 'dashboard' | 'live' | 'codes' | 'review' | 'features' | 'bonus' | 'campaign' | 'quiz' | 'popup' | 'raffle' | 'upload' | 'notice' | 'video' | 'ads' | 'today' | 'winners' | 'feedback' | 'club' | 'settings';
 type NavItem = { r: Route; label: string; Icon: LucideIcon };
 const nav: NavItem[] = [
   { r: 'dashboard', label: 'Dashboard', Icon: LayoutDashboard },
@@ -1566,6 +1567,7 @@ const nav: NavItem[] = [
   { r: 'features', label: 'Feature requests', Icon: Star },
   { r: 'quiz', label: 'Quiz', Icon: CircleHelp },
   { r: 'campaign', label: 'Campaign', Icon: Rocket },
+  { r: 'club', label: 'Reward Club', Icon: Ticket },
   { r: 'bonus', label: 'Community & bonus', Icon: Gift },
   { r: 'notice', label: 'Notice', Icon: Megaphone },
   { r: 'raffle', label: 'Raffle draw', Icon: Dices },
@@ -1705,6 +1707,7 @@ export default function NusukAdmin() {
         )}
         {route === 'dashboard' && <Dashboard toast={toast} go={go} />}
         {route === 'live' && <LiveScreenPage toast={toast} />}
+        {route === 'club' && <ClubPage toast={toast} />}
         {route === 'codes' && <CodesPage key="codes" toast={toast} settings={settings} />}
         {route === 'review' && <CodesPage key="review" toast={toast} reviewMode settings={settings} />}
         {route === 'upload' && <Upload toast={toast} defaultMax={settings?.default_max_uses ?? 1} />}

@@ -110,6 +110,16 @@ const cm0 = defaultCommunity();
           <span id="nk-status" class="text-emerald-800/80" role="status"></span>
         </div>
 
+        <!-- Ribat Reward Club (Nusuk Manager → Reward Club). Hidden until the club is turned on. -->
+        <a id="nk-club" href="/nusuk/club" class="mt-4 hidden items-center gap-3 rounded-xl bg-gradient-to-r from-emerald-800 to-emerald-950 px-3.5 py-3 text-white shadow-md transition hover:brightness-110">
+          <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-gold-400 text-emerald-950" aria-hidden="true"><Fragment set:html={lucide('gift', 'h-5 w-5', 2.2)} /></span>
+          <span class="min-w-0 flex-1 text-left">
+            <span id="nk-club-title" class="block text-[15px] font-bold leading-tight">রিবাত রিওয়ার্ড ক্লাব: টিকিট জমান, পুরস্কার জিতুন</span>
+            <span id="nk-club-sub" class="block text-xs text-emerald-50/80">কোড কপি করলেই প্রতিদিন ১টি টিকিট · বন্ধুকে যুক্ত করলে আরও · সম্পূর্ণ ফ্রি</span>
+          </span>
+          <span id="nk-club-cta" class="shrink-0 rounded-full bg-gold-400 px-2.5 py-1 text-xs font-bold text-emerald-950">যুক্ত হোন ›</span>
+        </a>
+
         <!-- Tutorial video (Nusuk Manager → Video). Hidden until a YouTube link is set. -->
         <a id="nk-video-open" href="#" target="_blank" rel="noopener" class="nk-video-btn mt-4 hidden items-center gap-3 rounded-xl px-3.5 py-2.5">
           <span class="nk-video-play" aria-hidden="true"><Fragment set:html={lucide('play', 'h-3.5 w-3.5', 2, true)} /></span>
@@ -663,6 +673,7 @@ const cm0 = defaultCommunity();
     <script>
       import { rpc, rpcReady, type Boot, type Claim, type CodeCheck, type CodeRef, type FeatureReq, type FeaturedItem, type FeaturedList, type SliderItem, type Submit } from './_lib/rpc';
       import { initQuiz } from './_lib/quiz';
+      import { clubOf, hasMemberSession, memberToken, rememberRef, DEFAULT_TITLE } from './_lib/club';
       import { initInsights, insightsOn } from './_lib/insights';
       import { adHtml, defaultAds, liveAds, parseAds, sampleDuaAd } from './_lib/ads';
       import { bonusReady, parseBonus, parseCommunity } from './_lib/bonus';
@@ -1168,6 +1179,39 @@ const cm0 = defaultCommunity();
       ppDialog.addEventListener('click', (e) => { if (e.target === ppDialog) ppClose(); });
       ppDialog.addEventListener('cancel', ppClose);
 
+      // ---- Ribat Reward Club: banner + one ticket a day for a signed-in member who copies a code ----
+      rememberRef(); // ?ref=NG-… from a shared card / QR code, used when they make an account
+      let clubOn = false;
+      function renderClub(content: unknown) {
+        const c = clubOf(content);
+        clubOn = c.on;
+        const el = $('nk-club');
+        el.classList.toggle('hidden', !c.on);
+        el.classList.toggle('flex', c.on);
+        if (!c.on) return;
+        const member = hasMemberSession();
+        $('nk-club-title').textContent = `${c.title.trim() || DEFAULT_TITLE}: টিকিট জমান, পুরস্কার জিতুন`;
+        $('nk-club-cta').textContent = member ? 'ড্যাশবোর্ড ›' : 'যুক্ত হোন ›';
+      }
+      const CLUB_DAY = 'nusuk:club:copied';
+      const dhakaDay = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Dhaka' });
+      async function clubCopied() {
+        if (!clubOn || !hasMemberSession()) return;
+        try { if (localStorage.getItem(CLUB_DAY) === dhakaDay()) return; } catch {}
+        try {
+          const token = await memberToken();
+          if (!token) return;
+          const r = await rpc<{ ok: boolean; counted?: boolean }>('nusuk_club_copy', {}, token);
+          if (r.ok) {
+            try { localStorage.setItem(CLUB_DAY, dhakaDay()); } catch {}
+            if (r.counted) {
+              status.textContent = 'আজকের ১টি টিকিট জমা হয়েছে ✓';
+              setTimeout(() => { if (status.textContent?.includes('টিকিট')) status.textContent = ''; }, 5000);
+            }
+          }
+        } catch (e) { console.error(e); }
+      }
+
       let lastContent: Record<string, string> | undefined;
       const insights = initInsights();
       function applyContent(b: Boot) {
@@ -1180,6 +1224,7 @@ const cm0 = defaultCommunity();
         renderVideo(b.content);
         renderToday(b.content);
         renderWinners(parseWinners(b.content));
+        renderClub(b.content);
         if (b.content) {
           document.querySelectorAll<HTMLElement>('[data-k]').forEach((el) => {
             const v = b.content?.[el.dataset.k!];
@@ -1259,6 +1304,7 @@ const cm0 = defaultCommunity();
         const ok = await copyText(c.code);
         if (!ok) { status.textContent = 'কপি হয়নি, কোডটি চেপে ধরে কপি করুন'; busy = false; return; }
         toast();
+        clubCopied();
         used = [...used.filter((u) => u.id !== c.id), { id: c.id, code: c.code, at: Date.now() }].slice(-800);
         store(local, LS, used);
         renderMine();

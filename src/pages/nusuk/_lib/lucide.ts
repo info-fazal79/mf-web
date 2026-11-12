@@ -2,7 +2,7 @@
  * Lucide icons (https://lucide.dev, ISC licence) as inline SVG strings, from the lucide-static package.
  * Works in .astro markup (set:html) and in client scripts that build HTML strings.
  */
-import { Activity, ArrowRight, ChevronDown, CircleCheck, CircleDot, Copy, Handshake, Hourglass, Inbox, Megaphone, MessageCircle, MessageSquare, PartyPopper, Play, Search, Smartphone, Sparkles, Star, Target, Trophy, Users, Zap } from 'lucide-static';
+import { Activity, Gift, Ticket, ArrowRight, ChevronDown, CircleCheck, CircleDot, Copy, Handshake, Hourglass, Inbox, Megaphone, MessageCircle, MessageSquare, PartyPopper, Play, Search, Smartphone, Sparkles, Star, Target, Trophy, Users, Zap } from 'lucide-static';
 
 /** inner markup of a lucide-static svg string */
 const inner = (svg: string) => svg.replace(/^[\s\S]*?<svg[^>]*>/, '').replace(/<\/svg>\s*$/, '').trim();
@@ -30,6 +30,8 @@ const P = {
   messageSquare: inner(MessageSquare),
   play: inner(Play),
   arrowRight: inner(ArrowRight),
+  gift: inner(Gift),
+  ticket: inner(Ticket),
 };
 
 export type IconName = keyof typeof P;
