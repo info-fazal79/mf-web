@@ -4,6 +4,7 @@
 //   ?hide=quiz,featured,feed,winner,ticker   hide panels
 //   &title=...                               own headline
 import './_lib/nusuk.css';
+import { lucide } from './_lib/lucide';
 ---
 
 <!doctype html>
@@ -62,6 +63,15 @@ import './_lib/nusuk.css';
       .ls-muted { color: var(--muted); }
       .ls-label-hero { color: var(--accent); font-weight: 600; }
       .ls-accent { color: var(--accent); }
+      /* Lucide icons: soft rounded badge in the theme colour */
+      .ls-kpi-ico { display: grid; place-items: center; width: 2.1rem; height: 2.1rem; border-radius: 0.65rem; color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); }
+      .ls-panel-hero .ls-kpi-ico { color: var(--hero-accent, var(--accent)); background: color-mix(in srgb, var(--hero-accent, var(--accent)) 18%, transparent); }
+      .ls-h-ico { display: grid; place-items: center; width: 2.4rem; height: 2.4rem; border-radius: 0.75rem; color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); }
+      :global(.ls-rank) { display: grid; place-items: center; width: 1.9rem; height: 1.9rem; border-radius: 9999px; font-size: 0.95rem; font-weight: 800; color: #fff; background: color-mix(in srgb, currentColor 0%, #6b7a74); }
+      :global(.ls-rank-1) { background: linear-gradient(135deg, #f6d365, #d4a017); color: #3b2a00; }
+      :global(.ls-rank-2) { background: linear-gradient(135deg, #e6e9ee, #a8b0ba); color: #26303a; }
+      :global(.ls-rank-3) { background: linear-gradient(135deg, #f0b98a, #b86b35); color: #3a1a05; }
+      :global(.ls-tick-ico) { display: inline-grid; vertical-align: -0.2em; margin-right: 0.45rem; color: var(--ticker-accent, currentColor); }
       .ls-good { color: var(--good); }
       .ls-good-bg { background: var(--good); }
       .ls-chip { background: var(--chip); }
@@ -99,27 +109,27 @@ import './_lib/nusuk.css';
 
       <!-- KPI tiles -->
       <section class="flex gap-4 [&>*]:min-w-0 [&>*]:flex-1">
-        <div class="ls-panel p-5"><div class="text-xl ls-muted">🟢 এখন অ্যাক্টিভ</div><div id="k-active" class="ls-num mt-1 text-[56px] font-bold leading-none ls-good">০</div><div id="k-active-s" class="mt-2 text-base ls-muted"></div></div>
-        <div class="ls-panel p-5"><div class="text-xl ls-muted">👥 আজ ভিজিটর</div><div id="k-visitors" class="ls-num mt-1 text-[56px] font-bold leading-none">০</div><div id="k-visitors-s" class="mt-2 text-base ls-muted"></div></div>
-        <div class="ls-panel flex-[2]! ls-panel-hero p-5"><div class="text-xl ls-label-hero">📋 আজ কোড কপি হয়েছে</div><div id="k-copies" class="ls-num mt-1 text-[72px] font-bold leading-none ls-accent">০</div><div id="k-copies-s" class="mt-2 text-base ls-muted"></div></div>
-        <div class="ls-panel p-5"><div class="text-xl ls-muted">📥 আজ নতুন কোড</div><div id="k-sub" class="ls-num mt-1 text-[56px] font-bold leading-none">০</div><div id="k-sub-s" class="mt-2 text-base ls-muted"></div></div>
-        <div class="ls-panel p-5" data-panel="quiz"><div class="text-xl ls-muted">🎯 আজ কুইজে উত্তর</div><div id="k-quiz" class="ls-num mt-1 text-[56px] font-bold leading-none">০</div><div id="k-quiz-s" class="mt-2 text-base ls-muted"></div></div>
+        <div class="ls-panel p-5"><div class="flex items-center gap-2.5 text-xl ls-muted"><span class="ls-kpi-ico"><Fragment set:html={lucide('activity', 'h-5 w-5')} /></span>এখন অ্যাক্টিভ</div><div id="k-active" class="ls-num mt-1 text-[56px] font-bold leading-none ls-good">০</div><div id="k-active-s" class="mt-2 text-base ls-muted"></div></div>
+        <div class="ls-panel p-5"><div class="flex items-center gap-2.5 text-xl ls-muted"><span class="ls-kpi-ico"><Fragment set:html={lucide('users', 'h-5 w-5')} /></span>আজ ভিজিটর</div><div id="k-visitors" class="ls-num mt-1 text-[56px] font-bold leading-none">০</div><div id="k-visitors-s" class="mt-2 text-base ls-muted"></div></div>
+        <div class="ls-panel flex-[2]! ls-panel-hero p-5"><div class="flex items-center gap-2.5 text-xl ls-label-hero"><span class="ls-kpi-ico"><Fragment set:html={lucide('copy', 'h-5 w-5')} /></span>আজ কোড কপি হয়েছে</div><div id="k-copies" class="ls-num mt-1 text-[72px] font-bold leading-none ls-accent">০</div><div id="k-copies-s" class="mt-2 text-base ls-muted"></div></div>
+        <div class="ls-panel p-5"><div class="flex items-center gap-2.5 text-xl ls-muted"><span class="ls-kpi-ico"><Fragment set:html={lucide('inbox', 'h-5 w-5')} /></span>আজ নতুন কোড</div><div id="k-sub" class="ls-num mt-1 text-[56px] font-bold leading-none">০</div><div id="k-sub-s" class="mt-2 text-base ls-muted"></div></div>
+        <div class="ls-panel p-5" data-panel="quiz"><div class="flex items-center gap-2.5 text-xl ls-muted"><span class="ls-kpi-ico"><Fragment set:html={lucide('target', 'h-5 w-5')} /></span>আজ কুইজে উত্তর</div><div id="k-quiz" class="ls-num mt-1 text-[56px] font-bold leading-none">০</div><div id="k-quiz-s" class="mt-2 text-base ls-muted"></div></div>
       </section>
 
       <!-- Middle: charts + feed -->
       <section class="grid min-h-0 flex-1 grid-cols-[1fr_520px] gap-5">
         <div class="grid min-h-0 grid-rows-2 gap-5">
           <div class="ls-panel flex min-h-0 flex-col p-5">
-            <div class="flex items-baseline justify-between"><h2 class="text-2xl font-bold">অ্যাক্টিভ ইউজার</h2><span class="text-base ls-muted">গত ২ ঘণ্টা · প্রতি মিনিটে</span></div>
+            <div class="flex items-baseline justify-between"><h2 class="flex items-center gap-2.5 text-2xl font-bold"><span class="ls-h-ico"><Fragment set:html={lucide('activity', 'h-6 w-6', 2.2)} /></span>অ্যাক্টিভ ইউজার</h2><span class="text-base ls-muted">গত ২ ঘণ্টা · প্রতি মিনিটে</span></div>
             <div id="c-active" class="mt-2 min-h-0 flex-1"></div>
           </div>
           <div class="ls-panel flex min-h-0 flex-col p-5">
-            <div class="flex items-baseline justify-between"><h2 class="text-2xl font-bold">কোড কপি</h2><span class="text-base ls-muted">গত ৪ ঘণ্টা · প্রতি ১০ মিনিটে</span></div>
+            <div class="flex items-baseline justify-between"><h2 class="flex items-center gap-2.5 text-2xl font-bold"><span class="ls-h-ico"><Fragment set:html={lucide('copy', 'h-6 w-6', 2.2)} /></span>কোড কপি</h2><span class="text-base ls-muted">গত ৪ ঘণ্টা · প্রতি ১০ মিনিটে</span></div>
             <div id="c-copies" class="mt-2 min-h-0 flex-1"></div>
           </div>
         </div>
         <div class="ls-panel flex min-h-0 flex-col p-5" data-panel="feed">
-          <div class="flex items-center justify-between"><h2 class="text-2xl font-bold">⚡ এইমাত্র যা ঘটছে</h2><span class="ls-live h-3 w-3 rounded-full ls-good-bg"></span></div>
+          <div class="flex items-center justify-between"><h2 class="flex items-center gap-2.5 text-2xl font-bold"><span class="ls-h-ico"><Fragment set:html={lucide('zap', 'h-6 w-6', 2.2)} /></span>এইমাত্র যা ঘটছে</h2><span class="ls-live h-3 w-3 rounded-full ls-good-bg"></span></div>
           <ul id="ls-feed" class="mt-3 grid min-h-0 flex-1 content-start gap-2.5 overflow-hidden"></ul>
         </div>
       </section>
@@ -127,15 +137,15 @@ import './_lib/nusuk.css';
       <!-- Bottom: quiz, featured, winner -->
       <section class="flex h-[262px] gap-5 [&>*]:min-w-0 [&>*]:flex-1">
         <div class="ls-panel flex min-h-0 flex-col p-5" data-panel="quiz">
-          <h2 class="text-2xl font-bold">🏆 কুইজ লিডারবোর্ড</h2>
+          <h2 class="flex items-center gap-2.5 text-2xl font-bold"><span class="ls-h-ico"><Fragment set:html={lucide('trophy', 'h-6 w-6', 2.2)} /></span>কুইজ লিডারবোর্ড</h2>
           <ol id="ls-quiz" class="mt-2 grid content-start gap-1 overflow-hidden"></ol>
         </div>
         <div class="ls-panel flex min-h-0 flex-col p-5" data-panel="featured">
-          <h2 class="text-2xl font-bold">★ এখন ফিচার করা কোড</h2>
+          <h2 class="flex items-center gap-2.5 text-2xl font-bold"><span class="ls-h-ico"><Fragment set:html={lucide('star', 'h-6 w-6', 2.2)} /></span>এখন ফিচার করা কোড</h2>
           <ul id="ls-feat" class="mt-2 grid content-start gap-1 overflow-hidden"></ul>
         </div>
         <div class="ls-panel flex min-h-0 flex-col p-5" data-panel="winner">
-          <h2 class="text-2xl font-bold">🎉 সর্বশেষ বিজয়ী</h2>
+          <h2 class="flex items-center gap-2.5 text-2xl font-bold"><span class="ls-h-ico"><Fragment set:html={lucide('partyPopper', 'h-6 w-6', 2.2)} /></span>সর্বশেষ বিজয়ী</h2>
           <div id="ls-win" class="mt-2 flex-1"></div>
         </div>
       </section>

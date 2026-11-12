@@ -30,13 +30,15 @@ const ago = (iso: string, now: number) => {
   return m < 60 ? `${bn(m)} মিনিট আগে` : `${bn(Math.round(m / 60))} ঘণ্টা আগে`;
 };
 
+import { lucide } from './lucide';
+
 const FEED: Record<string, (l: string | null) => [string, string]> = {
-  submitted: (l) => ['📥', `নতুন কোড জমা হয়েছে <b class="font-mono">${esc(l ?? '')}</b>`],
-  approved: (l) => ['✅', `কোড তালিকায় যুক্ত হলো <b class="font-mono">${esc(l ?? '')}</b>`],
-  featured: (l) => ['★', `কোড ফিচার করা হলো <b class="font-mono">${esc(l ?? '')}</b>`],
-  quiz_join: (l) => ['🎯', `<b>${esc(l ?? 'একজন')}</b> কুইজে যোগ দিলেন`],
-  feature_request: () => ['⭐', 'একজন ফিচারের জন্য আবেদন করলেন'],
-  feedback: () => ['💬', 'নতুন একটি মতামত এসেছে'],
+  submitted: (l) => [lucide('inbox', 'h-6 w-6'), `নতুন কোড জমা হয়েছে <b class="font-mono">${esc(l ?? '')}</b>`],
+  approved: (l) => [lucide('circleCheck', 'h-6 w-6'), `কোড তালিকায় যুক্ত হলো <b class="font-mono">${esc(l ?? '')}</b>`],
+  featured: (l) => [lucide('star', 'h-6 w-6'), `কোড ফিচার করা হলো <b class="font-mono">${esc(l ?? '')}</b>`],
+  quiz_join: (l) => [lucide('target', 'h-6 w-6'), `<b>${esc(l ?? 'একজন')}</b> কুইজে যোগ দিলেন`],
+  feature_request: () => [lucide('sparkles', 'h-6 w-6'), 'একজন ফিচারের জন্য আবেদন করলেন'],
+  feedback: () => [lucide('messageCircle', 'h-6 w-6'), 'নতুন একটি মতামত এসেছে'],
 };
 
 export function initLiveScreen() {
@@ -146,7 +148,7 @@ export function initLiveScreen() {
       ? items.slice(0, 11).map((f, i) => {
           const [icon, text] = (FEED[f.kind] ?? (() => ['•', '']))(f.label);
           return `<li class="${fresh && i === 0 ? 'ls-feed-item ' : ''}flex items-center gap-3 rounded-2xl ls-chip px-4 py-2.5 text-xl">
-            <span class="grid h-10 w-10 shrink-0 place-items-center rounded-xl ls-icon text-2xl">${icon}</span>
+            <span class="grid h-10 w-10 shrink-0 place-items-center rounded-xl ls-icon ls-accent">${icon}</span>
             <span class="min-w-0 flex-1 truncate">${text}</span>
             <span class="shrink-0 text-base ls-muted">${ago(f.at, t)}</span></li>`;
         }).join('')
@@ -162,7 +164,7 @@ export function initLiveScreen() {
     $('ls-win').innerHTML = `
       <div class="flex items-center gap-4">
         <img src="${flagUrl(w.country, 160)}" alt="" class="h-16 w-24 rounded-lg object-cover ring-2 ring-black/10" />
-        <div class="min-w-0"><div class="truncate text-3xl font-bold">${esc(w.name)}</div><div class="text-lg ls-muted">${esc(countryName(w.country, 'bn'))} · ${esc(prizeLong[w.prize] ?? '')}</div></div>
+        <div class="min-w-0"><div class="truncate text-3xl font-bold">${esc(w.name)}</div><div class="text-lg ls-muted">${esc(countryName(w.country, 'bn'))} · ${esc((prizeLong[w.prize] ?? '').replace(/^[^\p{L}\p{N}]+/u, ''))}</div></div>
       </div>
       <div id="ls-next" class="mt-3 text-xl"></div>
       <div class="mt-1 text-base ls-muted">বাংলাদেশি বিজয়ী এ পর্যন্ত: <b class="ls-accent">${bn(count)}</b> জন</div>`;
@@ -172,7 +174,9 @@ export function initLiveScreen() {
       if (!el) return;
       if (Number.isNaN(end) || now() - end > 6 * 3600e3) { el.textContent = ''; return; }
       const left = end - now();
-      el.innerHTML = left > 0 ? `⏳ পরবর্তী বিজয়ী ঘোষণা: <b class="ls-num font-mono ls-accent">${countdownText(left)}</b>` : '🎉 নতুন বিজয়ী এখনই ঘোষণা হচ্ছে!';
+      el.innerHTML = left > 0
+        ? `<span class="inline-flex items-center gap-2">${lucide('hourglass', 'h-5 w-5 ls-accent')}পরবর্তী বিজয়ী ঘোষণা: <b class="ls-num font-mono ls-accent">${countdownText(left)}</b></span>`
+        : `<span class="inline-flex items-center gap-2">${lucide('partyPopper', 'h-5 w-5 ls-accent')}নতুন বিজয়ী এখনই ঘোষণা হচ্ছে!</span>`;
     };
     tick();
     winTimer = setInterval(tick, 1000);
@@ -195,14 +199,19 @@ export function initLiveScreen() {
     $('k-quiz-s').textContent = `${d.quiz_answers_today ? `${bn(Math.round((d.quiz_correct_today / d.quiz_answers_today) * 100))}% সঠিক · ` : ''}${bn(d.quiz_players)} জন খেলোয়াড়`;
     renderFeed(d.feed ?? [], now());
     renderWinner(d.today_winner, d.winners_count ?? 0);
-    const parts = [
-      '📲 কোড নিন এক ক্লিকে: muhammadfazal.com/nusuk',
-      d.notice ? `📢 ${d.notice}` : '',
-      '🎯 প্রতিদিন কুইজ খেলুন, লিডারবোর্ডে নাম তুলুন',
-      '⭐ নিজের কোড জমা দিন, অন্যরা ব্যবহার করবে',
-      '🤝 Ribatul Ummah কমিউনিটিতে যুক্ত থাকুন',
-    ].filter(Boolean).join('   •   ');
-    if ($('ls-ticker').dataset.text !== parts) { $('ls-ticker').dataset.text = parts; $('ls-ticker').textContent = `${parts}   •   ${parts}   •   `; }
+    const items: [Parameters<typeof lucide>[0], string][] = [
+      ['smartphone', 'কোড নিন এক ক্লিকে: muhammadfazal.com/nusuk'],
+      ...(d.notice ? [['megaphone', d.notice] as [Parameters<typeof lucide>[0], string]] : []),
+      ['target', 'প্রতিদিন কুইজ খেলুন, লিডারবোর্ডে নাম তুলুন'],
+      ['star', 'নিজের কোড জমা দিন, অন্যরা ব্যবহার করবে'],
+      ['handshake', 'Ribatul Ummah কমিউনিটিতে যুক্ত থাকুন'],
+    ];
+    const parts = items.map(([, t]) => t).join('|');
+    if ($('ls-ticker').dataset.text !== parts) {
+      $('ls-ticker').dataset.text = parts;
+      const html = items.map(([ic, t]) => `<span class="ls-tick-ico">${lucide(ic, 'h-6 w-6', 2.2)}</span>${esc(t)}`).join('<span class="mx-6 opacity-50">•</span>');
+      $('ls-ticker').innerHTML = `${html}<span class="mx-6 opacity-50">•</span>${html}<span class="mx-6 opacity-50">•</span>`;
+    }
   }
 
   async function loadCharts() {
@@ -218,9 +227,9 @@ export function initLiveScreen() {
     let d: { enabled: boolean; board?: QuizRow[] };
     try { d = await rpc('nusuk_quiz_public', { p_limit: 5 }); } catch { return; }
     const rows = d.enabled ? d.board ?? [] : [];
-    const medal = (r: number) => (r === 1 ? '🥇' : r === 2 ? '🥈' : r === 3 ? '🥉' : bn(r));
+    const medal = (r: number) => `<span class="ls-rank ${r <= 3 ? `ls-rank-${r}` : ''}">${bn(r)}</span>`;
     $('ls-quiz').innerHTML = rows.length
-      ? rows.map((r) => `<li class="flex items-center gap-3 text-lg leading-snug"><span class="w-8 text-center text-xl">${medal(r.rank)}</span><b class="min-w-0 flex-1 truncate">${esc(r.name)}</b><span class="font-mono text-base ls-muted">${esc(r.code ?? '')}</span><b class="ls-num w-16 text-right ls-accent">${bn(r.points)}</b></li>`).join('')
+      ? rows.map((r) => `<li class="flex items-center gap-3 text-lg leading-snug"><span class="w-8 shrink-0">${medal(r.rank)}</span><b class="min-w-0 flex-1 truncate">${esc(r.name)}</b><span class="font-mono text-base ls-muted">${esc(r.code ?? '')}</span><b class="ls-num w-16 text-right ls-accent">${bn(r.points)}</b></li>`).join('')
       : '<li class="text-xl ls-muted">আজকের কুইজের ফল এখানে দেখা যাবে</li>';
   }
 
@@ -232,7 +241,7 @@ export function initLiveScreen() {
   }
   function renderFeat() {
     $('ls-feat').innerHTML = feat.length
-      ? feat.slice(0, 5).map((f) => `<li class="flex items-center gap-3 text-lg leading-snug"><span class="ls-accent">★</span><b class="font-mono flex-1">${esc(f.code)}</b><span class="ls-num font-mono text-lg ls-muted">⏳ ${countdownText(Math.max(0, Date.parse(f.ends) - now()))}</span></li>`).join('')
+      ? feat.slice(0, 5).map((f) => `<li class="flex items-center gap-3 text-lg leading-snug"><span class="ls-accent">${lucide('star', 'h-5 w-5')}</span><b class="font-mono flex-1">${esc(f.code)}</b><span class="ls-num inline-flex items-center gap-1.5 font-mono text-lg ls-muted">${lucide('hourglass', 'h-4 w-4')}${countdownText(Math.max(0, Date.parse(f.ends) - now()))}</span></li>`).join('')
       : '<li class="text-xl ls-muted">এখন কোনো কোড ফিচার করা নেই</li>';
   }
 
