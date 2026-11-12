@@ -68,6 +68,8 @@ drop table if exists public.nusuk_visitor_days;
 drop table if exists public.nusuk_active_log;
 drop table if exists public.nusuk_hourly;
 drop table if exists public.nusuk_daily;
+-- update 29 · live screen
+drop function if exists public.nusuk_live_screen();
 -- update 27 · live charts
 drop function if exists public.nusuk_insights_range(int);
 drop function if exists public.nusuk_insights();

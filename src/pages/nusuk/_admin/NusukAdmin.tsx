@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNo
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import AdsPage from './AdsPage';
+import LiveScreenPage from './LiveScreenPage';
 import QuizPage from './QuizPage';
 import BonusPage from './BonusPage';
 import CampaignPage from './CampaignPage';
@@ -1554,9 +1555,10 @@ function WinnersPage({ toast, settings, reload }: { toast: ToastFn; settings: Se
 }
 
 /* ---------------- Shell ---------------- */
-type Route = 'dashboard' | 'codes' | 'review' | 'features' | 'bonus' | 'campaign' | 'quiz' | 'popup' | 'raffle' | 'upload' | 'notice' | 'video' | 'ads' | 'today' | 'winners' | 'feedback' | 'settings';
+type Route = 'dashboard' | 'live' | 'codes' | 'review' | 'features' | 'bonus' | 'campaign' | 'quiz' | 'popup' | 'raffle' | 'upload' | 'notice' | 'video' | 'ads' | 'today' | 'winners' | 'feedback' | 'settings';
 const nav: { r: Route; label: string; icon: string }[] = [
   { r: 'dashboard', label: 'Dashboard', icon: 'M3 13h8V3H3zm10 8h8V11h-8zM3 21h8v-6H3zm10-18v6h8V3z' },
+  { r: 'live', label: 'Live screen', icon: 'M2 7a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2zM8 21h8M10 9l5 3-5 3z' },
   { r: 'codes', label: 'Codes', icon: 'M4 6h16M4 12h16M4 18h10' },
   { r: 'review', label: 'Review', icon: 'M9 12l2 2 4-4M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z' },
   { r: 'features', label: 'Feature requests', icon: 'M12 2l3 6.5 7 .8-5.2 4.8 1.5 7L12 17.6 5.7 21.1l1.5-7L2 9.3l7-.8z' },
@@ -1685,6 +1687,7 @@ export default function NusukAdmin() {
           </div>
         </div>
         {route === 'dashboard' && <Dashboard toast={toast} go={go} />}
+        {route === 'live' && <LiveScreenPage toast={toast} />}
         {route === 'codes' && <CodesPage key="codes" toast={toast} settings={settings} />}
         {route === 'review' && <CodesPage key="review" toast={toast} reviewMode settings={settings} />}
         {route === 'upload' && <Upload toast={toast} defaultMax={settings?.default_max_uses ?? 1} />}

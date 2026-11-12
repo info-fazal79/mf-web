@@ -1,0 +1,106 @@
+---
+// Nusuk · Live screen for OBS (Browser source 1920×1080) and Facebook / YouTube live.
+// Public-safe numbers only. Options in the URL (built in Nusuk Manager → Live screen):
+//   ?hide=quiz,featured,feed,winner,ticker   hide panels
+//   &title=...                               own headline
+import './_lib/nusuk.css';
+---
+
+<!doctype html>
+<html lang="bn">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Live · নুসুক উমরাহ কোড শেয়ার</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=JetBrains+Mono:wght@600;700&display=swap" />
+    <style>
+      html, body { margin: 0; height: 100%; overflow: hidden; background: #021f17; }
+      #ls-stage { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; transform-origin: 0 0; }
+      .ls-panel { background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(220, 188, 82, 0.22); border-radius: 22px; backdrop-filter: blur(2px); }
+      .ls-num { font-variant-numeric: tabular-nums; }
+      .ls-live { animation: ls-pulse 1.6s ease-in-out infinite; }
+      @keyframes ls-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
+      .ls-feed-item { animation: ls-in 0.6s ease-out both; }
+      @keyframes ls-in { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: none; } }
+      .ls-bump { animation: ls-bump 0.7s ease-out; }
+      @keyframes ls-bump { 0% { color: #ffe08a; transform: scale(1.06); } 100% { transform: none; } }
+      .ls-ticker { animation: ls-scroll 45s linear infinite; white-space: nowrap; }
+      @keyframes ls-scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+      [data-hidden] { display: none !important; }
+    </style>
+  </head>
+  <body class="font-sans antialiased">
+    <div id="ls-stage" class="nk-pattern flex flex-col gap-5 p-8 text-white">
+      <!-- Header -->
+      <header class="flex items-center gap-5">
+        <img src="/nusuk/ribat-logo-96.webp" alt="" width="72" height="72" class="h-[72px] w-[72px] rounded-2xl bg-white/10 p-1.5" />
+        <div class="min-w-0 flex-1">
+          <div id="ls-title" class="text-[44px] font-bold leading-tight">নুসুক উমরাহ কোড শেয়ার · লাইভ</div>
+          <div class="text-xl text-emerald-100/80">Ribatul Ummah · muhammadfazal.com/nusuk</div>
+        </div>
+        <div class="flex items-center gap-3 rounded-full bg-red-600 px-5 py-2 text-2xl font-bold"><span class="ls-live h-4 w-4 rounded-full bg-white"></span>LIVE</div>
+        <div class="text-right">
+          <div id="ls-clock" class="ls-num font-mono text-[44px] font-bold leading-none">--:--:--</div>
+          <div id="ls-date" class="mt-1 text-lg text-emerald-100/80"></div>
+        </div>
+      </header>
+
+      <!-- KPI tiles -->
+      <section class="flex gap-4 [&>*]:min-w-0 [&>*]:flex-1">
+        <div class="ls-panel p-5"><div class="text-xl text-emerald-100/80">🟢 এখন অ্যাক্টিভ</div><div id="k-active" class="ls-num mt-1 text-[56px] font-bold leading-none text-[#7ee2b8]">০</div><div id="k-active-s" class="mt-2 text-base text-emerald-100/70"></div></div>
+        <div class="ls-panel p-5"><div class="text-xl text-emerald-100/80">👥 আজ ভিজিটর</div><div id="k-visitors" class="ls-num mt-1 text-[56px] font-bold leading-none">০</div><div id="k-visitors-s" class="mt-2 text-base text-emerald-100/70"></div></div>
+        <div class="ls-panel flex-[2]! border-gold-400/60! p-5"><div class="text-xl text-gold-100">📋 আজ কোড কপি হয়েছে</div><div id="k-copies" class="ls-num mt-1 text-[72px] font-bold leading-none text-gold-400">০</div><div id="k-copies-s" class="mt-2 text-base text-emerald-100/70"></div></div>
+        <div class="ls-panel p-5"><div class="text-xl text-emerald-100/80">📥 আজ নতুন কোড</div><div id="k-sub" class="ls-num mt-1 text-[56px] font-bold leading-none">০</div><div id="k-sub-s" class="mt-2 text-base text-emerald-100/70"></div></div>
+        <div class="ls-panel p-5" data-panel="quiz"><div class="text-xl text-emerald-100/80">🎯 আজ কুইজে উত্তর</div><div id="k-quiz" class="ls-num mt-1 text-[56px] font-bold leading-none">০</div><div id="k-quiz-s" class="mt-2 text-base text-emerald-100/70"></div></div>
+      </section>
+
+      <!-- Middle: charts + feed -->
+      <section class="grid min-h-0 flex-1 grid-cols-[1fr_520px] gap-5">
+        <div class="grid min-h-0 grid-rows-2 gap-5">
+          <div class="ls-panel flex min-h-0 flex-col p-5">
+            <div class="flex items-baseline justify-between"><h2 class="text-2xl font-bold">অ্যাক্টিভ ইউজার</h2><span class="text-base text-emerald-100/70">গত ২ ঘণ্টা · প্রতি মিনিটে</span></div>
+            <div id="c-active" class="mt-2 min-h-0 flex-1"></div>
+          </div>
+          <div class="ls-panel flex min-h-0 flex-col p-5">
+            <div class="flex items-baseline justify-between"><h2 class="text-2xl font-bold">কোড কপি</h2><span class="text-base text-emerald-100/70">গত ৪ ঘণ্টা · প্রতি ১০ মিনিটে</span></div>
+            <div id="c-copies" class="mt-2 min-h-0 flex-1"></div>
+          </div>
+        </div>
+        <div class="ls-panel flex min-h-0 flex-col p-5" data-panel="feed">
+          <div class="flex items-center justify-between"><h2 class="text-2xl font-bold">⚡ এইমাত্র যা ঘটছে</h2><span class="ls-live h-3 w-3 rounded-full bg-[#7ee2b8]"></span></div>
+          <ul id="ls-feed" class="mt-3 grid min-h-0 flex-1 content-start gap-2.5 overflow-hidden"></ul>
+        </div>
+      </section>
+
+      <!-- Bottom: quiz, featured, winner -->
+      <section class="flex h-[262px] gap-5 [&>*]:min-w-0 [&>*]:flex-1">
+        <div class="ls-panel flex min-h-0 flex-col p-5" data-panel="quiz">
+          <h2 class="text-2xl font-bold">🏆 কুইজ লিডারবোর্ড</h2>
+          <ol id="ls-quiz" class="mt-2 grid content-start gap-1 overflow-hidden"></ol>
+        </div>
+        <div class="ls-panel flex min-h-0 flex-col p-5" data-panel="featured">
+          <h2 class="text-2xl font-bold">★ এখন ফিচার করা কোড</h2>
+          <ul id="ls-feat" class="mt-2 grid content-start gap-1 overflow-hidden"></ul>
+        </div>
+        <div class="ls-panel flex min-h-0 flex-col p-5" data-panel="winner">
+          <h2 class="text-2xl font-bold">🎉 সর্বশেষ বিজয়ী</h2>
+          <div id="ls-win" class="mt-2 flex-1"></div>
+        </div>
+      </section>
+
+      <!-- Ticker -->
+      <footer class="-mx-8 -mb-8 overflow-hidden bg-gold-400 py-3 text-2xl font-bold text-emerald-950" data-panel="ticker">
+        <div id="ls-ticker" class="ls-ticker inline-block"></div>
+      </footer>
+    </div>
+
+    <script>
+      import { initLiveScreen } from './_lib/livescreen';
+      initLiveScreen();
+    </script>
+  </body>
+</html>
