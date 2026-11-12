@@ -81,15 +81,42 @@ export function parseClub(raw: unknown): ClubCfg {
 export const clubOf = (content: unknown) => parseClub(content && typeof content === 'object' ? (content as Record<string, unknown>).club : null);
 
 export type Member = { sl: number; name: string; phone: string; email: string | null; nusuk_code: string; district: string | null; umrah_done: 'yes' | 'no' | 'planning' | null; consent: boolean; referred_by: string | null; joined: string };
-export type TicketRow = { kind: 'join' | 'ref_bonus' | 'referral' | 'copy'; day: string; at: string; from: string | null };
+export type TicketKind = 'join' | 'enter' | 'ref_bonus' | 'referral' | 'copy';
+export type TicketRow = { kind: TicketKind; qty: number; day: string; at: string; from: string | null; contest: string };
+
+// ---------- competitions (table nusuk_club_contests, update_33) ----------
+export type ContestKind = 'lucky' | 'window' | 'top';
+export const CONTEST_KINDS: { key: ContestKind; name: string; hint: string }[] = [
+  { key: 'lucky', name: 'Lucky draw', hint: 'Tickets → lucky draw. More tickets, more chance.' },
+  { key: 'window', name: 'Limited-time offer', hint: 'Only what happens between the start and end time counts.' },
+  { key: 'top', name: 'Top referrers', hint: 'Leaderboard by people brought in; the top members win (no lottery).' },
+];
+export type ContestCard = { theme?: 'green' | 'gold' | 'night'; headline?: string; sub?: string; line?: string };
+export type Contest = {
+  id: number;
+  title: string;
+  kind: ContestKind;
+  active?: boolean;
+  starts_at: string | null;
+  ends_at: string | null;
+  t_join: number; t_enter: number; t_ref_bonus: number; t_referral: number; t_copy: number;
+  copy_from: string; copy_to: string;
+  info: string;
+  card: ContestCard;
+  caption: string;
+  sort?: number;
+  in_window?: boolean;
+  my?: { total: number; today: number; referrals: number; copied_today: boolean; rank: number | null } | null;
+  top?: { name: string; sl: number; refs: number }[] | null;
+};
+
 export type ClubMe = {
   cfg: ClubCfg;
   signed_in: boolean;
-  in_window: boolean;
   email?: string;
   today?: string;
   member: Member | null;
-  tickets?: { total: number; today: number; referrals: number; referrals_today: number; copied_today: boolean };
+  contests: Contest[];
   history?: TicketRow[];
 };
 export type SaveResult = { ok: boolean; created?: boolean; ref_counted?: boolean; reason?: 'signin' | 'name' | 'phone' | 'phone_taken' | 'closed' | 'code' | 'code_taken' | 'bad_ref' | 'self_ref' | 'busy' };
@@ -107,20 +134,94 @@ export const SAVE_ERR: Record<NonNullable<SaveResult['reason']>, string> = {
   busy: 'একটু পরে আবার চেষ্টা করুন।',
 };
 
-export const KIND_LABEL: Record<TicketRow['kind'], string> = {
+export const KIND_LABEL: Record<TicketKind, string> = {
   join: 'অ্যাকাউন্ট খোলার টিকিট',
+  enter: 'প্রতিযোগিতায় যোগদানের টিকিট',
   ref_bonus: 'রেফারেল কোড দিয়ে যুক্ত হওয়ার বাড়তি টিকিট',
   referral: 'আপনার কোড দিয়ে নতুন সদস্য',
-  copy: 'আজকের কোড কপির টিকিট',
+  copy: 'কোড কপির টিকিট',
 };
 
-/** Fill the caption template: {code} {name} {sl} {link} */
-export function fillCaption(tpl: string, m: Pick<Member, 'nusuk_code' | 'name' | 'sl'>) {
-  return (tpl.trim() || DEFAULT_CAPTION)
+const tk = (n: number) => `${bn(n)}টি টিকিট`;
+/** Rules written out from a competition's numbers, so the page always matches the settings */
+export function contestRules(c: Pick<Contest, 'kind' | 't_join' | 't_enter' | 't_ref_bonus' | 't_referral' | 't_copy' | 'copy_from' | 'copy_to' | 'starts_at' | 'ends_at'>) {
+  const out: string[] = [];
+  if (c.t_join) out.push(`এই প্রতিযোগিতা চলাকালে নতুন অ্যাকাউন্ট খুলে প্রোফাইল পূরণ করলে ${tk(c.t_join)}।`);
+  if (c.t_enter) out.push(`প্রতিযোগিতা চলাকালে লগইন করলেই (পুরোনো সদস্যরাও) একবার ${tk(c.t_enter)}।`);
+  if (c.t_ref_bonus) out.push(`কারো রেফারেল কোড দিয়ে যুক্ত হলে আপনি পাবেন বাড়তি ${tk(c.t_ref_bonus)}।`);
+  if (c.t_referral) out.push(c.kind === 'top'
+    ? 'আপনার কোড দিয়ে যতজন নতুন সদস্য যুক্ত হবেন, লিডারবোর্ডে আপনার সংখ্যা তত বাড়বে।'
+    : `আপনার কোড দিয়ে প্রতিজন নতুন সদস্য যুক্ত হলে আপনি পাবেন ${tk(c.t_referral)}।`);
+  if (c.t_copy) out.push(`প্রতিদিন ${bnTime(c.copy_from)} – ${bnTime(c.copy_to)}-এর মধ্যে নুসুক কোড কপি করলে দিনে ${tk(c.t_copy)} (যত কোডই কপি করুন)।`);
+  if (c.starts_at || c.ends_at) out.push(`সময়: ${c.starts_at ? bnDate(c.starts_at) : 'এখন'} থেকে ${c.ends_at ? bnDate(c.ends_at) : 'পরবর্তী ঘোষণা'} পর্যন্ত (বাংলাদেশ সময়)।`);
+  out.push(c.kind === 'top'
+    ? 'সময় শেষে লিডারবোর্ডের শীর্ষ সদস্যরা পুরস্কার পাবেন।'
+    : 'যত বেশি টিকিট, লাকি ড্রতে তত বেশি সুযোগ। বিজয়ী নির্ধারণ হবে লটারিতে।');
+  out.push('অংশগ্রহণ সম্পূর্ণ ফ্রি। একই মোবাইল নম্বর বা একই ডিভাইস দিয়ে একাধিক অ্যাকাউন্টে রেফারেল গোনা হবে না।');
+  return out;
+}
+
+/** "২০ নভেম্বর, রাত ১১:৫৯" in Bangladesh time */
+export function bnDate(iso: string) {
+  const d = new Date(iso);
+  const day = d.toLocaleDateString('bn-BD', { day: 'numeric', month: 'long', timeZone: 'Asia/Dhaka' });
+  const hm = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Dhaka' });
+  return `${day}, ${bnTime(hm)}`;
+}
+
+/** Default caption per competition type */
+export const CONTEST_CAPTIONS: Record<ContestKind, string> = {
+  lucky: [
+    '🕋 নুসুক উমরাহ প্রতিযোগিতা · রিবাত উপহার লাকি ড্র',
+    '',
+    '✅ হাজারো নুসুক রেফারেল কোড এক জায়গায়। কপি করুন, উমরাহ জেতার সুযোগ বাড়ান।',
+    '🎁 সাথে রিবাতের ইসলামিক পণ্য জেতার লাকি ড্র!',
+    '',
+    '👉 আমার কোড দিয়ে যুক্ত হলে আপনিও পাবেন বাড়তি টিকিট:',
+    '🔑 {code}',
+    '',
+    '🔗 {link}',
+    'Google দিয়ে লগইন করে প্রোফাইলের "রেফারেল কোড" ঘরে {code} লিখুন।',
+    '',
+    '#Nusuk #NusukUmrah #উমরাহ #RibatulUmmah #রিবাত',
+  ].join('\n'),
+  window: [
+    '⏰ সীমিত সময়ের অফার! · রিবাত রিওয়ার্ড ক্লাব',
+    '',
+    '{ends}',
+    'এই সময়ের মধ্যে আমার কোড দিয়ে যুক্ত হলে আপনিও পাবেন বাড়তি টিকিট, আর জিততে পারেন রিবাতের ইসলামিক পণ্য।',
+    '',
+    '🔑 আমার রেফারেল কোড: {code}',
+    '🔗 {link}',
+    '',
+    'সাথে পাবেন হাজারো নুসুক কোড, উমরাহ জেতার সুযোগ বাড়ান। সম্পূর্ণ ফ্রি!',
+    '',
+    '#Nusuk #NusukUmrah #উমরাহ #RibatulUmmah',
+  ].join('\n'),
+  top: [
+    '🏆 সেরা রেফারার প্রতিযোগিতা · রিবাত রিওয়ার্ড ক্লাব',
+    '',
+    'আমাকে সাহায্য করুন! আমার কোড দিয়ে যুক্ত হলে আমি লিডারবোর্ডে এগিয়ে যাব, আর আপনিও পাবেন হাজারো নুসুক কোড ও রিবাতের পুরস্কার জেতার সুযোগ।',
+    '',
+    '🔑 আমার রেফারেল কোড: {code}',
+    '🔗 {link}',
+    'Google দিয়ে লগইন করে "রেফারেল কোড" ঘরে {code} লিখুন।',
+    '{ends}',
+    '',
+    '#Nusuk #NusukUmrah #উমরাহ #RibatulUmmah',
+  ].join('\n'),
+};
+
+/** Fill the caption template: {code} {name} {sl} {link} {ends} */
+export function fillCaption(tpl: string, m: Pick<Member, 'nusuk_code' | 'name' | 'sl'>, contest?: Pick<Contest, 'kind' | 'ends_at'>) {
+  const base = tpl.trim() || (contest ? CONTEST_CAPTIONS[contest.kind] : DEFAULT_CAPTION);
+  return base
     .replaceAll('{code}', m.nusuk_code)
     .replaceAll('{name}', m.name)
     .replaceAll('{sl}', String(m.sl))
-    .replaceAll('{link}', SITE_LINK);
+    .replaceAll('{link}', SITE_LINK)
+    .replaceAll('{ends}', contest?.ends_at ? `⏳ শেষ: ${bnDate(contest.ends_at)}` : '')
+    .replace(/\n{3,}/g, '\n\n');
 }
 
 /** Personal link inside the QR code: opens /nusuk with the referral code filled in */

@@ -2,7 +2,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Download, ExternalLink, RefreshCw, Search, Ticket, Trophy, Users } from 'lucide-react';
 import { supabase as sb } from '@/lib/supabase';
-import { DEFAULT_CAPTION, DEFAULT_CARD_LINE, DEFAULT_NOTICE, DEFAULT_NOTICE_BTN, DEFAULT_RULES, DEFAULT_TITLE, parseClub, type ClubCfg } from '../_lib/club';
+import { DEFAULT_NOTICE, DEFAULT_NOTICE_BTN, DEFAULT_TITLE, parseClub, type ClubCfg, type Contest } from '../_lib/club';
+import ContestsPanel from './ContestsPanel';
 
 type ToastFn = (t: string, ok?: boolean) => void;
 const errText = (e: unknown) => (e && typeof e === 'object' && 'message' in e ? String((e as { message: string }).message) : String(e));
@@ -47,6 +48,9 @@ export default function ClubPage({ toast }: { toast: ToastFn }) {
   const [page, setPage] = useState(0);
   const [day, setDay] = useState('');
   const [dayRows, setDayRows] = useState<DayRow[] | null>(null);
+  const [contests, setContests] = useState<Contest[]>([]);
+  const [contest, setContest] = useState<number | null>(null);
+  const onContests = useCallback((l: Contest[]) => setContests(l), []);
 
   useEffect(() => {
     sb!.from('nusuk_settings').select('content').eq('id', 1).single().then(({ data: d }) => {
@@ -56,11 +60,11 @@ export default function ClubPage({ toast }: { toast: ToastFn }) {
   }, []);
 
   const loadData = useCallback(async (search: string, p: number) => {
-    const { data: d, error } = await sb!.rpc('nusuk_admin_club', { p_search: search, p_limit: PAGE, p_offset: p * PAGE });
-    if (error) return toast(errText(error).includes('nusuk_admin_club') ? 'Run update_31_reward_club.sql in Supabase first' : errText(error), false);
+    const { data: d, error } = await sb!.rpc('nusuk_admin_club', { p_search: search, p_limit: PAGE, p_offset: p * PAGE, p_contest: contest });
+    if (error) return toast(errText(error).includes('nusuk_admin_club') ? 'Run update_33_club_contests.sql in Supabase first' : errText(error), false);
     setData(d as Data);
-  }, [toast]);
-  useEffect(() => { loadData('', 0); }, [loadData]);
+  }, [toast, contest]);
+  useEffect(() => { setPage(0); loadData(q, 0); setDayRows(null); }, [loadData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const set = (p: Partial<ClubCfg>) => { setC((x) => ({ ...x, ...p })); setDirty(true); };
   async function save(next = c) {
@@ -99,7 +103,7 @@ export default function ClubPage({ toast }: { toast: ToastFn }) {
   }
 
   async function exportMembers() {
-    const { data: d, error } = await sb!.rpc('nusuk_admin_club', { p_search: q, p_limit: 5000, p_offset: 0 });
+    const { data: d, error } = await sb!.rpc('nusuk_admin_club', { p_search: q, p_limit: 5000, p_offset: 0, p_contest: contest });
     if (error) return toast(errText(error), false);
     const rows = (d as Data).rows;
     csv(`reward-club-members-${(d as Data).today}.csv`,
@@ -109,7 +113,7 @@ export default function ClubPage({ toast }: { toast: ToastFn }) {
         new Date(r.created_at).toLocaleString('en-GB', { timeZone: 'Asia/Dhaka' })]));
   }
   async function loadDay(d = day) {
-    const { data: x, error } = await sb!.rpc('nusuk_admin_club_day', { p_day: d || null });
+    const { data: x, error } = await sb!.rpc('nusuk_admin_club_day', { p_day: d || null, p_contest: contest });
     if (error) return toast(errText(error), false);
     const r = x as { day: string; rows: DayRow[] };
     setDay(r.day);
@@ -117,7 +121,7 @@ export default function ClubPage({ toast }: { toast: ToastFn }) {
   }
   function exportDay() {
     if (!dayRows) return;
-    csv(`reward-club-tickets-${day}.csv`, ['SL', 'Name', 'Mobile', 'Nusuk code', 'Tickets'], dayRows.map((r) => [r.sl, r.name, r.phone, r.code, r.tickets]));
+    csv(`reward-club-tickets-${day}${contest ? `-c${contest}` : ''}.csv`, ['SL', 'Name', 'Mobile', 'Nusuk code', 'Tickets'], dayRows.map((r) => [r.sl, r.name, r.phone, r.code, r.tickets]));
   }
 
   if (!loaded) return <section className="nk-card p-5 text-sm text-emerald-900/60">Loading…</section>;
@@ -197,23 +201,20 @@ export default function ClubPage({ toast }: { toast: ToastFn }) {
           </div>
           <p className="text-xs text-emerald-900/60">Signed-in members see the button as "আমার অ্যাকাউন্ট". Leave empty for the default text.</p>
         </div>
-        <div className="grid gap-4 sm:grid-cols-3">
-          <label className="sm:col-span-1"><span className="mb-1 block text-sm font-semibold">Name of the club</span>
-            <input className="nk-input" value={c.title} placeholder={DEFAULT_TITLE} maxLength={80} onChange={(e) => set({ title: e.target.value })} /></label>
-          <label><span className="mb-1 block text-sm font-semibold">Copy ticket from (BD time)</span>
-            <input type="time" className="nk-input" value={c.copy_from} onChange={(e) => set({ copy_from: e.target.value })} /></label>
-          <label><span className="mb-1 block text-sm font-semibold">Copy ticket until</span>
-            <input type="time" className="nk-input" value={c.copy_to} onChange={(e) => set({ copy_to: e.target.value })} /></label>
-        </div>
-        <p className="-mt-2 text-xs text-emerald-900/60">One copy ticket per member per day, only between these times. Copying more codes gives no extra tickets.</p>
-        <label><span className="mb-1 block text-sm font-semibold">Line on the photo card (under the code)</span>
-          <input className="nk-input" value={c.card_line} placeholder={DEFAULT_CARD_LINE} maxLength={120} onChange={(e) => set({ card_line: e.target.value })} /></label>
-        <label><span className="mb-1 block text-sm font-semibold">Facebook caption</span>
-          <textarea className="nk-input font-mono text-sm" rows={12} value={c.caption} placeholder={DEFAULT_CAPTION} onChange={(e) => set({ caption: e.target.value })} />
-          <span className="mt-1 block text-xs text-emerald-900/60">Leave empty for the default. You can use {'{code}'} (their referral code), {'{name}'}, {'{sl}'} and {'{link}'} (muhammadfazal.com/nusuk).</span></label>
-        <label><span className="mb-1 block text-sm font-semibold">Rules (one per line)</span>
-          <textarea className="nk-input text-sm" rows={8} value={c.rules} placeholder={DEFAULT_RULES} onChange={(e) => set({ rules: e.target.value })} />
-          <span className="mt-1 block text-xs text-emerald-900/60">Shown on /nusuk/club. Leave empty for the default rules.</span></label>
+        <label className="max-w-md"><span className="mb-1 block text-sm font-semibold">Name of the club</span>
+          <input className="nk-input" value={c.title} placeholder={DEFAULT_TITLE} maxLength={80} onChange={(e) => set({ title: e.target.value })} /></label>
+        <p className="text-xs text-emerald-900/60">Ticket rules, copy time, photo card and caption are set per competition below.</p>
+      </section>
+
+      <ContestsPanel toast={toast} onChange={onContests} />
+
+      <section className="nk-card flex flex-wrap items-center gap-3 p-4 sm:p-5">
+        <span className="text-sm font-bold text-emerald-950">Show numbers for</span>
+        <select className="nk-input w-auto py-1.5 text-sm" value={contest ?? ''} onChange={(e) => setContest(e.target.value ? Number(e.target.value) : null)} aria-label="Competition">
+          <option value="">All competitions</option>
+          {contests.map((x) => <option key={x.id} value={x.id}>{x.title}</option>)}
+        </select>
+        <span className="text-xs text-emerald-900/60">Applies to the tickets, top referrers, day list and members table below.</span>
       </section>
 
       {data && data.top.length > 0 && (

@@ -1,10 +1,10 @@
 /* /nusuk/club · Ribat Reward Club: Google sign-in, profile, ticket dashboard, photo card + caption. */
 import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { ArrowLeft, Check, Clock, Copy, Download, Gift, History, LogOut, PenLine, Share2, Sparkles, Ticket, UserPlus, Users } from 'lucide-react';
+import { ArrowLeft, Check, Clock, Copy, Download, Gift, History, LogOut, PenLine, Share2, Sparkles, Ticket, Trophy, UserPlus, Users } from 'lucide-react';
 import {
-  CODE_RE, DEFAULT_RULES, DEFAULT_TITLE, KIND_LABEL, SAVE_ERR, bn, bnTime, fillCaption, memberClient, rememberRef, savedRef,
-  type ClubMe, type Member, type SaveResult,
+  CODE_RE, DEFAULT_RULES, DEFAULT_TITLE, KIND_LABEL, SAVE_ERR, bn, bnDate, bnTime, contestRules, fillCaption, memberClient, rememberRef, savedRef,
+  type ClubMe, type Contest, type Member, type SaveResult,
 } from '../_lib/club';
 import { drawCard, cardBlob } from '../_lib/clubcard';
 
@@ -112,7 +112,7 @@ export default function ClubApp() {
       {me.member && !editing && <Dashboard me={me} onEdit={() => setEditing(true)} />}
       {me.member && editing && <ProfileForm sb={sb} member={me.member} email={me.member.email ?? undefined} onDone={async () => { setEditing(false); await reload(); }} onCancel={() => setEditing(false)} />}
 
-      <Rules text={me.cfg.rules} />
+      {!me.member && (me.contests?.length ? <ContestsPreview contests={me.contests} /> : <Rules text={me.cfg.rules} />)}
       <p className="text-center text-xs text-emerald-900/60">লগইন করে আপনি আমাদের <a href="/nusuk/privacy" className="font-semibold underline">গোপনীয়তা নীতি</a> মেনে নিচ্ছেন।</p>
       {me.signed_in && (
         <button type="button" onClick={() => sb.auth.signOut()} className="mx-auto flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-emerald-900/70 hover:bg-emerald-900/5">
@@ -248,18 +248,55 @@ function ProfileForm({ sb, member, email, onDone, onCancel }: { sb: SupabaseClie
 
 function Stat({ icon, label, value, hint }: { icon: ReactNode; label: string; value: number; hint?: string }) {
   return (
-    <div className="nk-card p-4">
-      <div className="flex items-center gap-2 text-sm font-semibold text-emerald-900/70">{icon}{label}</div>
-      <div className="mt-1 text-3xl font-bold text-emerald-950">{bn(value)}</div>
-      {hint && <div className="mt-0.5 text-xs text-emerald-900/60">{hint}</div>}
+    <div className="rounded-xl bg-emerald-50 p-3">
+      <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-900/70">{icon}{label}</div>
+      <div className="mt-0.5 text-2xl font-bold text-emerald-950">{bn(value)}</div>
+      {hint && <div className="text-xs text-emerald-900/60">{hint}</div>}
     </div>
+  );
+}
+
+/** Time left until `iso`, in Bengali */
+function timeLeft(iso: string, now: number) {
+  const ms = new Date(iso).getTime() - now;
+  if (ms <= 0) return 'শেষ হয়েছে';
+  const d = Math.floor(ms / 86400000), h = Math.floor((ms % 86400000) / 3600000), m = Math.floor((ms % 3600000) / 60000);
+  return d > 0 ? `${bn(d)} দিন ${bn(h)} ঘণ্টা বাকি` : h > 0 ? `${bn(h)} ঘণ্টা ${bn(m)} মিনিট বাকি` : `${bn(Math.max(1, m))} মিনিট বাকি`;
+}
+
+function ContestRules({ c }: { c: Contest }) {
+  return (
+    <ul className="grid gap-1.5 text-[15px] leading-relaxed">
+      {contestRules(c).map((l, i) => (
+        <li key={i} className="flex gap-2.5"><Check className="mt-1 h-4 w-4 shrink-0 text-emerald-600" aria-hidden />{l}</li>
+      ))}
+    </ul>
+  );
+}
+
+/** Before sign-up: what competitions are running */
+function ContestsPreview({ contests }: { contests: Contest[] }) {
+  if (!contests.length) return null;
+  return (
+    <>
+      {contests.map((c) => (
+        <section key={c.id} className="nk-card p-4 sm:p-5">
+          <h2 className="flex items-center gap-2 text-lg font-bold"><Trophy className="h-5 w-5 text-emerald-700" aria-hidden /> {c.title}</h2>
+          {c.info.trim() && <p className="mt-1 text-[15px] text-emerald-900/80">{c.info}</p>}
+          <div className="mt-3"><ContestRules c={c} /></div>
+        </section>
+      ))}
+    </>
   );
 }
 
 function Dashboard({ me, onEdit }: { me: ClubMe; onEdit: () => void }) {
   const m = me.member!;
-  const t = me.tickets!;
-  const win = `${bnTime(me.cfg.copy_from)} – ${bnTime(me.cfg.copy_to)}`;
+  const [sel, setSel] = useState(0);
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => { const t = setInterval(() => setNow(Date.now()), 30000); return () => clearInterval(t); }, []);
+  const contests = me.contests;
+  const c = contests[Math.min(sel, contests.length - 1)];
   return (
     <>
       <section className="nk-card flex flex-wrap items-center justify-between gap-3 p-4 sm:p-5">
@@ -275,30 +312,80 @@ function Dashboard({ me, onEdit }: { me: ClubMe; onEdit: () => void }) {
         <button type="button" onClick={onEdit} className="nk-btn nk-ghost flex items-center gap-2 px-4 py-2 text-sm"><PenLine className="h-4 w-4" aria-hidden /> প্রোফাইল এডিট</button>
       </section>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <Stat icon={<Sparkles className="h-4 w-4" aria-hidden />} label="আজকের টিকিট" value={t.today} hint="আজকের লাকি ড্রতে" />
-        <Stat icon={<Ticket className="h-4 w-4" aria-hidden />} label="মোট টিকিট" value={t.total} />
-        <Stat icon={<Users className="h-4 w-4" aria-hidden />} label="আপনার কোডে যুক্ত" value={t.referrals} hint={t.referrals_today ? `আজ ${bn(t.referrals_today)} জন` : undefined} />
-      </div>
+      {!c && <section className="nk-card p-5 text-[15px]">এই মুহূর্তে কোনো প্রতিযোগিতা চলছে না। নতুন প্রতিযোগিতা শুরু হলে এখানে দেখাবে, ইনশাআল্লাহ।</section>}
 
-      <section className={`nk-card flex items-start gap-3 p-4 ${t.copied_today ? 'bg-emerald-50' : ''}`}>
-        <Clock className="mt-0.5 h-5 w-5 shrink-0 text-emerald-700" aria-hidden />
-        <div className="text-[15px]">
-          {t.copied_today
-            ? <><b>আজকের কোড কপির টিকিট জমা হয়েছে।</b> কাল আবার {win}-এর মধ্যে কপি করে নতুন টিকিট নিন।</>
-            : <><b>আজকের কোড কপির টিকিট এখনো নেননি।</b> প্রতিদিন {win}-এর মধ্যে <a href="/nusuk" className="font-bold text-emerald-700 underline">কোড পেজে</a> একটি কোড কপি করলেই ১টি টিকিট।{!me.in_window && ' (এখন সময়ের বাইরে)'}</>}
+      {contests.length > 1 && (
+        <div className="flex gap-1 overflow-x-auto rounded-xl border border-[#e7e1cf] bg-white p-1" role="tablist" aria-label="প্রতিযোগিতা">
+          {contests.map((x, i) => (
+            <button key={x.id} type="button" role="tab" aria-selected={x === c} onClick={() => setSel(i)}
+              className={`shrink-0 rounded-lg px-3.5 py-2 text-sm font-bold transition ${x === c ? 'bg-emerald-900 text-white' : 'text-emerald-900 hover:bg-emerald-50'}`}>
+              {x.title}
+            </button>
+          ))}
         </div>
-      </section>
+      )}
 
-      <ShareCard me={me} />
+      {c && (
+        <section className="nk-card grid gap-4 p-4 sm:p-5">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <h2 className="flex items-center gap-2 text-lg font-bold"><Trophy className="h-5 w-5 text-emerald-700" aria-hidden /> {c.title}</h2>
+              {c.info.trim() && <p className="mt-0.5 text-[15px] text-emerald-900/80">{c.info}</p>}
+            </div>
+            {c.ends_at && <span className="flex items-center gap-1.5 rounded-full bg-gold-400/25 px-3 py-1 text-sm font-bold"><Clock className="h-4 w-4" aria-hidden />{timeLeft(c.ends_at, now)}</span>}
+          </div>
+          {c.kind === 'top' ? (
+            <div className="grid grid-cols-2 gap-2">
+              <Stat icon={<Users className="h-4 w-4" aria-hidden />} label="আপনার কোডে যুক্ত" value={c.my?.referrals ?? 0} />
+              <Stat icon={<Trophy className="h-4 w-4" aria-hidden />} label="আপনার অবস্থান" value={c.my?.rank ?? 0} hint={c.my?.rank ? undefined : 'এখনো কেউ যুক্ত হননি'} />
+            </div>
+          ) : (
+            <div className="grid grid-cols-3 gap-2">
+              <Stat icon={<Sparkles className="h-4 w-4" aria-hidden />} label="আজকের টিকিট" value={c.my?.today ?? 0} />
+              <Stat icon={<Ticket className="h-4 w-4" aria-hidden />} label="মোট টিকিট" value={c.my?.total ?? 0} />
+              <Stat icon={<Users className="h-4 w-4" aria-hidden />} label="আপনার কোডে যুক্ত" value={c.my?.referrals ?? 0} />
+            </div>
+          )}
+          {c.t_copy > 0 && (
+            <div className={`flex items-start gap-3 rounded-xl p-3 text-[15px] ${c.my?.copied_today ? 'bg-emerald-50' : 'bg-gold-400/15'}`}>
+              <Clock className="mt-0.5 h-5 w-5 shrink-0 text-emerald-700" aria-hidden />
+              <div>
+                {c.my?.copied_today
+                  ? <><b>আজকের কোড কপির টিকিট জমা হয়েছে।</b> কাল আবার {bnTime(c.copy_from)} – {bnTime(c.copy_to)}-এর মধ্যে কপি করুন।</>
+                  : <><b>আজকের কোড কপির টিকিট এখনো নেননি।</b> {bnTime(c.copy_from)} – {bnTime(c.copy_to)}-এর মধ্যে <a href="/nusuk" className="font-bold text-emerald-700 underline">কোড পেজে</a> একটি কোড কপি করুন।{!c.in_window && ' (এখন সময়ের বাইরে)'}</>}
+              </div>
+            </div>
+          )}
+          {c.kind === 'top' && c.top && c.top.length > 0 && (
+            <div>
+              <h3 className="mb-2 font-bold">লিডারবোর্ড</h3>
+              <ol className="grid gap-1 text-sm">
+                {c.top.map((t, i) => (
+                  <li key={t.sl} className={`flex items-center justify-between rounded-lg px-3 py-1.5 ${t.sl === m.sl ? 'bg-gold-400/25 font-bold' : 'bg-emerald-50'}`}>
+                    <span>{bn(i + 1)}. {t.name} <span className="text-emerald-900/60">· SL {bn(t.sl)}</span></span>
+                    <span>{bn(t.refs)} জন</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
+          <details className="rounded-xl border border-[#eee7d3] p-3">
+            <summary className="cursor-pointer font-bold">এই প্রতিযোগিতার নিয়ম</summary>
+            <div className="mt-2"><ContestRules c={c} /></div>
+          </details>
+        </section>
+      )}
+
+      {c && <ShareCard key={c.id} me={me} c={c} />}
 
       <section className="nk-card p-4 sm:p-5">
         <h2 className="flex items-center gap-2 text-lg font-bold"><History className="h-5 w-5 text-emerald-700" aria-hidden /> টিকিটের হিসাব</h2>
+        {(me.history ?? []).length === 0 && <p className="mt-2 text-sm text-emerald-900/60">এখনো কোনো টিকিট নেই।</p>}
         <ul className="mt-3 divide-y divide-[#eee7d3] text-sm">
           {(me.history ?? []).map((h, i) => (
             <li key={i} className="flex items-center justify-between gap-3 py-2">
-              <span>{KIND_LABEL[h.kind]}{h.kind === 'referral' && h.from ? `: ${h.from}` : ''}</span>
-              <span className="shrink-0 text-emerald-900/60">+১ · {new Date(h.at).toLocaleDateString('bn-BD', { day: 'numeric', month: 'short', timeZone: 'Asia/Dhaka' })}</span>
+              <span>{KIND_LABEL[h.kind]}{h.kind === 'referral' && h.from ? `: ${h.from}` : ''}<span className="block text-xs text-emerald-900/55">{h.contest}</span></span>
+              <span className="shrink-0 text-emerald-900/60">+{bn(h.qty ?? 1)} · {new Date(h.at).toLocaleDateString('bn-BD', { day: 'numeric', month: 'short', timeZone: 'Asia/Dhaka' })}</span>
             </li>
           ))}
         </ul>
@@ -307,19 +394,25 @@ function Dashboard({ me, onEdit }: { me: ClubMe; onEdit: () => void }) {
   );
 }
 
-function ShareCard({ me }: { me: ClubMe }) {
+function ShareCard({ me, c }: { me: ClubMe; c: Contest }) {
   const m = me.member!;
   const canvas = useRef<HTMLCanvasElement>(null);
   const [ready, setReady] = useState(false);
   const [note, setNote] = useState('');
-  const caption = fillCaption(me.cfg.caption, m);
+  const original = fillCaption(c.caption, m, c);
+  const [caption, setCaption] = useState(original);
+  useEffect(() => setCaption(original), [original]);
   const canShareFile = typeof navigator !== 'undefined' && 'canShare' in navigator;
 
   useEffect(() => {
     if (!canvas.current) return;
     setReady(false);
-    drawCard(canvas.current, { code: m.nusuk_code, sl: m.sl, name: m.name, line: me.cfg.card_line }).then(() => setReady(true));
-  }, [m.nusuk_code, m.sl, m.name, me.cfg.card_line]);
+    drawCard(canvas.current, {
+      code: m.nusuk_code, sl: m.sl, name: m.name,
+      theme: c.card.theme, headline: c.card.headline, sub: c.card.sub || c.title, line: c.card.line,
+      badge: c.ends_at ? `শেষ: ${bnDate(c.ends_at)}` : undefined,
+    }).then(() => setReady(true));
+  }, [m.nusuk_code, m.sl, m.name, c]);
 
   const flash = (t: string) => { setNote(t); setTimeout(() => setNote(''), 2200); };
   async function copyCaption() {
@@ -330,14 +423,14 @@ function ShareCard({ me }: { me: ClubMe }) {
     if (!b) return;
     const a = document.createElement('a');
     a.href = URL.createObjectURL(b);
-    a.download = `ribat-card-${m.sl}.png`;
+    a.download = `ribat-card-${m.sl}-${c.id}.png`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 4000);
   }
   async function share() {
     const b = canvas.current && (await cardBlob(canvas.current));
     if (!b) return;
-    const file = new File([b], `ribat-card-${m.sl}.png`, { type: 'image/png' });
+    const file = new File([b], `ribat-card-${m.sl}-${c.id}.png`, { type: 'image/png' });
     try { await navigator.clipboard.writeText(caption); } catch {}
     try {
       if (navigator.canShare?.({ files: [file] })) await navigator.share({ files: [file], text: caption });
@@ -348,8 +441,8 @@ function ShareCard({ me }: { me: ClubMe }) {
 
   return (
     <section className="nk-card p-4 sm:p-5">
-      <h2 className="flex items-center gap-2 text-lg font-bold"><Share2 className="h-5 w-5 text-emerald-700" aria-hidden /> আপনার ফটোকার্ড ও ক্যাপশন</h2>
-      <p className="mt-1 text-sm text-emerald-900/70">কার্ড ডাউনলোড করে ক্যাপশনসহ ফেসবুকে পোস্ট করুন। আপনার কোড দিয়ে যতজন যুক্ত হবেন, ততটি টিকিট আপনার।</p>
+      <h2 className="flex items-center gap-2 text-lg font-bold"><Share2 className="h-5 w-5 text-emerald-700" aria-hidden /> ফটোকার্ড ও ক্যাপশন</h2>
+      <p className="mt-1 text-sm text-emerald-900/70">কার্ড ডাউনলোড করে ক্যাপশনসহ ফেসবুকে পোস্ট করুন। আপনার কোড দিয়ে যতজন যুক্ত হবেন, আপনার সুযোগ তত বাড়বে।</p>
       <div className="mt-4 grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <div className="relative overflow-hidden rounded-xl border border-[#e7e1cf] bg-emerald-950">
           <canvas ref={canvas} className="block h-auto w-full" aria-label="আপনার ফটোকার্ড" />
@@ -358,8 +451,11 @@ function ShareCard({ me }: { me: ClubMe }) {
         <div className="grid content-start gap-2">
           <button type="button" onClick={download} disabled={!ready} className="nk-btn nk-green flex items-center justify-center gap-2 px-4 py-2.5"><Download className="h-4 w-4" aria-hidden /> কার্ড ডাউনলোড</button>
           {canShareFile && <button type="button" onClick={share} disabled={!ready} className="nk-btn nk-ghost flex items-center justify-center gap-2 px-4 py-2.5"><Share2 className="h-4 w-4" aria-hidden /> সরাসরি শেয়ার</button>}
-          <textarea readOnly value={caption} rows={11} className="nk-input text-sm leading-relaxed" onFocus={(e) => e.target.select()} aria-label="ক্যাপশন" />
-          <button type="button" onClick={copyCaption} className="nk-btn nk-ghost flex items-center justify-center gap-2 px-4 py-2.5"><Copy className="h-4 w-4" aria-hidden /> ক্যাপশন কপি</button>
+          <textarea value={caption} onChange={(e) => setCaption(e.target.value)} rows={11} className="nk-input text-sm leading-relaxed" aria-label="ক্যাপশন (চাইলে বদলাতে পারেন)" />
+          <div className="flex gap-2">
+            <button type="button" onClick={copyCaption} className="nk-btn nk-ghost flex flex-1 items-center justify-center gap-2 px-4 py-2.5"><Copy className="h-4 w-4" aria-hidden /> ক্যাপশন কপি</button>
+            {caption !== original && <button type="button" onClick={() => setCaption(original)} className="nk-btn nk-ghost px-3 py-2.5 text-sm">আগের মতো</button>}
+          </div>
           {note && <p className="rounded-lg bg-emerald-100 px-3 py-2 text-sm font-semibold text-emerald-900" role="status">{note}</p>}
         </div>
       </div>
