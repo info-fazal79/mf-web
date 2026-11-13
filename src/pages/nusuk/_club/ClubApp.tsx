@@ -89,7 +89,7 @@ export default function ClubApp() {
       {me.signed_in && !me.member && (me.cfg.on
         ? <ProfileForm sb={sb} email={me.email} onDone={reload} />
         : <section className="nk-card p-5 text-[15px]">নতুন অ্যাকাউন্ট খোলা শীঘ্রই চালু হবে, ইনশাআল্লাহ। একটু পরে আবার দেখুন।{me.email && <span className="mt-1 block text-xs text-emerald-900/60">লগইন: {me.email}</span>}</section>)}
-      {me.member && !editing && <Dashboard me={me} onEdit={() => setEditing(true)} />}
+      {me.member && !editing && <Dashboard me={me} onEdit={() => setEditing(true)} refBox={!me.member.referred_by ? <RefLater sb={sb} myCode={me.member.nusuk_code} onDone={reload} /> : null} />}
       {me.member && editing && <ProfileForm sb={sb} member={me.member} email={me.member.email ?? undefined} onDone={async () => { setEditing(false); await reload(); }} onCancel={() => setEditing(false)} />}
 
       <p className="text-center text-xs text-emerald-900/60">লগইন করে আপনি আমাদের <a href="/nusuk/privacy" className="font-semibold underline">গোপনীয়তা নীতি</a> মেনে নিচ্ছেন।</p>
@@ -164,13 +164,16 @@ function ProfileForm({ sb, member, email, onDone, onCancel }: { sb: SupabaseClie
     e.preventDefault();
     const code = f.code.replace(/\s/g, '');
     const ref = f.ref.replace(/\s/g, '');
+    if (!f.district.trim()) return setMsg({ t: 'আপনার জেলা লিখুন বা তালিকা থেকে বেছে নিন।', ok: false });
     if (isNew && !CODE_RE.test(code)) return setMsg({ t: SAVE_ERR.code, ok: false });
-    if (isNew && ref && !CODE_RE.test(ref)) return setMsg({ t: 'রেফারেল কোড সঠিক নয়। যেমন: NG-y3JkB7lU (না থাকলে খালি রাখুন)', ok: false });
     setBusy(true); setMsg(null);
-    const { data, error } = await sb.rpc('nusuk_club_save', {
+    const save = (withRef: boolean) => sb.rpc('nusuk_club_save', {
       p_name: f.name, p_phone: f.phone, p_code: code, p_district: f.district, p_umrah: f.umrah || null,
-      p_consent: f.consent, p_ref: isNew ? ref || null : null, p_device: deviceId(),
+      p_consent: f.consent, p_ref: isNew && withRef && CODE_RE.test(ref) ? ref : null, p_device: deviceId(),
     });
+    let { data, error } = await save(true);
+    // the code from a shared link did not work (wrong / own code): make the account without it
+    if (!error && (data as SaveResult)?.reason && ['bad_ref', 'self_ref'].includes((data as SaveResult).reason!)) ({ data, error } = await save(false));
     setBusy(false);
     if (error) return setMsg({ t: errText(error), ok: false });
     const r = data as SaveResult;
@@ -196,8 +199,8 @@ function ProfileForm({ sb, member, email, onDone, onCancel }: { sb: SupabaseClie
         <label className="sm:col-span-2"><span className={label}>আপনার নুসুক রেফারেল কোড *</span>
           <input className="nk-input font-mono" required={isNew} disabled={!isNew} placeholder="NG-xxxxxxxx" value={f.code} onChange={(e) => set({ code: e.target.value })} spellCheck={false} autoCapitalize="off" />
           <span className="mt-1 block text-xs text-emerald-900/60">{isNew ? 'নুসুক অ্যাপ থেকে হুবহু কপি করে দিন। পরে বদলানো যাবে না।' : 'রেফারেল কোড বদলানো যায় না (আপনার শেয়ার করা কার্ড যাতে কাজ করে)।'}</span></label>
-        <label><span className={label}>জেলা</span>
-          <input className="nk-input" list="nk-districts" value={f.district} onChange={(e) => set({ district: e.target.value })} placeholder="যেমন: ঢাকা" />
+        <label><span className={label}>জেলা *</span>
+          <input className="nk-input" required list="nk-districts" value={f.district} onChange={(e) => set({ district: e.target.value })} placeholder="যেমন: ঢাকা" />
           <datalist id="nk-districts">{DISTRICTS.map((d) => <option key={d} value={d} />)}</datalist></label>
         <label><span className={label}>আগে উমরাহ করেছেন?</span>
           <select className="nk-input" value={f.umrah} onChange={(e) => set({ umrah: e.target.value as typeof f.umrah })}>
@@ -206,11 +209,6 @@ function ProfileForm({ sb, member, email, onDone, onCancel }: { sb: SupabaseClie
             <option value="planning">না, শীঘ্রই যাওয়ার ইচ্ছা আছে</option>
             <option value="no">না</option>
           </select></label>
-        {isNew && (
-          <label className="sm:col-span-2"><span className={label}>রেফারেল কোড (যিনি আপনাকে পাঠিয়েছেন)</span>
-            <input className="nk-input font-mono" placeholder="NG-xxxxxxxx (না থাকলে খালি রাখুন)" value={f.ref} onChange={(e) => set({ ref: e.target.value })} spellCheck={false} autoCapitalize="off" />
-            <span className="mt-1 block text-xs text-emerald-900/60">কারো কোড দিলে আপনি ১টি বাড়তি টিকিট পাবেন, তিনিও পাবেন ১টি।</span></label>
-        )}
         <label className="flex items-start gap-2.5 text-sm sm:col-span-2">
           <input type="checkbox" className="mt-1 h-4 w-4 accent-emerald-700" checked={f.consent} onChange={(e) => set({ consent: e.target.checked })} />
           রিবাতের নতুন পণ্য, অফার ও আয়োজনের খবর SMS/ফোনে জানতে চাই।
@@ -269,7 +267,47 @@ function ContestsPreview({ contests }: { contests: Contest[] }) {
   );
 }
 
-function Dashboard({ me, onEdit }: { me: ClubMe; onEdit: () => void }) {
+const REF_ERR: Record<string, string> = {
+  bad_ref: 'এই রেফারেল কোডের কোনো সদস্য পাওয়া যায়নি। কোডটি আবার দেখুন।',
+  self_ref: 'নিজের কোড দেওয়া যাবে না।',
+  ref_newer: 'যিনি আপনার পরে যুক্ত হয়েছেন বা যাকে আপনি এনেছেন, তার কোড দেওয়া যাবে না।',
+  has_ref: 'আপনার রেফারেল কোড আগেই যোগ করা আছে।',
+  closed: 'এখন রেফারেল কোড যোগ করা বন্ধ আছে।',
+  signin: 'আবার লগইন করুন।',
+};
+
+/** Add the code of the person who invited you (once) */
+function RefLater({ sb, myCode, onDone }: { sb: SupabaseClient; myCode: string; onDone: () => void }) {
+  const [code, setCode] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+  async function add(e: FormEvent) {
+    e.preventDefault();
+    const c = code.replace(/\s/g, '');
+    if (!CODE_RE.test(c)) return setMsg('রেফারেল কোড সঠিক নয়। যেমন: NG-y3JkB7lU');
+    if (c.toLowerCase() === myCode.toLowerCase()) return setMsg(REF_ERR.self_ref);
+    setBusy(true); setMsg('');
+    const { data, error } = await sb.rpc('nusuk_club_set_ref', { p_ref: c, p_device: deviceId() });
+    setBusy(false);
+    if (error) return setMsg(errText(error).includes('nusuk_club_set_ref') ? 'একটু পরে আবার চেষ্টা করুন।' : errText(error));
+    const r = data as { ok: boolean; reason?: string };
+    if (!r.ok) return setMsg(REF_ERR[r.reason ?? ''] ?? 'একটু পরে আবার চেষ্টা করুন।');
+    onDone();
+  }
+  return (
+    <form onSubmit={add} className="nk-card grid gap-2 p-4 sm:p-5">
+      <h2 className="flex items-center gap-2 text-lg font-bold"><UserPlus className="h-5 w-5 text-emerald-700" aria-hidden /> কারো আমন্ত্রণে এসেছেন?</h2>
+      <p className="text-sm text-emerald-900/70">যিনি আপনাকে পাঠিয়েছেন, তার রেফারেল কোড দিন। একবারই যোগ করা যাবে।</p>
+      <div className="flex flex-wrap gap-2">
+        <input className="nk-input min-w-0 flex-1 font-mono" placeholder="NG-xxxxxxxx" value={code} onChange={(e) => setCode(e.target.value)} spellCheck={false} autoCapitalize="off" aria-label="রেফারেল কোড" />
+        <button type="submit" disabled={busy} className="nk-btn nk-green px-5 py-2.5">{busy ? 'যোগ হচ্ছে…' : 'যোগ করুন'}</button>
+      </div>
+      {msg && <p className="rounded-xl bg-red-50 px-3.5 py-2.5 text-sm text-red-800">{msg}</p>}
+    </form>
+  );
+}
+
+function Dashboard({ me, onEdit, refBox }: { me: ClubMe; onEdit: () => void; refBox?: ReactNode }) {
   const m = me.member!;
   const [sel, setSel] = useState(0);
   const [now, setNow] = useState(Date.now());
@@ -290,6 +328,8 @@ function Dashboard({ me, onEdit }: { me: ClubMe; onEdit: () => void }) {
         </div>
         <button type="button" onClick={onEdit} className="nk-btn nk-ghost flex items-center gap-2 px-4 py-2 text-sm"><PenLine className="h-4 w-4" aria-hidden /> প্রোফাইল এডিট</button>
       </section>
+
+      {refBox}
 
       {!c && <section className="nk-card p-5 text-[15px]">এই মুহূর্তে কোনো প্রতিযোগিতা চলছে না। নতুন প্রতিযোগিতা শুরু হলে এখানে দেখাবে, ইনশাআল্লাহ।</section>}
 
