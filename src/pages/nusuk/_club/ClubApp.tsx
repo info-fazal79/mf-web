@@ -307,6 +307,27 @@ function RefLater({ sb, myCode, onDone }: { sb: SupabaseClient; myCode: string; 
   );
 }
 
+/** Progress of the Nusuk Keys sent to the member's code */
+function KeysCard({ k }: { k: NonNullable<ClubMe['keys']> }) {
+  const done = k.delivered >= k.keys;
+  const pct = Math.min(100, Math.round((k.delivered / Math.max(1, k.keys)) * 100));
+  return (
+    <section className={`nk-card grid gap-2 p-4 sm:p-5 ${done ? '' : 'border-gold-500/60'}`}>
+      <h2 className="flex items-center gap-2 text-lg font-bold"><Gift className="h-5 w-5 text-emerald-700" aria-hidden />
+        {done ? `আপনার কোডে ${bn(k.keys)}টি Nusuk Key দেওয়া সম্পন্ন হয়েছে` : `আপনার কোডে ${bn(k.keys)}টি Nusuk Key যাচ্ছে`}
+      </h2>
+      <div className="h-3 overflow-hidden rounded-full bg-emerald-100" role="progressbar" aria-valuemin={0} aria-valuemax={k.keys} aria-valuenow={k.delivered}>
+        <div className={`h-full rounded-full ${done ? 'bg-emerald-600' : 'bg-gold-500'} transition-all`} style={{ width: `${pct}%` }} />
+      </div>
+      <p className="text-sm text-emerald-900/75">
+        {bn(k.keys)}টির মধ্যে <b>{bn(k.delivered)}টি</b> পৌঁছেছে
+        {!done && (k.ends ? ` · ${bnDate(k.ends)}-এর মধ্যে সম্পন্ন হবে` : ' · কিছুক্ষণের মধ্যেই সম্পন্ন হবে')}
+      </p>
+      {!done && <p className="text-xs text-emerald-900/60">মানুষ আপনার কোড কপি করে নুসুক অ্যাপে ব্যবহার করলে Key জমা হয়। পেজ রিফ্রেশ করলে সর্বশেষ সংখ্যা দেখাবে।</p>}
+    </section>
+  );
+}
+
 function Dashboard({ me, onEdit, refBox }: { me: ClubMe; onEdit: () => void; refBox?: ReactNode }) {
   const m = me.member!;
   const [sel, setSel] = useState(0);
@@ -328,6 +349,8 @@ function Dashboard({ me, onEdit, refBox }: { me: ClubMe; onEdit: () => void; ref
         </div>
         <button type="button" onClick={onEdit} className="nk-btn nk-ghost flex items-center gap-2 px-4 py-2 text-sm"><PenLine className="h-4 w-4" aria-hidden /> প্রোফাইল এডিট</button>
       </section>
+
+      {me.keys && <KeysCard k={me.keys} />}
 
       {refBox}
 

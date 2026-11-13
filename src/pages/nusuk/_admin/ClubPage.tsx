@@ -1,6 +1,6 @@
 /* Nusuk Manager → Reward Club: settings, members (leads), tickets, CSV export (update_31_reward_club.sql). */
 import { useCallback, useEffect, useState } from 'react';
-import { Download, ExternalLink, RefreshCw, Search, Ticket, Trophy, Users } from 'lucide-react';
+import { Download, ExternalLink, Gift, KeyRound, RefreshCw, Search, Ticket, Trophy, Users } from 'lucide-react';
 import { supabase as sb } from '@/lib/supabase';
 import { DEFAULT_NOTICE, DEFAULT_NOTICE_BTN, DEFAULT_TITLE, parseClub, type ClubCfg, type Contest } from '../_lib/club';
 import ContestsPanel from './ContestsPanel';
@@ -60,11 +60,38 @@ export default function ClubPage({ toast }: { toast: ToastFn }) {
     });
   }, []);
 
+  // ---- Nusuk Keys for members (update_36) ----
+  type KeyGift = { keys: number; hours: number | null; at: string; delivered: number; count: number };
+  const [gifts, setGifts] = useState<Record<string, KeyGift>>({});
+  const [giftKeys, setGiftKeys] = useState(() => { try { return Number(localStorage.getItem('nusuk:club:giftKeys')) || 50; } catch { return 50; } });
+  const [giftHours, setGiftHours] = useState(() => { try { return Number(localStorage.getItem('nusuk:club:giftHours') ?? 1); } catch { return 1; } });
+  useEffect(() => { try { localStorage.setItem('nusuk:club:giftKeys', String(giftKeys)); localStorage.setItem('nusuk:club:giftHours', String(giftHours)); } catch {} }, [giftKeys, giftHours]);
+  const [giving, setGiving] = useState<number | null>(null);
+  const loadGifts = useCallback(async () => {
+    const { data: g, error } = await sb!.rpc('nusuk_admin_club_keys');
+    if (!error) setGifts((g ?? {}) as Record<string, KeyGift>);
+  }, []);
+  async function giveKeys(r: { sl: number; name: string; nusuk_code: string }) {
+    const k = Math.max(1, Math.min(1000, Math.round(giftKeys) || 0));
+    const when = giftHours ? `within ${giftHours} hour${giftHours > 1 ? 's' : ''}` : 'at once (top of the code page until done)';
+    const again = gifts[String(r.sl)] ? `\n\nThis member already got ${gifts[String(r.sl)].keys} Keys before.` : '';
+    if (!confirm(`Give ${k} Nusuk Keys to ${r.name} (SL ${r.sl}, ${r.nusuk_code}) ${when}?${again}`)) return;
+    setGiving(r.sl);
+    const { data: x, error } = await sb!.rpc('nusuk_admin_club_give_keys', { p_sl: r.sl, p_keys: k, p_hours: giftHours || null });
+    setGiving(null);
+    if (error) return toast(errText(error).includes('nusuk_admin_club_give_keys') ? 'Run update_36_club_keys.sql in Supabase first' : errText(error), false);
+    const res = x as { ok: boolean; reason?: string };
+    if (!res.ok) return toast(res.reason === 'rejected' ? 'This code is rejected in Codes, so it cannot get Keys' : 'Could not give Keys', false);
+    toast(`🎁 ${r.name} gets ${k} Keys ${giftHours ? `within ${giftHours}h` : 'now'}`);
+    loadGifts();
+  }
+
   const loadData = useCallback(async (search: string, p: number) => {
     const { data: d, error } = await sb!.rpc('nusuk_admin_club', { p_search: search, p_limit: PAGE, p_offset: p * PAGE, p_contest: contest });
     if (error) return toast(errText(error).includes('nusuk_admin_club') ? 'Run update_33_club_contests.sql in Supabase first' : errText(error), false);
     setData(d as Data);
-  }, [toast, contest]);
+    loadGifts();
+  }, [toast, contest, loadGifts]);
   useEffect(() => { setPage(0); loadData(q, 0); setDayRows(null); }, [loadData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const set = (p: Partial<ClubCfg>) => { setC((x) => ({ ...x, ...p })); setDirty(true); };
@@ -258,10 +285,21 @@ export default function ClubPage({ toast }: { toast: ToastFn }) {
             <button type="button" className="nk-btn nk-ghost flex items-center gap-1.5 px-3 py-1.5 text-sm" onClick={exportMembers}><Download className="h-4 w-4" aria-hidden /> CSV</button>
           </div>
         </div>
+        <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-gold-500/50 bg-gold-400/10 p-3 text-sm">
+          <KeyRound className="h-4 w-4 text-emerald-800" aria-hidden />
+          <b>Give Nusuk Keys:</b>
+          <input type="number" min={1} max={1000} className="nk-input w-24 py-1" value={giftKeys} onChange={(e) => setGiftKeys(+e.target.value)} aria-label="How many Keys" />
+          <span>Keys,</span>
+          <select className="nk-input w-auto py-1" value={giftHours} onChange={(e) => setGiftHours(+e.target.value)} aria-label="How fast">
+            <option value={0}>at once (top of the page)</option>
+            {[1, 2, 3, 6, 12, 24].map((h) => <option key={h} value={h}>within {h} hour{h > 1 ? 's' : ''}</option>)}
+          </select>
+          <span className="text-xs text-emerald-900/65">Then press <b>Give</b> on a member. They see the progress on their account page.</span>
+        </div>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[860px] text-left text-sm">
+          <table className="w-full min-w-[980px] text-left text-sm">
             <thead className="text-xs text-emerald-900/60">
-              <tr>{['SL', 'Name', 'Mobile', 'Nusuk code', 'District', 'Umrah', 'Referred by', 'Tickets', 'Today', 'Refs', 'Joined'].map((h) => <th key={h} className="px-2 py-1.5 font-semibold">{h}</th>)}</tr>
+              <tr>{['SL', 'Name', 'Mobile', 'Nusuk code', 'District', 'Umrah', 'Referred by', 'Tickets', 'Today', 'Refs', 'Keys', 'Joined'].map((h) => <th key={h} className="px-2 py-1.5 font-semibold">{h}</th>)}</tr>
             </thead>
             <tbody className="divide-y divide-[#eee7d3]">
               {data?.rows.map((r) => (
@@ -276,6 +314,24 @@ export default function ClubPage({ toast }: { toast: ToastFn }) {
                   <td className="px-2 py-1.5 font-bold tabular-nums">{r.tickets}</td>
                   <td className="px-2 py-1.5 tabular-nums">{r.tickets_today}</td>
                   <td className="px-2 py-1.5 tabular-nums">{r.referrals}</td>
+                  <td className="px-2 py-1.5">
+                    {(() => {
+                      const g = gifts[String(r.sl)];
+                      return (
+                        <div className="flex items-center gap-2">
+                          {g && (
+                            <span className={`whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-bold ${g.delivered >= g.keys ? 'bg-emerald-100 text-emerald-900' : 'bg-gold-400/30 text-emerald-950'}`}
+                              title={`Given ${new Date(g.at).toLocaleString('en-GB', { timeZone: 'Asia/Dhaka' })}${g.hours ? ` · over ${g.hours}h` : ' · at once'}${g.count > 1 ? ` · ${g.count} gifts` : ''}`}>
+                              {g.delivered >= g.keys ? `✓ ${g.keys}` : `${g.delivered}/${g.keys}`}
+                            </span>
+                          )}
+                          <button type="button" disabled={giving === r.sl} onClick={() => giveKeys(r)} className="nk-btn nk-ghost flex items-center gap-1 px-2 py-1 text-xs">
+                            <Gift className="h-3.5 w-3.5" aria-hidden />{giving === r.sl ? '…' : 'Give'}
+                          </button>
+                        </div>
+                      );
+                    })()}
+                  </td>
                   <td className="px-2 py-1.5 text-xs text-emerald-900/60">{new Date(r.created_at).toLocaleDateString('en-GB', { timeZone: 'Asia/Dhaka' })}</td>
                 </tr>
               ))}

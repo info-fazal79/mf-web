@@ -119,6 +119,8 @@ export type ClubMe = {
   member: Member | null;
   contests: Contest[];
   history?: TicketRow[];
+  /** latest Nusuk Key gift to this member's code (update_36) */
+  keys?: { keys: number; hours: number | null; at: string; delivered: number; ends: string | null } | null;
 };
 export type SaveResult = { ok: boolean; created?: boolean; ref_counted?: boolean; reason?: 'signin' | 'name' | 'phone' | 'phone_taken' | 'closed' | 'code' | 'code_taken' | 'bad_ref' | 'self_ref' | 'busy' };
 
