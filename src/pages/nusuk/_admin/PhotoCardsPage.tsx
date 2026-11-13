@@ -110,8 +110,8 @@ export default function PhotoCardsPage({ toast }: { toast: ToastFn }) {
             <div>
               <h2 className="text-base font-bold text-emerald-950">Messages chosen</h2>
               <ul className="mt-2 grid gap-1 text-sm">
-                {CARD_MESSAGES.map((m, i) => (
-                  <li key={i} className="flex items-center justify-between gap-2"><span className="min-w-0">{m}</span><b className="shrink-0 tabular-nums">{n(d.messages[String(i)])}</b></li>
+                {CARD_MESSAGES.map((m, i) => (m || d.messages[String(i)]) && (
+                  <li key={i} className="flex items-center justify-between gap-2"><span className="min-w-0">{m || <span className="text-emerald-900/50">(removed message)</span>}</span><b className="shrink-0 tabular-nums">{n(d.messages[String(i)])}</b></li>
                 ))}
               </ul>
               <p className="mt-2 text-xs text-emerald-900/60">Colours: {Object.entries(THEME).map(([k, v]) => `${v} ${n(d.themes[k])}`).join(' · ')}</p>

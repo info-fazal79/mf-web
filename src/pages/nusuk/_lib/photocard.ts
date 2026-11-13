@@ -13,9 +13,10 @@ const MY_CODE = 'nusuk:mycode:v1';
 const MY_NAME = 'nusuk:cardname:v1';
 const MY_LOOK = 'nusuk:cardlook:v1';
 
-/** Order matters: the index is saved with each download/share (Nusuk Manager → Photo cards). Add new ones at the end. */
+/** Order matters: the index is saved with each download/share (Nusuk Manager → Photo cards). Add new ones at the end;
+    to remove one, set it to '' (keeps the other numbers right). */
 export const CARD_MESSAGES = [
-  'আপনার ছোট্ট সহযোগিতা, আমার উমরাহর স্বপ্নের পথে এক ধাপ',
+  '', // retired
   'দোয়া করবেন, আল্লাহ যেন উমরাহর তাওফিক দেন',
   'চলুন, একসাথে উমরাহর স্বপ্ন পূরণ করি',
   'আল্লাহর ঘরের মেহমান হওয়ার স্বপ্ন দেখি',
@@ -107,7 +108,7 @@ export async function drawPhotoCard(canvas: HTMLCanvasElement, d: PhotoCard) {
   ctx.fillStyle = L.head;
   fitText(ctx, 'নুসুক উমরাহ প্রতিযোগিতা', mid, 315, 920, 76, 700);
   ctx.fillStyle = L.text;
-  fitText(ctx, d.message.trim() || CARD_MESSAGES[0], mid, 400, 920, 40, 600);
+  fitText(ctx, d.message.trim() || CARD_MESSAGES.find(Boolean)!, mid, 400, 920, 40, 600);
 
   // the code, big
   ctx.fillStyle = L.soft;
@@ -183,7 +184,7 @@ export function initPhotoCard() {
     if (inp) rememberMyCode(inp.value);
   }, true);
 
-  msgIn.innerHTML = CARD_MESSAGES.map((m, i) => `<option value="${i}">${m}</option>`).join('');
+  msgIn.innerHTML = CARD_MESSAGES.map((m, i) => (m ? `<option value="${i}">${m}</option>` : '')).join('');
   const theme = (): CardTheme => (looks.find((l) => l.checked)?.value as CardTheme) || 'green';
   const code = () => codeIn.value.replace(/\s/g, '');
   const valid = () => CODE_RE.test(code());
