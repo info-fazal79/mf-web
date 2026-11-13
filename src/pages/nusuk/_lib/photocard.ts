@@ -44,6 +44,30 @@ export function rememberMyCode(code: string) {
 }
 export const myCode = () => get(MY_CODE);
 
+/** Community links for the caption (Nusuk Manager → Community & bonus); set by /nusuk once settings load. */
+const links = { group: 'https://www.facebook.com/groups/ribatulummah', page: '' };
+let onLinks = () => {};
+export function setPhotoCardLinks(l: { group?: string; page?: string }) {
+  if (l.group) links.group = l.group;
+  if (l.page) links.page = l.page;
+  onLinks();
+}
+
+export function cardCaption(code: string) {
+  return [
+    '🕋 উমরাহর স্বপ্নে আমিও আছি, ইনশাআল্লাহ!',
+    '',
+    `আমার নুসুক রেফারেল কোড: ${code || 'NG-xxxxxxxx'}`,
+    'নুসুক অ্যাপে কোডটি বসিয়ে দিন, আর দোয়ায় রাখবেন 🤲',
+    '',
+    `✅ হাজারো নুসুক কোড এক ক্লিকে: ${SITE.replace(/\/$/, '')}`,
+    links.group ? `👥 কমিউনিটিতে যুক্ত হোন: ${links.group}` : null,
+    links.page ? `📄 আমাদের পেজ: ${links.page}` : null,
+    '',
+    '#NusukUmrah #RibatulUmmah #MuhammadFazal',
+  ].filter((x) => x !== null).join('\n');
+}
+
 export type PhotoCard = { code: string; name: string; message: string; theme: CardTheme };
 
 export async function drawPhotoCard(canvas: HTMLCanvasElement, d: PhotoCard) {
@@ -175,6 +199,23 @@ export function initPhotoCard() {
   const share = $<HTMLButtonElement>('nk-pc-share')!;
   const hint = $('nk-pc-hint')!;
   const looks = Array.from(dlg.querySelectorAll<HTMLInputElement>('input[name="nk-pc-look"]'));
+  const capIn = $<HTMLTextAreaElement>('nk-pc-cap')!;
+  const capBtn = $<HTMLButtonElement>('nk-pc-capcopy')!;
+  const capLabel = capBtn.querySelector('span')!;
+  let capEdited = false;
+  const syncCaption = () => { if (!capEdited) capIn.value = cardCaption(valid() ? code() : ''); };
+  capIn.addEventListener('input', () => { capEdited = true; });
+  onLinks = syncCaption;
+  capBtn.addEventListener('click', async () => {
+    syncCaption();
+    let ok = false;
+    try { await navigator.clipboard.writeText(capIn.value); ok = true; } catch {
+      capIn.select();
+      try { ok = document.execCommand('copy'); } catch { /* old browser */ }
+    }
+    capLabel.textContent = ok ? 'কপি হয়েছে ✓' : 'সিলেক্ট করে কপি করুন';
+    setTimeout(() => { capLabel.textContent = 'ক্যাপশন কপি করুন'; }, 2000);
+  });
 
   // remember the code from any code form on the page (submit, "is my code listed?", feature request)
   document.addEventListener('submit', (e) => {
@@ -197,6 +238,7 @@ export function initPhotoCard() {
       err.classList.toggle('hidden', ok || !code());
       dl.disabled = !ok;
       share.disabled = !ok;
+      syncCaption();
       await drawPhotoCard(canvas, { code: ok ? code() : '', name: nameIn.value.slice(0, 40), message: CARD_MESSAGES[Number(msgIn.value)] ?? '', theme: theme() });
     }, 120);
   };
@@ -225,7 +267,7 @@ export function initPhotoCard() {
   };
   const blob = () => new Promise<Blob | null>((res) => canvas.toBlob(res, 'image/png'));
   const fileName = () => `nusuk-code-${code()}.png`;
-  const caption = () => `আমার নুসুক রেফারেল কোড: ${code()}\nনুসুক অ্যাপে কোডটি বসিয়ে দিন। আরও কোড পেতে: muhammadfazal.com/nusuk\n#NusukUmrah #RibatulUmmah`;
+  const caption = () => capIn.value.trim() || cardCaption(code());
 
   let viaShare = false;
   dl.addEventListener('click', async () => {

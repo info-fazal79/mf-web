@@ -712,6 +712,12 @@ const cm0 = defaultCommunity();
           <button type="button" id="nk-pc-dl" class="nk-btn nk-green flex items-center justify-center gap-2 py-3 text-sm disabled:opacity-50"><Fragment set:html={lucide('download', 'h-4 w-4', 2.2)} /> ডাউনলোড</button>
           <button type="button" id="nk-pc-share" class="nk-btn nk-ghost flex items-center justify-center gap-2 py-3 text-sm disabled:opacity-50"><Fragment set:html={lucide('share', 'h-4 w-4', 2.2)} /> শেয়ার</button>
         </div>
+        <div class="grid gap-1.5 rounded-xl border border-[#e7e1cf] bg-cream/60 p-3">
+          <label for="nk-pc-cap" class="text-sm font-semibold">পোস্টের ক্যাপশন</label>
+          <textarea id="nk-pc-cap" rows="8" class="nk-input nk-scroll resize-y text-sm leading-relaxed"></textarea>
+          <button type="button" id="nk-pc-capcopy" class="nk-btn nk-ghost flex items-center justify-center gap-2 py-2.5 text-sm"><Fragment set:html={lucide('copy', 'h-4 w-4', 2.2)} /><span>ক্যাপশন কপি করুন</span></button>
+          <p class="text-xs text-emerald-900/60">ছবি ডাউনলোড করে ফেসবুকে পোস্ট দিন, ক্যাপশনটি পেস্ট করুন। চাইলে লেখা বদলাতে পারেন।</p>
+        </div>
         <p class="text-center text-xs text-emerald-900/60">ছবিটি আপনার ফোন/কম্পিউটারেই তৈরি হয়, কোথাও আপলোড হয় না।</p>
       </form>
     </dialog>
@@ -777,7 +783,7 @@ const cm0 = defaultCommunity();
       import { initCampaign } from './_lib/campaign';
       import { parsePopup, popupRunning } from './_lib/popup';
       import { initLive } from './_lib/live';
-      import { initPhotoCard } from './_lib/photocard';
+      import { initPhotoCard, setPhotoCardLinks } from './_lib/photocard';
       initPhotoCard();
       import { CODE_RE, countdownText, countryName, defaultVideoLabel, flagUrl, parseToday, parseTopBar, parseVideo, subscribeUrl, parseWinners, prizeLabel, type Winner } from './_lib/content';
 
@@ -1195,6 +1201,7 @@ const cm0 = defaultCommunity();
         const cm = parseCommunity(content);
         const bo = parseBonus(content);
         const links = { 'nk-cm-page': bo.page_url, 'nk-cm-group': bo.group_url, 'nk-cm-wa': cm.whatsapp_url };
+        setPhotoCardLinks({ group: bo.group_url, page: bo.page_url });
         let any = false;
         for (const [id, url] of Object.entries(links)) {
           const a = $<HTMLAnchorElement>(id);
