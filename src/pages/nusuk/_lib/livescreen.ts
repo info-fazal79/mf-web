@@ -249,7 +249,7 @@ export function initLiveScreen() {
   loadCfg(); loadScreen(); loadCharts(); loadQuiz(); loadFeatured();
   setInterval(loadCfg, 10_000); // admin changes (theme, panels, headline) show within 10 s
   setInterval(applyCfg, 30_000); // scheduled / rotating themes switch on time
-  setInterval(loadScreen, 10_000);
+  setInterval(loadScreen, 15_000); // the server shares one result for 15 s (update 41)
   setInterval(loadCharts, 30_000);
   setInterval(loadQuiz, 60_000);
   setInterval(loadFeatured, 30_000);

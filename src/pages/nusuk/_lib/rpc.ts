@@ -23,6 +23,8 @@ export type Boot = {
   notice?: string | null;
   logo_url?: string | null;
   content?: Record<string, string>;
+  /** settings version; content is left out when the page already has this version (update 41) */
+  ver?: string;
   remaining?: number;
   code?: CodeRef | null;
 };

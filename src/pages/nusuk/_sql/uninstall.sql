@@ -110,3 +110,23 @@ drop function if exists public.nusuk_admin_photocards(int);
 drop function if exists public.nusuk_photocard_log(text, text, text, text, int, text);
 drop table if exists public.nusuk_photocards;
 drop table if exists public.nusuk_settings;
+
+-- update 41 (performance)
+drop function if exists public.nusuk_live_screen_raw();
+drop function if exists public.nusuk_insights_raw();
+drop function if exists public.nusuk_featured_list_raw();
+drop function if exists public.nusuk_quiz_public_raw(int);
+drop function if exists public.nusuk_admin_dashboard_raw();
+drop function if exists public.nusuk_cache_get(text, interval);
+drop function if exists public.nusuk_cache_put(text, jsonb);
+drop function if exists public.nusuk_cache_now(jsonb);
+drop table if exists public.nusuk_cache;
+drop trigger if exists nusuk_count_visitors on public.nusuk_visitors;
+drop trigger if exists nusuk_count_codes on public.nusuk_codes;
+drop trigger if exists nusuk_count_codes_status on public.nusuk_codes;
+drop trigger if exists nusuk_settings_touch on public.nusuk_settings;
+drop function if exists public.nusuk_count_visitors();
+drop function if exists public.nusuk_count_codes();
+drop function if exists public.nusuk_settings_touch();
+drop table if exists public.nusuk_counters;
+drop function if exists public.nusuk_bootstrap(bigint[], bigint[], text, boolean);

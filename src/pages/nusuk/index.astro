@@ -1322,6 +1322,7 @@ const cm0 = defaultCommunity();
       }
 
       let lastContent: Record<string, string> | undefined;
+      let contentVer: string | null = null; // settings version the page has (update 41)
       const insights = initInsights();
       function applyContent(b: Boot) {
         insights.setOn(insightsOn(b.content));
@@ -1375,8 +1376,14 @@ const cm0 = defaultCommunity();
       async function boot(keepCode = false) {
         if (!rpcReady) { status.textContent = 'সার্ভার কনফিগার করা হয়নি'; return; }
         try {
-          const b = await rpc<Boot>('nusuk_bootstrap', { p_exclude: exclude(), p_used: usedIds() });
+          // keepCode: the page keeps the code it shows, so no new pick; p_ver: settings come only when changed
+          const keep = keepCode && !!current;
+          const b = await rpc<Boot>('nusuk_bootstrap', { p_exclude: exclude(), p_used: usedIds(), p_ver: contentVer, p_pick: !keep });
           lastBoot = Date.now();
+          if (b.ver) {
+            if (b.content == null && contentVer === b.ver && lastContent) b.content = lastContent;
+            contentVer = b.content ? b.ver : null;
+          }
           applyContent(b);
           if (!b.enabled) return closed(b);
           setRemaining(b.remaining);
