@@ -24,7 +24,7 @@ const errText = (e: unknown) => (e && typeof e === 'object' && 'message' in e ? 
 function Shell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-[#f7f4ea] text-emerald-950">
-      <header className="bg-gradient-to-br from-emerald-900 to-[#032b20] text-white">
+      <header className="sticky top-0 z-40 bg-gradient-to-br from-emerald-900 to-[#032b20] text-white shadow-[0_6px_18px_-8px_rgba(2,30,22,0.55)]">
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-4">
           <a href="/nusuk" className="flex items-center gap-2.5">
             <img src="/nusuk/ribat-logo-96.webp" alt="" width={40} height={40} className="h-10 w-10 rounded-full bg-[#e9ef9f] object-cover ring-2 ring-gold-400/60" />

@@ -66,9 +66,9 @@ const cm0 = defaultCommunity();
     <!-- Vote and giveaway strips (Nusuk Manager → Top notice) -->
     <div id="nk-live" class="hidden"></div>
     <!-- ===== Hero: code box is the first thing on screen ===== -->
-    <header class="nk-pattern text-white">
-      <div class="mx-auto max-w-xl px-4 pt-4 pb-24 sm:pb-28">
-        <nav class="flex items-center justify-between gap-3">
+    <!-- Sticky top bar: logo, login and menu stay on screen while scrolling -->
+    <div id="nk-headbar" class="nk-headbar sticky top-0 z-40 text-white">
+        <nav class="mx-auto flex max-w-xl items-center justify-between gap-3 px-4 py-2.5">
           <a href="/nusuk" class="flex min-w-0 items-center gap-2.5" aria-label="Ribatul Ummah · Nusuk Code Share">
             <span id="nk-logo" class="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-xl bg-[#e9ef9f] ring-1 ring-gold-400/50">
               <img src="/nusuk/ribat-logo-96.webp" alt="Ribat" width="44" height="44" class="h-full w-full object-cover" />
@@ -88,10 +88,22 @@ const cm0 = defaultCommunity();
             </button>
           </div>
         </nav>
-        <h1 class="mt-5 text-center text-2xl font-bold sm:text-3xl" data-k="title">{c.title}</h1>
+    </div>
+    <header class="nk-pattern text-white">
+      <div class="mx-auto max-w-xl px-4 pt-3 pb-24 sm:pb-28">
+        <h1 class="text-center text-2xl font-bold sm:text-3xl" data-k="title">{c.title}</h1>
         <p class="mx-auto mt-1.5 max-w-md text-center text-sm text-emerald-100/85" data-k="subtitle">{c.subtitle}</p>
       </div>
     </header>
+    <script is:inline>
+      (function () {
+        var bar = document.getElementById('nk-headbar');
+        if (!bar) return;
+        var tick = function () { bar.classList.toggle('is-stuck', bar.getBoundingClientRect().top <= 0 && window.scrollY > 0); };
+        window.addEventListener('scroll', tick, { passive: true });
+        tick();
+      })();
+    </script>
 
 
     <!-- ===== Site menu (header ☰): every section of the page + login ===== -->
