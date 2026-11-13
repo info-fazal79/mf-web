@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNod
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { ArrowLeft, Check, Clock, UserRound, Copy, Download, Gift, History, LogOut, PenLine, Share2, Sparkles, Ticket, Trophy, UserPlus, Users } from 'lucide-react';
 import {
-  CODE_RE, KIND_LABEL, markJoined, SAVE_ERR, bn, bnDate, bnTime, contestRules, fillCaption, memberClient, rememberRef, savedRef,
+  CODE_RE, KIND_LABEL, markJoined, showOf, SAVE_ERR, bn, bnDate, bnTime, contestRules, fillCaption, memberClient, rememberRef, savedRef,
   type ClubMe, type Contest, type Member, type SaveResult,
 } from '../_lib/club';
 import { drawCard, cardBlob } from '../_lib/clubcard';
@@ -88,9 +88,9 @@ export default function ClubApp() {
       )}
       {!me.signed_in && <SignIn sb={sb} cfg={me.cfg} />}
       {me.signed_in && !me.member && (me.cfg.on
-        ? <ProfileForm sb={sb} email={me.email} onDone={reload} />
+        ? <ProfileForm sb={sb} email={me.email} onDone={reload} tickets={showOf(me.cfg).tickets} />
         : <section className="nk-card p-5 text-[15px]">নতুন অ্যাকাউন্ট খোলা শীঘ্রই চালু হবে, ইনশাআল্লাহ। একটু পরে আবার দেখুন।{me.email && <span className="mt-1 block text-xs text-emerald-900/60">লগইন: {me.email}</span>}</section>)}
-      {me.member && !editing && <Dashboard me={me} onEdit={() => setEditing(true)} refBox={!me.member.referred_by ? <RefLater sb={sb} myCode={me.member.nusuk_code} onDone={reload} /> : null} />}
+      {me.member && !editing && <Dashboard me={me} onEdit={() => setEditing(true)} refBox={showOf(me.cfg).invite && !me.member.referred_by ? <RefLater sb={sb} myCode={me.member.nusuk_code} onDone={reload} /> : null} />}
       {me.member && editing && <ProfileForm sb={sb} member={me.member} email={me.member.email ?? undefined} onDone={async () => { setEditing(false); await reload(); }} onCancel={() => setEditing(false)} />}
 
       <p className="text-center text-xs text-emerald-900/60">লগইন করে আপনি আমাদের <a href="/nusuk/privacy" className="font-semibold underline">গোপনীয়তা নীতি</a> মেনে নিচ্ছেন।</p>
@@ -129,7 +129,7 @@ function SignIn({ sb, cfg }: { sb: SupabaseClient; cfg: ClubMe['cfg'] }) {
   }
   return (
     <section className="nk-card p-5 text-center">
-      {inviter && (
+      {inviter && showOf(cfg).invite && (
         <p className="mx-auto mb-4 flex max-w-md items-center justify-center gap-2 rounded-xl bg-gold-400/20 px-3 py-2 text-[15px] font-semibold">
           <UserPlus className="h-4 w-4 shrink-0" aria-hidden /> {inviter.name} (SL {bn(inviter.sl)}) আপনাকে আমন্ত্রণ জানিয়েছেন। যুক্ত হলেই পাবেন ২টি টিকিট!
         </p>
@@ -146,7 +146,7 @@ function SignIn({ sb, cfg }: { sb: SupabaseClient; cfg: ClubMe['cfg'] }) {
   );
 }
 
-function ProfileForm({ sb, member, email, onDone, onCancel }: { sb: SupabaseClient; member?: Member; email?: string; onDone: () => void; onCancel?: () => void }) {
+function ProfileForm({ sb, member, email, onDone, onCancel, tickets = true }: { sb: SupabaseClient; member?: Member; email?: string; onDone: () => void; onCancel?: () => void; tickets?: boolean }) {
   const isNew = !member;
   const [f, setF] = useState({
     name: member?.name ?? '',
@@ -188,7 +188,7 @@ function ProfileForm({ sb, member, email, onDone, onCancel }: { sb: SupabaseClie
     <form onSubmit={submit} className="nk-card grid gap-4 p-4 sm:p-5">
       <div>
         <h2 className="text-lg font-bold">{isNew ? 'প্রোফাইল পূরণ করুন' : 'প্রোফাইল এডিট'}</h2>
-        {isNew && <p className="mt-1 text-sm text-emerald-900/70">সেভ করলেই আপনার প্রথম টিকিট জমা হবে। আপনার নুসুক কোডটিই হবে আপনার রেফারেল কোড।</p>}
+        {isNew && <p className="mt-1 text-sm text-emerald-900/70">{tickets ? 'সেভ করলেই আপনার প্রথম টিকিট জমা হবে। আপনার নুসুক কোডটিই হবে আপনার রেফারেল কোড।' : 'তথ্যগুলো সেভ করলেই আপনার অ্যাকাউন্ট তৈরি হয়ে যাবে।'}</p>}
         {email && <p className="mt-1 text-xs text-emerald-900/60">লগইন: {email}</p>}
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
@@ -217,7 +217,7 @@ function ProfileForm({ sb, member, email, onDone, onCancel }: { sb: SupabaseClie
       </div>
       {msg && <p className={`rounded-xl px-3.5 py-2.5 text-sm ${msg.ok ? 'bg-emerald-100 text-emerald-900' : 'bg-red-50 text-red-800'}`}>{msg.t}</p>}
       <div className="flex flex-wrap gap-2">
-        <button type="submit" disabled={busy} className="nk-btn nk-green px-5 py-2.5">{busy ? 'সেভ হচ্ছে…' : isNew ? 'সেভ করে টিকিট নিন' : 'সেভ করুন'}</button>
+        <button type="submit" disabled={busy} className="nk-btn nk-green px-5 py-2.5">{busy ? 'সেভ হচ্ছে…' : isNew ? (tickets ? 'সেভ করে টিকিট নিন' : 'সেভ করে যুক্ত হোন') : 'সেভ করুন'}</button>
         {onCancel && <button type="button" onClick={onCancel} className="nk-btn nk-ghost px-5 py-2.5">বাতিল</button>}
       </div>
     </form>
@@ -334,7 +334,8 @@ function Dashboard({ me, onEdit, refBox }: { me: ClubMe; onEdit: () => void; ref
   const [sel, setSel] = useState(0);
   const [now, setNow] = useState(Date.now());
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 30000); return () => clearInterval(t); }, []);
-  const contests = me.contests;
+  const show = showOf(me.cfg);
+  const contests = show.contests ? me.contests : [];
   const c = contests[Math.min(sel, contests.length - 1)];
   return (
     <>
@@ -345,7 +346,7 @@ function Dashboard({ me, onEdit, refBox }: { me: ClubMe; onEdit: () => void; ref
           <div className="mt-1 flex flex-wrap gap-2 text-sm">
             <span className="rounded-full bg-gold-400/25 px-2.5 py-0.5 font-bold">SL {bn(m.sl)}</span>
             <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 font-mono font-semibold">{m.nusuk_code}</span>
-            {m.referred_by && <span className="rounded-full bg-emerald-50 px-2.5 py-0.5">আমন্ত্রণ: {m.referred_by}</span>}
+            {show.invite && m.referred_by && <span className="rounded-full bg-emerald-50 px-2.5 py-0.5">আমন্ত্রণ: {m.referred_by}</span>}
           </div>
         </div>
         <button type="button" onClick={onEdit} className="nk-btn nk-ghost flex items-center gap-2 px-4 py-2 text-sm"><PenLine className="h-4 w-4" aria-hidden /> প্রোফাইল এডিট</button>
@@ -355,7 +356,7 @@ function Dashboard({ me, onEdit, refBox }: { me: ClubMe; onEdit: () => void; ref
 
       {refBox}
 
-      {!c && <section className="nk-card p-5 text-[15px]">এই মুহূর্তে কোনো প্রতিযোগিতা চলছে না। নতুন প্রতিযোগিতা শুরু হলে এখানে দেখাবে, ইনশাআল্লাহ।</section>}
+      {show.contests && !c && <section className="nk-card p-5 text-[15px]">এই মুহূর্তে কোনো প্রতিযোগিতা চলছে না। নতুন প্রতিযোগিতা শুরু হলে এখানে দেখাবে, ইনশাআল্লাহ।</section>}
 
       {contests.length > 1 && (
         <div className="flex gap-1 overflow-x-auto rounded-xl border border-[#e7e1cf] bg-white p-1" role="tablist" aria-label="প্রতিযোগিতা">
@@ -430,7 +431,7 @@ function Dashboard({ me, onEdit, refBox }: { me: ClubMe; onEdit: () => void; ref
 
       {c && <ShareCard key={c.id} me={me} c={c} />}
 
-      <section className="nk-card p-4 sm:p-5">
+      {show.tickets && <section className="nk-card p-4 sm:p-5">
         <h2 className="flex items-center gap-2 text-lg font-bold"><History className="h-5 w-5 text-emerald-700" aria-hidden /> টিকিটের হিসাব</h2>
         {(me.history ?? []).length === 0 && <p className="mt-2 text-sm text-emerald-900/60">এখনো কোনো টিকিট নেই।</p>}
         <ul className="mt-3 divide-y divide-[#eee7d3] text-sm">
@@ -441,7 +442,7 @@ function Dashboard({ me, onEdit, refBox }: { me: ClubMe; onEdit: () => void; ref
             </li>
           ))}
         </ul>
-      </section>
+      </section>}
     </>
   );
 }

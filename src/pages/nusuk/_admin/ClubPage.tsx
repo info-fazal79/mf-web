@@ -229,6 +229,20 @@ export default function ClubPage({ toast }: { toast: ToastFn }) {
           </div>
           <p className="text-xs text-emerald-900/60">Signed-in members see the button as "আমার অ্যাকাউন্ট". Leave empty for the default text.</p>
         </div>
+        <div className="grid gap-2 rounded-xl border border-[#e7e1cf] p-3">
+          <h3 className="text-sm font-bold">Account page sections (/nusuk/account)</h3>
+          {([
+            ['invite', 'Invite box: “কারো আমন্ত্রণে এসেছেন?” (add an inviter’s code), the inviter name on the sign-in page and the “আমন্ত্রণ:” tag'],
+            ['tickets', 'Ticket history (টিকিটের হিসাব) and ticket wording on the sign-up form'],
+            ['contests', 'Competitions (cards, photo card, “no competition running” message)'],
+          ] as const).map(([k, t]) => (
+            <label key={k} className="flex items-start gap-2.5 text-sm">
+              <input type="checkbox" className="mt-0.5 h-4 w-4 accent-emerald-700" checked={c.show[k]} onChange={(e) => set({ show: { ...c.show, [k]: e.target.checked } })} />
+              <span>{t}</span>
+            </label>
+          ))}
+          <p className="text-xs text-emerald-900/60">Unticked = hidden from members. Their data is kept; tick it again when you start a competition. Needs update_38_club_sections.sql.</p>
+        </div>
         <label className="max-w-md"><span className="mb-1 block text-sm font-semibold">Name of the club</span>
           <input className="nk-input" value={c.title} placeholder={DEFAULT_TITLE} maxLength={80} onChange={(e) => set({ title: e.target.value })} /></label>
         <p className="text-xs text-emerald-900/60">Ticket rules, copy time, photo card and caption are set per competition below.</p>

@@ -26,7 +26,15 @@ export type ClubCfg = {
   notice_on: boolean; // Reward Club bar at the top of /nusuk
   notice_text: string;
   notice_btn: string;
+  /** account page sections (missing = shown) */
+  show: ClubShow;
 };
+export type ClubShow = { invite: boolean; tickets: boolean; contests: boolean };
+export const showOf = (cfg: { show?: Partial<ClubShow> } | null | undefined): ClubShow => ({
+  invite: cfg?.show?.invite !== false,
+  tickets: cfg?.show?.tickets !== false,
+  contests: cfg?.show?.contests !== false,
+});
 
 export const DEFAULT_TITLE = 'রিবাত রিওয়ার্ড ক্লাব';
 export const DEFAULT_NOTICE = 'অ্যাকাউন্টে লগইন করে প্রোফাইল সম্পূর্ণ করলেই ফ্রিতে পাবেন ৫০টি Nusuk Key!';
@@ -74,6 +82,7 @@ export function parseClub(raw: unknown): ClubCfg {
     notice_on: r.notice_on !== false,
     notice_text: s('notice_text', 200),
     notice_btn: s('notice_btn', 30),
+    show: showOf(r as { show?: Partial<ClubShow> }),
   };
 }
 
