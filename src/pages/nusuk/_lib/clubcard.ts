@@ -9,7 +9,8 @@ import { DEFAULT_CARD_LINE, bn, refLink } from './club';
 export const CARD_W = 1080;
 export const CARD_H = 1350;
 export const FONT = '"Hind Siliguri", system-ui, sans-serif';
-export const MONO = '"JetBrains Mono", ui-monospace, monospace';
+/** clear letters for codes: l, I, 1, O, 0 all look different */
+export const MONO = '"IBM Plex Mono", "JetBrains Mono", ui-monospace, monospace';
 
 export type CardTheme = 'green' | 'gold' | 'night';
 export const CARD_THEMES: { key: CardTheme; name: string }[] = [
@@ -94,7 +95,7 @@ export async function drawCard(canvas: HTMLCanvasElement, d: CardData) {
     await Promise.all([
       document.fonts.load(`700 60px "Hind Siliguri"`),
       document.fonts.load(`500 40px "Hind Siliguri"`),
-      document.fonts.load(`700 60px "JetBrains Mono"`),
+      document.fonts.load(`700 60px "IBM Plex Mono"`),
     ]);
   } catch { /* system fonts */ }
   const logo = await loadImage('/nusuk/ribat-logo.webp');

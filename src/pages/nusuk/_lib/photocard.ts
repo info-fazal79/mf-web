@@ -55,7 +55,7 @@ export async function drawPhotoCard(canvas: HTMLCanvasElement, d: PhotoCard) {
     await Promise.all([
       document.fonts.load(`700 60px "Hind Siliguri"`),
       document.fonts.load(`500 40px "Hind Siliguri"`),
-      document.fonts.load(`700 60px "JetBrains Mono"`),
+      document.fonts.load(`700 60px "IBM Plex Mono"`),
     ]);
   } catch { /* system fonts */ }
   const logo = await loadImage('/nusuk/ribat-logo.webp');
