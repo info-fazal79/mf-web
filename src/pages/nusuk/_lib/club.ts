@@ -263,6 +263,16 @@ export function memberClient() {
 }
 
 /** True when this browser has a member session saved (cheap check, no network, no supabase-js). */
+const JOINED_KEY = 'nusuk:member:joined';
+/** Remember on this browser that the signed-in person has a finished account (set by the account page). */
+export function markJoined(joined: boolean) {
+  try { if (joined) localStorage.setItem(JOINED_KEY, '1'); else localStorage.removeItem(JOINED_KEY); } catch {}
+}
+/** Signed in here AND already made their account (profile saved). */
+export function isJoinedMember() {
+  try { return hasMemberSession() && localStorage.getItem(JOINED_KEY) === '1'; } catch { return false; }
+}
+
 export function hasMemberSession() {
   try { return Boolean(localStorage.getItem(MEMBER_KEY)); } catch { return false; }
 }

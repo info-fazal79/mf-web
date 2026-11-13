@@ -708,7 +708,7 @@ const cm0 = defaultCommunity();
       import { rpc, rpcReady, type Boot, type Claim, type CodeCheck, type CodeRef, type FeatureReq, type FeaturedItem, type FeaturedList, type SliderItem, type Submit } from './_lib/rpc';
       import { initQuiz } from './_lib/quiz';
       import { lucide } from './_lib/lucide';
-      import { clubOf, hasMemberSession, memberToken, rememberRef, DEFAULT_NOTICE, DEFAULT_NOTICE_BTN } from './_lib/club';
+      import { clubOf, hasMemberSession, isJoinedMember, memberToken, rememberRef, DEFAULT_NOTICE, DEFAULT_NOTICE_BTN } from './_lib/club';
       import { initInsights, insightsOn } from './_lib/insights';
       import { adHtml, defaultAds, liveAds, parseAds, sampleDuaAd } from './_lib/ads';
       import { bonusReady, parseBonus, parseCommunity } from './_lib/bonus';
@@ -1223,7 +1223,8 @@ const cm0 = defaultCommunity();
         // test mode: only signed-in members see it here (the server checks the testers list)
         clubOn = c.on || (c.test && member);
         // Reward Club bar at the very top
-        const showBar = clubOn && c.notice_on;
+        // members who already made their account don't need the sign-up offer
+        const showBar = clubOn && c.notice_on && !isJoinedMember();
         $('nk-clubbar').classList.toggle('hidden', !showBar);
         if (showBar) {
           $('nk-clubbar-text').textContent = c.notice_text.trim() || DEFAULT_NOTICE;
