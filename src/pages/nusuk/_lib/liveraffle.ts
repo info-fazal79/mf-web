@@ -26,7 +26,7 @@ const esc = (t = '') => t.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;
 const first = (n: string) => n.trim().split(/\s+/)[0] ?? n;
 const scopeText = (s?: string) => (!s || s === 'all' ? 'পুরো প্রতিযোগিতার টিকিট' : `${new Date(`${s}T00:00:00+06:00`).toLocaleDateString('bn-BD', { day: 'numeric', month: 'long', timeZone: 'Asia/Dhaka' })}-এর টিকিট`);
 
-export function initLiveRaffle(opts: { onMode: (raffle: boolean) => void; theme: () => string }) {
+export function initLiveRaffle(opts: { onMode: (mode: 'normal' | 'raffle' | 'winner') => void; onWinner: (d: unknown) => void; theme: () => string }) {
   const $ = (id: string) => document.getElementById(id)!;
   let draw: Draw | null = null;
   let drawKey = '';
@@ -124,8 +124,9 @@ export function initLiveRaffle(opts: { onMode: (raffle: boolean) => void; theme:
     let d: Draw;
     try { d = await rpc<Draw>('nusuk_club_live_draw'); } catch { return; } // update 34 not run: stay normal
     skew = Date.parse(d.now) - Date.now();
+    if ((d.mode as string) === 'winner') { opts.onMode('winner'); opts.onWinner(d); draw = null; drawKey = ''; return; }
     const raffle = d.mode === 'raffle' && !!d.contest;
-    opts.onMode(raffle);
+    opts.onMode(raffle ? 'raffle' : 'normal');
     if (!raffle) { draw = null; drawKey = ''; return; }
     const key = `${d.contest!.id}|${d.scope}`;
     if (key !== drawKey) {
