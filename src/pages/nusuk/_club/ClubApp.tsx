@@ -212,7 +212,7 @@ function ProfileForm({ sb, member, email, onDone, onCancel }: { sb: SupabaseClie
           </select></label>
         <label className="flex items-start gap-2.5 text-sm sm:col-span-2">
           <input type="checkbox" className="mt-1 h-4 w-4 accent-emerald-700" checked={f.consent} onChange={(e) => set({ consent: e.target.checked })} />
-          রিবাতের নতুন পণ্য, অফার ও আয়োজনের খবর SMS/ফোনে জানতে চাই।
+          রিবাতুল উম্মাহর নতুন প্রতিযোগিতা, কুইজ ও গুরুত্বপূর্ণ ঘোষণা SMS/ফোনে জানতে চাই।
         </label>
       </div>
       {msg && <p className={`rounded-xl px-3.5 py-2.5 text-sm ${msg.ok ? 'bg-emerald-100 text-emerald-900' : 'bg-red-50 text-red-800'}`}>{msg.t}</p>}
