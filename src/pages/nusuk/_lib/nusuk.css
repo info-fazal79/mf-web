@@ -214,3 +214,11 @@ button.nk-qz-opt:disabled { cursor: default; }
 /* Leaderboard rows never push the dialog wider than the screen */
 #nk-qz ol, #nk-quiz-top { grid-template-columns: minmax(0, 1fr); }
 .nk-qz-row { min-width: 0; }
+
+/* "আজকের বিজয়ী" badge on the code page: a soft gold glow that keeps pulsing */
+.nk-today-glow { animation: nk-today-glow 1.6s ease-in-out infinite; }
+@keyframes nk-today-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(220, 188, 82, 0.75); transform: scale(1); }
+  50% { box-shadow: 0 0 0 8px rgba(220, 188, 82, 0); transform: scale(1.06); }
+}
+@media (prefers-reduced-motion: reduce) { .nk-today-glow { animation: none; } }

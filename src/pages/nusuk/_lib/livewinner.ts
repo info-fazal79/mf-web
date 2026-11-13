@@ -49,8 +49,11 @@ export function initLiveWinner() {
       <div class="flex items-center gap-8">
         <img src="${flagUrl(today.country, 160)}" alt="" class="h-[120px] w-[180px] shrink-0 rounded-2xl object-cover shadow-lg ring-4 ring-white/40" />
         <div class="min-w-0">
-          <div class="text-2xl ls-muted">সর্বশেষ বিজয়ী${today.date ? ` · ${esc(dateText(today.date))}` : ''}</div>
-          <div class="truncate text-[64px] font-bold leading-tight">${esc(today.name)}</div>
+          <div class="flex items-center gap-4">
+            <span class="lw-today-badge">🎉 আজকের বিজয়ী</span>
+            ${today.date ? `<span class="text-2xl ls-muted">${esc(dateText(today.date))}</span>` : ''}
+          </div>
+          <div class="mt-2 truncate text-[64px] font-bold leading-tight">${esc(today.name)}</div>
           <div class="mt-1 flex flex-wrap items-center gap-3 text-2xl">
             <span class="ls-chip rounded-full px-4 py-1">${esc(countryName(today.country, 'bn'))}</span>
             <span class="rounded-full px-4 py-1 font-bold ls-accent" style="background: color-mix(in srgb, var(--accent) 16%, transparent)">${esc(prizeText(today))}</span>

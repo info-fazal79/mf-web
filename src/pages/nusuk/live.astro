@@ -88,11 +88,19 @@ import { lucide } from './_lib/lucide';
       @keyframes ls-bump { 0% { color: #ffe08a; transform: scale(1.06); } 100% { transform: none; } }
       .ls-ticker { animation: ls-scroll 45s linear infinite; white-space: nowrap; }
       @keyframes ls-scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+      /* "আজকের বিজয়ী" on the Winner view: big gold pill that keeps glowing + a light sweep */
+      :global(.lw-today-badge) { position: relative; overflow: hidden; display: inline-flex; align-items: center; border-radius: 9999px; padding: 0.35rem 1.4rem;
+        font-size: 40px; font-weight: 800; line-height: 1.2; color: #3b2a00; background: linear-gradient(135deg, #ffe08a, #e0b93a 55%, #f6d365);
+        animation: lw-glow 1.4s ease-in-out infinite; }
+      :global(.lw-today-badge)::after { content: ''; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 30%, rgba(255,255,255,0.75) 50%, transparent 70%);
+        transform: translateX(-120%); animation: lw-sweep 2.6s ease-in-out infinite; }
+      @keyframes lw-glow { 0%, 100% { box-shadow: 0 0 0 0 rgba(242, 201, 76, 0.85); transform: scale(1); } 50% { box-shadow: 0 0 0 16px rgba(242, 201, 76, 0); transform: scale(1.05); } }
+      @keyframes lw-sweep { 0%, 35% { transform: translateX(-120%); } 75%, 100% { transform: translateX(120%); } }
       .lw-in #lw-reveal-body { animation: lw-in 0.8s cubic-bezier(0.2, 1.4, 0.4, 1) both; }
       @keyframes lw-in { from { opacity: 0; transform: scale(0.6); } to { opacity: 1; transform: none; } }
-      .lw-bit { position: absolute; top: -40px; border-radius: 3px; opacity: 0.95; animation: lw-fall linear forwards; }
+      :global(.lw-bit) { position: absolute; top: -40px; border-radius: 3px; opacity: 0.95; animation: lw-fall linear forwards; }
       @keyframes lw-fall { to { transform: translateY(1200px) rotate(720deg); opacity: 0.6; } }
-      .lw-dots::after { content: ''; animation: lw-dots 1.5s steps(4) infinite; }
+      :global(.lw-dots)::after { content: ''; animation: lw-dots 1.5s steps(4) infinite; }
       @keyframes lw-dots { 0% { content: ''; } 25% { content: '.'; } 50% { content: '..'; } 75% { content: '...'; } }
       .lr-pop { animation: lr-pop 0.6s cubic-bezier(0.2, 1.4, 0.4, 1) both; }
       @keyframes lr-pop { from { opacity: 0; transform: translate(-50%, -50%) scale(0.7); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
@@ -155,7 +163,7 @@ import { lucide } from './_lib/lucide';
           <ul id="ls-feat" class="mt-2 grid content-start gap-1 overflow-hidden"></ul>
         </div>
         <div class="ls-panel flex min-h-0 flex-col p-5" data-panel="winner">
-          <h2 class="flex items-center gap-2.5 text-2xl font-bold"><span class="ls-h-ico"><Fragment set:html={lucide('partyPopper', 'h-6 w-6', 2.2)} /></span>সর্বশেষ বিজয়ী</h2>
+          <h2 class="flex items-center gap-2.5 text-2xl font-bold"><span class="ls-h-ico"><Fragment set:html={lucide('partyPopper', 'h-6 w-6', 2.2)} /></span>আজকের বিজয়ী</h2>
           <div id="ls-win" class="mt-2 flex-1"></div>
         </div>
       </section>

@@ -120,7 +120,7 @@ const cm0 = defaultCommunity();
         <ul class="grid gap-0.5 p-3 text-[15px]">
             <li><a href="#copy" data-menu="copy" class="flex items-center gap-3 rounded-xl px-3 py-2.5 font-semibold text-emerald-950 hover:bg-emerald-50"><span class="text-emerald-700"><Fragment set:html={lucide('copy', 'h-5 w-5')} /></span>কোড কপি করুন</a></li>
             <li><a href="#feature" data-menu="feature" class="flex items-center gap-3 rounded-xl px-3 py-2.5 font-semibold text-emerald-950 hover:bg-emerald-50"><span class="text-emerald-700"><Fragment set:html={lucide('star', 'h-5 w-5')} /></span>কোড ফিচার করুন</a></li>
-            <li><a href="#nk-today" data-menu="nk-today" class="flex items-center gap-3 rounded-xl px-3 py-2.5 font-semibold text-emerald-950 hover:bg-emerald-50"><span class="text-emerald-700"><Fragment set:html={lucide('crown', 'h-5 w-5')} /></span>সর্বশেষ বিজয়ী</a></li>
+            <li><a href="#nk-today" data-menu="nk-today" class="flex items-center gap-3 rounded-xl px-3 py-2.5 font-semibold text-emerald-950 hover:bg-emerald-50"><span class="text-emerald-700"><Fragment set:html={lucide('crown', 'h-5 w-5')} /></span>আজকের বিজয়ী</a></li>
             <li><a href="#nk-quiz" data-menu="nk-quiz" class="flex items-center gap-3 rounded-xl px-3 py-2.5 font-semibold text-emerald-950 hover:bg-emerald-50"><span class="text-emerald-700"><Fragment set:html={lucide('target', 'h-5 w-5')} /></span>দৈনিক ইসলামিক কুইজ</a></li>
             <li><a href="#nk-pcard" data-menu="nk-pcard" class="flex items-center gap-3 rounded-xl px-3 py-2.5 font-semibold text-emerald-950 hover:bg-emerald-50"><span class="text-emerald-700"><Fragment set:html={lucide('imageDown', 'h-5 w-5')} /></span>ফটো কার্ড বানান</a></li>
             <li><a href="#nk-ins" data-menu="nk-ins" class="flex items-center gap-3 rounded-xl px-3 py-2.5 font-semibold text-emerald-950 hover:bg-emerald-50"><span class="text-emerald-700"><Fragment set:html={lucide('chartLine', 'h-5 w-5')} /></span>লাইভ পরিসংখ্যান</a></li>
@@ -201,7 +201,7 @@ const cm0 = defaultCommunity();
       <section id="nk-today" class="mt-6 hidden" aria-labelledby="nk-today-h">
         <div class="relative overflow-hidden rounded-[1.25rem] border-2 border-gold-500/70 bg-gradient-to-r from-gold-100 via-white to-white px-4 py-3.5 shadow-md shadow-gold-500/15">
           <div class="flex flex-wrap items-center justify-between gap-2">
-            <h2 id="nk-today-h" class="inline-flex items-center gap-1 rounded-full bg-emerald-900 px-3 py-1 text-xs font-bold text-gold-100">🎉 <span id="nk-today-label">আজকের বিজয়ী</span></h2>
+            <h2 id="nk-today-h" class="nk-today-glow inline-flex items-center gap-1 rounded-full bg-emerald-900 px-3 py-1 text-xs font-bold text-gold-100">🎉 <span id="nk-today-label">আজকের বিজয়ী</span></h2>
             <span id="nk-today-next" class="nk-next order-last flex w-full items-center justify-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold text-emerald-950 sm:order-none sm:w-auto" style="display:none" aria-live="off">
               <span aria-hidden="true">⏳</span><span id="nk-today-next-label">পরবর্তী বিজয়ী ঘোষণা</span>
               <b id="nk-today-left" class="rounded-md bg-emerald-900 px-1.5 py-0.5 font-mono tabular-nums text-gold-100"></b>
@@ -1072,7 +1072,7 @@ const cm0 = defaultCommunity();
         if (!t) return;
         const d = new Date();
         const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-        $('nk-today-label').textContent = t.date === today ? 'আজকের বিজয়ী' : 'সর্বশেষ বিজয়ী';
+        $('nk-today-label').textContent = 'আজকের বিজয়ী';
         const img = $<HTMLImageElement>('nk-today-flag');
         if (img.dataset.c !== t.country) {
           img.dataset.c = t.country;
