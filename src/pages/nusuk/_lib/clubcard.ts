@@ -8,8 +8,8 @@ import { DEFAULT_CARD_LINE, bn, refLink } from './club';
 
 export const CARD_W = 1080;
 export const CARD_H = 1350;
-const FONT = '"Hind Siliguri", system-ui, sans-serif';
-const MONO = '"JetBrains Mono", ui-monospace, monospace';
+export const FONT = '"Hind Siliguri", system-ui, sans-serif';
+export const MONO = '"JetBrains Mono", ui-monospace, monospace';
 
 export type CardTheme = 'green' | 'gold' | 'night';
 export const CARD_THEMES: { key: CardTheme; name: string }[] = [
@@ -23,7 +23,7 @@ type Look = {
   box: string; boxText: string; boxEdge: string;
   pill: string; pillText: string; panel: string; qrDark: string;
 };
-const LOOKS: Record<CardTheme, Look> = {
+export const LOOKS: Record<CardTheme, Look> = {
   green: {
     bg: ['#0b5a43', '#064532', '#022a1f'], ring: 'rgba(242,201,76,0.10)', frame: 'rgba(242,201,76,0.55)',
     title: '#ffffff', head: '#f2c94c', text: '#ffffff', soft: 'rgba(255,255,255,0.75)',
@@ -41,7 +41,7 @@ const LOOKS: Record<CardTheme, Look> = {
   },
 };
 
-function loadImage(src: string) {
+export function loadImage(src: string) {
   return new Promise<HTMLImageElement | null>((res) => {
     const i = new Image();
     i.onload = () => res(i);
@@ -50,13 +50,13 @@ function loadImage(src: string) {
   });
 }
 
-function rr(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+export function rr(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
   ctx.beginPath();
   ctx.roundRect(x, y, w, h, r);
 }
 
 /** Text that shrinks until it fits `max` width */
-function fitText(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, max: number, size: number, weight: number, family = FONT) {
+export function fitText(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, max: number, size: number, weight: number, family = FONT) {
   let s = size;
   do {
     ctx.font = `${weight} ${s}px ${family}`;
@@ -66,7 +66,7 @@ function fitText(ctx: CanvasRenderingContext2D, text: string, x: number, y: numb
   ctx.fillText(text, x, y);
 }
 
-function drawQR(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, size: number, dark: string) {
+export function drawQR(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, size: number, dark: string) {
   const qr = qrcode(0, 'M');
   qr.addData(text);
   qr.make();

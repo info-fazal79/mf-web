@@ -31,6 +31,17 @@ html { scroll-padding-top: 4.5rem; }
   transition: box-shadow 0.2s;
 }
 .nk-headbar.is-stuck { box-shadow: 0 6px 18px -8px rgba(2, 30, 22, 0.55); }
+/* Photo card maker */
+.nk-pcard { background: linear-gradient(120deg, #fff 55%, #fbf5e3); }
+.nk-pcard-thumb { position: relative; width: 4.6rem; height: 5.75rem; border-radius: 0.7rem; background: linear-gradient(150deg, #0b5a43, #022a1f); box-shadow: 0 8px 18px -8px rgba(2, 42, 31, 0.6); transform: rotate(-5deg); border: 2px solid rgba(242, 201, 76, 0.6); }
+.nk-pcard-thumb-logo { position: absolute; top: 0.4rem; left: 50%; translate: -50% 0; display: grid; width: 1.4rem; height: 1.4rem; overflow: hidden; border-radius: 9999px; background: #e9ef9f; }
+.nk-pcard-thumb-logo img { width: 100%; height: 100%; object-fit: cover; }
+.nk-pcard-thumb-code { position: absolute; top: 2.15rem; left: 0.35rem; right: 0.35rem; border-radius: 0.3rem; background: #fff; color: #053d2d; font: 700 0.55rem/1.5 "JetBrains Mono", monospace; text-align: center; }
+.nk-pcard-thumb-qr { position: absolute; bottom: 0.4rem; left: 0.45rem; width: 1.25rem; height: 1.25rem; border-radius: 0.2rem; background: #fff repeating-conic-gradient(#053d2d 0 25%, #fff 0 50%) 0 0 / 0.42rem 0.42rem; }
+.nk-pc-look span { display: flex; align-items: center; justify-content: center; gap: 0.4rem; border: 1px solid #e7e1cf; border-radius: 0.75rem; padding: 0.5rem; font-size: 0.85rem; font-weight: 600; cursor: pointer; }
+.nk-pc-look span i { width: 1rem; height: 1rem; border-radius: 9999px; border: 1px solid rgba(0, 0, 0, 0.15); }
+.nk-pc-look input:checked + span { border-color: var(--color-emerald-600, #059669); background: #ecfdf5; box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.2); }
+.nk-pc-look input:focus-visible + span { outline: 2px solid #059669; outline-offset: 2px; }
 .nk-pattern {
   background-color: var(--color-emerald-900);
   background-image:

@@ -122,6 +122,7 @@ const cm0 = defaultCommunity();
             <li><a href="#feature" data-menu="feature" class="flex items-center gap-3 rounded-xl px-3 py-2.5 font-semibold text-emerald-950 hover:bg-emerald-50"><span class="text-emerald-700"><Fragment set:html={lucide('star', 'h-5 w-5')} /></span>কোড ফিচার করুন</a></li>
             <li><a href="#nk-today" data-menu="nk-today" class="flex items-center gap-3 rounded-xl px-3 py-2.5 font-semibold text-emerald-950 hover:bg-emerald-50"><span class="text-emerald-700"><Fragment set:html={lucide('crown', 'h-5 w-5')} /></span>সর্বশেষ বিজয়ী</a></li>
             <li><a href="#nk-quiz" data-menu="nk-quiz" class="flex items-center gap-3 rounded-xl px-3 py-2.5 font-semibold text-emerald-950 hover:bg-emerald-50"><span class="text-emerald-700"><Fragment set:html={lucide('target', 'h-5 w-5')} /></span>দৈনিক ইসলামিক কুইজ</a></li>
+            <li><a href="#nk-pcard" data-menu="nk-pcard" class="flex items-center gap-3 rounded-xl px-3 py-2.5 font-semibold text-emerald-950 hover:bg-emerald-50"><span class="text-emerald-700"><Fragment set:html={lucide('imageDown', 'h-5 w-5')} /></span>ফটো কার্ড বানান</a></li>
             <li><a href="#nk-ins" data-menu="nk-ins" class="flex items-center gap-3 rounded-xl px-3 py-2.5 font-semibold text-emerald-950 hover:bg-emerald-50"><span class="text-emerald-700"><Fragment set:html={lucide('chartLine', 'h-5 w-5')} /></span>লাইভ পরিসংখ্যান</a></li>
             <li><a href="#nk-winners" data-menu="nk-winners" class="flex items-center gap-3 rounded-xl px-3 py-2.5 font-semibold text-emerald-950 hover:bg-emerald-50"><span class="text-emerald-700"><Fragment set:html={lucide('trophy', 'h-5 w-5')} /></span>বাংলাদেশি বিজয়ীরা</a></li>
             <li><a href="#faq" data-menu="faq" class="flex items-center gap-3 rounded-xl px-3 py-2.5 font-semibold text-emerald-950 hover:bg-emerald-50"><span class="text-emerald-700"><Fragment set:html={lucide('circleHelp', 'h-5 w-5')} /></span>জরুরি প্রশ্ন ও উত্তর</a></li>
@@ -244,6 +245,22 @@ const cm0 = defaultCommunity();
           </div>
           <ol id="nk-quiz-top" class="grid gap-1"></ol>
           <button id="nk-quiz-board" type="button" class="nk-btn nk-ghost mt-3 w-full py-2.5 text-sm">পুরো লিডারবোর্ড দেখুন ›</button>
+        </div>
+      </section>
+
+      <!-- ===== Photo card maker (code + name + QR to this page) ===== -->
+      <section id="nk-pcard" class="nk-card nk-pcard mt-8 scroll-mt-4 overflow-hidden p-0" aria-labelledby="nk-pcard-h">
+        <div class="flex items-center gap-4 p-5 sm:p-6">
+          <div class="nk-pcard-thumb shrink-0" aria-hidden="true">
+            <span class="nk-pcard-thumb-logo"><img src="/nusuk/ribat-logo-96.webp" alt="" width="22" height="22" /></span>
+            <span class="nk-pcard-thumb-code">NG-••••</span>
+            <span class="nk-pcard-thumb-qr"></span>
+          </div>
+          <div class="min-w-0 flex-1">
+            <h2 id="nk-pcard-h" class="text-lg font-bold text-emerald-950">নিজের কোডের ফটো কার্ড বানান</h2>
+            <p class="mt-0.5 text-sm text-emerald-900/75">আপনার নাম ও কোড দিয়ে সুন্দর একটি কার্ড, সাথে আমাদের QR কোড। ডাউনলোড করে ফেসবুকে শেয়ার করুন, বেশি মানুষ আপনার কোড ব্যবহার করবে।</p>
+            <button id="nk-pc-open" type="button" class="nk-btn nk-green mt-3 flex items-center gap-2 px-4 py-2.5 text-sm"><Fragment set:html={lucide('imageDown', 'h-4 w-4', 2.2)} /> ফটো কার্ড তৈরি করুন</button>
+          </div>
         </div>
       </section>
 
@@ -665,6 +682,39 @@ const cm0 = defaultCommunity();
       </div>
     </dialog>
 
+    <dialog id="nk-pc" class="nk-scroll m-auto max-h-[calc(100dvh-1.5rem)] w-[calc(100%-1.5rem)] max-w-md overflow-y-auto overflow-x-hidden rounded-[1.25rem] p-0 shadow-2xl backdrop:bg-emerald-950/60" aria-labelledby="nk-pc-title">
+      <form id="nk-pc-form" method="dialog" class="grid gap-3 p-5" novalidate>
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <h2 id="nk-pc-title" class="text-lg font-bold text-emerald-900">আপনার ফটো কার্ড</h2>
+            <p class="text-sm text-emerald-900/70">তথ্য দিন, নিচে কার্ডটি দেখে ডাউনলোড করুন।</p>
+          </div>
+          <button type="button" id="nk-pc-close" class="grid h-9 w-9 shrink-0 place-items-center rounded-full text-xl text-emerald-900/60 hover:bg-emerald-50" aria-label="বন্ধ করুন">×</button>
+        </div>
+        <label><span class="mb-1 block text-sm font-semibold">আপনার নাম</span>
+          <input id="nk-pc-name" maxlength="40" autocomplete="name" class="nk-input" placeholder="কার্ডে যে নাম দেখাবে" /></label>
+        <label><span class="mb-1 block text-sm font-semibold">আপনার নুসুক রেফারেল কোড *</span>
+          <input id="nk-pc-code" maxlength="40" autocomplete="off" autocapitalize="off" spellcheck="false" class="nk-input font-mono tracking-wider" placeholder="NG-xxxxxxxx" />
+          <span id="nk-pc-hint" class="mt-1 hidden text-xs text-emerald-900/60">এই ডিভাইসে আগে ব্যবহার করা কোডটি বসানো হয়েছে। চাইলে বদলাতে পারেন।</span>
+          <span id="nk-pc-err" class="mt-1 hidden text-xs text-red-700">কোডটি সঠিক নয়। NG- দিয়ে শুরু, তারপর ৮টি অক্ষর বা সংখ্যা।</span></label>
+        <label><span class="mb-1 block text-sm font-semibold">কার্ডের বার্তা</span>
+          <select id="nk-pc-msg" class="nk-input"></select></label>
+        <fieldset>
+          <legend class="mb-1 text-sm font-semibold">রং</legend>
+          <div class="grid grid-cols-3 gap-2">
+            <label class="nk-pc-look"><input type="radio" name="nk-pc-look" value="green" class="peer sr-only" /><span><i style="background:linear-gradient(135deg,#0b5a43,#022a1f)"></i>সবুজ</span></label>
+            <label class="nk-pc-look"><input type="radio" name="nk-pc-look" value="gold" class="peer sr-only" /><span><i style="background:linear-gradient(135deg,#fffaf0,#ead9a8)"></i>ক্রিম</span></label>
+            <label class="nk-pc-look"><input type="radio" name="nk-pc-look" value="night" class="peer sr-only" /><span><i style="background:linear-gradient(135deg,#1c2c55,#060b17)"></i>নীল</span></label>
+          </div>
+        </fieldset>
+        <canvas id="nk-pc-canvas" width="1080" height="1350" class="w-full rounded-xl border border-[#e7e1cf] bg-emerald-950/5" aria-label="ফটো কার্ডের প্রিভিউ"></canvas>
+        <div class="grid grid-cols-2 gap-2">
+          <button type="button" id="nk-pc-dl" class="nk-btn nk-green flex items-center justify-center gap-2 py-3 text-sm disabled:opacity-50"><Fragment set:html={lucide('download', 'h-4 w-4', 2.2)} /> ডাউনলোড</button>
+          <button type="button" id="nk-pc-share" class="nk-btn nk-ghost flex items-center justify-center gap-2 py-3 text-sm disabled:opacity-50"><Fragment set:html={lucide('share', 'h-4 w-4', 2.2)} /> শেয়ার</button>
+        </div>
+        <p class="text-center text-xs text-emerald-900/60">ছবিটি আপনার ফোন/কম্পিউটারেই তৈরি হয়, কোথাও আপলোড হয় না।</p>
+      </form>
+    </dialog>
     <dialog id="nk-fb" class="m-auto w-[calc(100%-2rem)] max-w-md rounded-[1.25rem] p-0 shadow-2xl backdrop:bg-emerald-950/60" aria-labelledby="nk-fb-title">
       <form id="nk-fb-form" class="grid gap-3 p-5" novalidate>
         <div class="flex items-start justify-between gap-3">
@@ -727,6 +777,8 @@ const cm0 = defaultCommunity();
       import { initCampaign } from './_lib/campaign';
       import { parsePopup, popupRunning } from './_lib/popup';
       import { initLive } from './_lib/live';
+      import { initPhotoCard } from './_lib/photocard';
+      initPhotoCard();
       import { CODE_RE, countdownText, countryName, defaultVideoLabel, flagUrl, parseToday, parseTopBar, parseVideo, subscribeUrl, parseWinners, prizeLabel, type Winner } from './_lib/content';
 
       // Bangladesh flag (green field, red disc set toward the hoist). Inline SVG so it renders on every OS.

@@ -8,6 +8,7 @@ import {
 } from '../_lib/club';
 import { drawCard, cardBlob } from '../_lib/clubcard';
 import { bnPlace } from '../_lib/clubdraw';
+import { rememberMyCode } from '../_lib/photocard';
 
 const DISTRICTS = 'ঢাকা,গাজীপুর,নারায়ণগঞ্জ,নরসিংদী,মুন্সিগঞ্জ,মানিকগঞ্জ,টাঙ্গাইল,কিশোরগঞ্জ,ফরিদপুর,গোপালগঞ্জ,মাদারীপুর,শরীয়তপুর,রাজবাড়ী,চট্টগ্রাম,কক্সবাজার,কুমিল্লা,ফেনী,নোয়াখালী,লক্ষ্মীপুর,চাঁদপুর,ব্রাহ্মণবাড়িয়া,খাগড়াছড়ি,রাঙ্গামাটি,বান্দরবান,রাজশাহী,নাটোর,নওগাঁ,চাঁপাইনবাবগঞ্জ,পাবনা,সিরাজগঞ্জ,বগুড়া,জয়পুরহাট,খুলনা,যশোর,সাতক্ষীরা,বাগেরহাট,ঝিনাইদহ,মাগুরা,নড়াইল,কুষ্টিয়া,চুয়াডাঙ্গা,মেহেরপুর,বরিশাল,পটুয়াখালী,ভোলা,পিরোজপুর,ঝালকাঠি,বরগুনা,সিলেট,মৌলভীবাজার,হবিগঞ্জ,সুনামগঞ্জ,রংপুর,দিনাজপুর,ঠাকুরগাঁও,পঞ্চগড়,নীলফামারী,লালমনিরহাট,কুড়িগ্রাম,গাইবান্ধা,ময়মনসিংহ,জামালপুর,শেরপুর,নেত্রকোনা,দেশের বাইরে'.split(',');
 
@@ -54,7 +55,8 @@ export default function ClubApp() {
     if (e) { setError(errText(e)); return; }
     setError('');
     setMe(data as ClubMe);
-    markJoined(Boolean((data as ClubMe).member)); // the /nusuk top bar (50 Keys offer) is hidden for members
+    markJoined(Boolean((data as ClubMe).member));
+    if ((data as ClubMe).member?.nusuk_code) rememberMyCode((data as ClubMe).member!.nusuk_code); // photo card on /nusuk // the /nusuk top bar (50 Keys offer) is hidden for members
   }, []);
 
   useEffect(() => {
