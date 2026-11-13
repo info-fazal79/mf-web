@@ -246,7 +246,7 @@ export function initPhotoCard() {
   msgIn.addEventListener('change', redraw);
   looks.forEach((l) => l.addEventListener('change', redraw));
 
-  if (!navigator.canShare) share.classList.add('hidden');
+  if (!navigator.canShare && !/FBAN|FBAV|FB_IAB|FBIOS|FB4A|Messenger|Instagram/i.test(navigator.userAgent)) share.classList.add('hidden');
 
   open.addEventListener('click', () => {
     if (!codeIn.value) codeIn.value = myCode();
@@ -261,10 +261,60 @@ export function initPhotoCard() {
   dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
 
   const keep = () => { rememberMyCode(code()); put(MY_NAME, nameIn.value.trim().slice(0, 40)); put(MY_LOOK, theme()); };
-  // count it for Nusuk Manager → Photo cards (never blocks the download)
+  // count it for Nusuk Manager → Photo cards (never blocks the download).
+  // Pressing again within a minute (same code, same action) is not counted twice.
   const track = (action: 'download' | 'share') => {
+    const k = `nusuk:pc:${action}:${code()}`;
+    try { if (Date.now() - Number(sessionStorage.getItem(k) || 0) < 60_000) return; sessionStorage.setItem(k, String(Date.now())); } catch {}
     rpc('nusuk_photocard_log', { p_action: action, p_code: code(), p_name: nameIn.value.trim().slice(0, 40), p_theme: theme(), p_msg: Number(msgIn.value) || 0, p_device: deviceId() }).catch(() => {});
   };
+
+  // Facebook / Messenger / Instagram open links in their own browser, which can't download a file or
+  // share a picture. There the card is shown big to save by long-press, with a way to open the real browser.
+  const UA = navigator.userAgent;
+  const inApp = /FBAN|FBAV|FB_IAB|FBIOS|FB4A|Messenger|Instagram|Line\/|; wv\)/i.test(UA);
+  const isIOS = /iPhone|iPad|iPod/i.test(UA);
+  const reopenUrl = () => {
+    const q = new URLSearchParams({ pc: code(), pct: theme() });
+    if (nameIn.value.trim()) q.set('pcn', nameIn.value.trim().slice(0, 40));
+    if (Number(msgIn.value)) q.set('pcm', msgIn.value);
+    return `${location.origin}/nusuk?${q}`;
+  };
+  const browserUrl = () => {
+    const u = reopenUrl();
+    if (isIOS) return `x-safari-${u}`; // opens Safari from in-app browsers
+    const rest = u.replace(/^https?:\/\//, '');
+    return `intent://${rest}#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=${encodeURIComponent(u)};end`;
+  };
+  function saveSheet(dataUrl: string, shared: boolean) {
+    dlg!.querySelector('.nk-pc-save')?.remove();
+    const box = document.createElement('div');
+    box.className = 'nk-pc-save fixed inset-0 z-50 flex flex-col items-center justify-center gap-3 overflow-y-auto bg-[#04241b] p-4 text-center text-white';
+    box.innerHTML = `
+      <p class="max-w-sm text-base font-bold leading-snug">${shared ? 'ক্যাপশন কপি হয়েছে। ' : ''}ছবিটির ওপর আঙুল <u>চেপে ধরে</u> রাখুন, তারপর <b>Download image</b> বা <b>Save image</b> চাপুন</p>
+      <img src="${dataUrl}" alt="আপনার ফটোকার্ড" class="max-h-[62vh] w-auto max-w-full rounded-xl shadow-2xl" style="-webkit-touch-callout: default; user-select: auto;" />
+      ${inApp ? `<p class="max-w-sm text-sm text-white/80">ফেসবুক/মেসেঞ্জারের ভেতরের ব্রাউজারে সরাসরি ডাউনলোড হয় না। না হলে নিচের বাটনে ব্রাউজারে খুলুন, সেখানে এক ক্লিকে ডাউনলোড হবে।</p>
+      <a href="${browserUrl()}" class="nk-btn nk-gold px-5 py-2.5 text-base">${isIOS ? 'Safari-তে খুলুন' : 'Chrome-এ খুলুন'}</a>` : ''}
+      <button type="button" class="nk-pc-save-close rounded-full bg-white/15 px-5 py-2 text-sm font-semibold hover:bg-white/25">বন্ধ করুন</button>`;
+    box.querySelector('.nk-pc-save-close')!.addEventListener('click', () => box.remove());
+    box.addEventListener('click', (e) => { if (e.target === box) box.remove(); });
+    dlg!.appendChild(box); // inside the dialog, so it sits above it
+  }
+
+  // came back from "open in browser": fill the card in again and open it
+  {
+    const q = new URLSearchParams(location.search);
+    const pc = q.get('pc');
+    if (pc && CODE_RE.test(pc)) {
+      codeIn.value = pc;
+      if (q.get('pcn')) nameIn.value = q.get('pcn')!.slice(0, 40);
+      const lk = q.get('pct');
+      if (lk) put(MY_LOOK, lk);
+      if (q.get('pcm')) msgIn.value = q.get('pcm')!;
+      history.replaceState(null, '', location.pathname + location.hash);
+      setTimeout(() => open.click(), 600);
+    }
+  }
   const blob = () => new Promise<Blob | null>((res) => canvas.toBlob(res, 'image/png'));
   const fileName = () => `nusuk-code-${code()}.png`;
   const caption = () => capIn.value.trim() || cardCaption(code());
@@ -274,6 +324,7 @@ export function initPhotoCard() {
     if (!valid()) return;
     keep();
     if (!viaShare) track('download');
+    if (inApp) { saveSheet(canvas.toDataURL('image/png'), viaShare); return; }
     const b = await blob();
     if (!b) return;
     const url = URL.createObjectURL(b);
@@ -292,7 +343,11 @@ export function initPhotoCard() {
       if (navigator.canShare?.({ files: [file] })) {
         await navigator.share({ files: [file], text: caption() });
         track('share');
-      } else { track('share'); viaShare = true; dl.click(); viaShare = false; }
+      } else {
+        track('share');
+        try { await navigator.clipboard.writeText(caption()); } catch {}
+        viaShare = true; dl.click(); viaShare = false;
+      }
     } catch { /* cancelled */ }
   });
 }
