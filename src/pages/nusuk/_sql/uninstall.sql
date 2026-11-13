@@ -106,4 +106,7 @@ drop table if exists public.nusuk_quiz_questions;
 drop table if exists public.nusuk_quiz_settings;
 drop table if exists public.nusuk_codes;
 drop function if exists public.nusuk_codes_mark_approved();
+drop function if exists public.nusuk_admin_photocards(int);
+drop function if exists public.nusuk_photocard_log(text, text, text, text, int, text);
+drop table if exists public.nusuk_photocards;
 drop table if exists public.nusuk_settings;

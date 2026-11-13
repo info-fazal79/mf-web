@@ -6,17 +6,32 @@
  */
 import { CARD_H, CARD_W, CARD_THEMES, FONT, LOOKS, MONO, drawQR, fitText, loadImage, rr, type CardTheme } from './clubcard';
 import { CODE_RE } from './content';
+import { rpc } from './rpc';
 
 const SITE = 'https://muhammadfazal.com/nusuk/';
 const MY_CODE = 'nusuk:mycode:v1';
 const MY_NAME = 'nusuk:cardname:v1';
 const MY_LOOK = 'nusuk:cardlook:v1';
 
+/** Order matters: the index is saved with each download/share (Nusuk Manager → Photo cards). Add new ones at the end. */
 export const CARD_MESSAGES = [
-  'আমার কোড ব্যবহার করে উমরাহর পথে আমাকে সাহায্য করুন',
+  'আপনার ছোট্ট সহযোগিতা, আমার উমরাহর স্বপ্নের পথে এক ধাপ',
   'দোয়া করবেন, আল্লাহ যেন উমরাহর তাওফিক দেন',
   'চলুন, একসাথে উমরাহর স্বপ্ন পূরণ করি',
+  'আল্লাহর ঘরের মেহমান হওয়ার স্বপ্ন দেখি',
+  'কাবার পথে একসাথে, ইনশাআল্লাহ',
 ];
+
+/** the same anonymous device id the rest of /nusuk uses */
+function deviceId() {
+  const k = 'nusuk:device:v1';
+  let id = get(k);
+  if (!/^[0-9a-f-]{36}$/i.test(id)) {
+    id = typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : '';
+    if (id) put(k, id);
+  }
+  return id;
+}
 
 const get = (k: string) => { try { return localStorage.getItem(k) ?? ''; } catch { return ''; } };
 const put = (k: string, v: string) => { try { localStorage.setItem(k, v); } catch { /* private mode */ } };
@@ -203,13 +218,19 @@ export function initPhotoCard() {
   dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
 
   const keep = () => { rememberMyCode(code()); put(MY_NAME, nameIn.value.trim().slice(0, 40)); put(MY_LOOK, theme()); };
+  // count it for Nusuk Manager → Photo cards (never blocks the download)
+  const track = (action: 'download' | 'share') => {
+    rpc('nusuk_photocard_log', { p_action: action, p_code: code(), p_name: nameIn.value.trim().slice(0, 40), p_theme: theme(), p_msg: Number(msgIn.value) || 0, p_device: deviceId() }).catch(() => {});
+  };
   const blob = () => new Promise<Blob | null>((res) => canvas.toBlob(res, 'image/png'));
   const fileName = () => `nusuk-code-${code()}.png`;
   const caption = () => `আমার নুসুক রেফারেল কোড: ${code()}\nনুসুক অ্যাপে কোডটি বসিয়ে দিন। আরও কোড পেতে: muhammadfazal.com/nusuk\n#NusukUmrah #RibatulUmmah`;
 
+  let viaShare = false;
   dl.addEventListener('click', async () => {
     if (!valid()) return;
     keep();
+    if (!viaShare) track('download');
     const b = await blob();
     if (!b) return;
     const url = URL.createObjectURL(b);
@@ -225,8 +246,10 @@ export function initPhotoCard() {
     if (!b) return;
     const file = new File([b], fileName(), { type: 'image/png' });
     try {
-      if (navigator.canShare?.({ files: [file] })) await navigator.share({ files: [file], text: caption() });
-      else dl.click();
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], text: caption() });
+        track('share');
+      } else { track('share'); viaShare = true; dl.click(); viaShare = false; }
     } catch { /* cancelled */ }
   });
 }
