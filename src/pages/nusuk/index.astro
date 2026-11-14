@@ -240,15 +240,15 @@ const cm0 = defaultCommunity();
       <section id="nk-dm" class="nk-card nk-dm mt-8 scroll-mt-20 overflow-hidden p-0" aria-labelledby="nk-dm-h">
         <div class="nk-dm-head px-5 pt-5 pb-4 text-white sm:px-6">
           <div class="flex items-start gap-3">
-            <span class="nk-dm-icon grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white/15 text-gold-100" aria-hidden="true"><Fragment set:html={lucide('mapPin', 'h-6 w-6', 2.2)} /></span>
+            <span class="nk-dm-icon grid h-11 w-11 shrink-0 place-items-center rounded-2xl text-gold-100" aria-hidden="true"><Fragment set:html={lucide('mapPin', 'h-6 w-6', 2.2)} /></span>
             <div class="min-w-0 flex-1">
               <h2 id="nk-dm-h" class="text-lg font-bold leading-tight">আপনার জেলা কতটা এগিয়ে?</h2>
               <p class="mt-1 text-sm text-emerald-50/85">যারা এই পেজে <b class="text-gold-100">অ্যাকাউন্ট খুলেছেন</b>, তারা কোন জেলা থেকে। অ্যাকাউন্ট খুললেই আপনার জেলা ম্যাপে গাঢ় সবুজ হয়ে উঠবে, সংখ্যাও বাড়বে। নিজের জেলাকে এগিয়ে নিন!</p>
             </div>
           </div>
           <div class="mt-4 grid grid-cols-2 gap-2 text-center">
-            <div class="rounded-xl bg-white/10 px-2 py-2"><div class="text-xs text-emerald-50/80">মোট অ্যাকাউন্ট</div><div id="nk-dm-total" class="text-xl font-bold tabular-nums text-gold-100">…</div></div>
-            <div class="rounded-xl bg-white/10 px-2 py-2"><div class="text-xs text-emerald-50/80">যুক্ত হওয়া জেলা</div><div id="nk-dm-dists" class="text-xl font-bold tabular-nums text-gold-100">…</div></div>
+            <div class="nk-dm-stat rounded-xl px-2 py-2"><div class="text-xs text-emerald-50/80">মোট অ্যাকাউন্ট</div><div id="nk-dm-total" class="text-xl font-bold tabular-nums text-gold-100">…</div></div>
+            <div class="nk-dm-stat rounded-xl px-2 py-2"><div class="text-xs text-emerald-50/80">যুক্ত হওয়া জেলা</div><div id="nk-dm-dists" class="text-xl font-bold tabular-nums text-gold-100">…</div></div>
           </div>
         </div>
         <div class="px-3 pt-3 pb-5 sm:px-6">
@@ -264,7 +264,7 @@ const cm0 = defaultCommunity();
           <div id="nk-dm-info" class="nk-dm-info mt-2 hidden" aria-live="polite"></div>
           <p class="mt-2 text-center text-xs text-emerald-900/60">দুই আঙুলে জুম করুন, টেনে ম্যাপ সরান। কোনো জেলায় চাপ দিলে জেলাটি মাঝখানে বড় হয়ে দেখাবে।</p>
           <h3 class="mt-4 mb-2 text-sm font-bold text-emerald-900">🏆 এগিয়ে থাকা জেলা</h3>
-          <ol id="nk-dm-top" class="flex flex-wrap gap-1.5"></ol>
+          <ol id="nk-dm-top" class="flex flex-wrap justify-center gap-1.5"></ol>
           <button type="button" id="nk-dm-allbtn" class="nk-btn nk-ghost mt-2 w-full py-2.5 text-sm">সব জেলা দেখুন ›</button>
           <ol id="nk-dm-all" class="nk-dm-all nk-scroll mt-2 hidden"></ol>
           <p id="nk-dm-abroad" class="mt-2 hidden text-xs text-emerald-900/70"></p>

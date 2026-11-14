@@ -37,6 +37,7 @@ export function initDistrictMap() {
   let prev: Map<string, number> | null = null;
   let abroad = 0;
   let loading = false;
+  let tries = 0;
   let timer: ReturnType<typeof setInterval> | undefined;
 
   // -------- which district a typed name belongs to --------
@@ -75,8 +76,10 @@ export function initDistrictMap() {
       sec!.classList.remove('hidden');
       await findMine();
       render(data.total || 0);
-    } catch {
-      /* keep what is on screen */
+    } catch (e) {
+      // keep what is on screen; if nothing is drawn yet, try again soon
+      console.warn('district map', e);
+      if (!svg && ++tries <= 5) setTimeout(() => { loading = false; load(); }, 4000 * tries);
     } finally { loading = false; }
   }
 
