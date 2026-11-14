@@ -1422,6 +1422,7 @@ const cm0 = defaultCommunity();
         toastTimer = setTimeout(() => (t.style.opacity = '0'), 1600);
       }
 
+      let lastCopied: { code: string; at: number } | null = null;
       // Copy (and count) the shown code; `afterCopy` runs right after the copy, before the next code loads
       async function copyCurrent(afterCopy?: (code: string) => void) {
         if (!current || busy) return;
@@ -1430,6 +1431,7 @@ const cm0 = defaultCommunity();
         const ok = await copyText(c.code);
         if (!ok) { status.textContent = 'কপি হয়নি, কোডটি চেপে ধরে কপি করুন'; busy = false; return; }
         toast();
+        lastCopied = { code: c.code, at: Date.now() };
         afterCopy?.(c.code);
         clubCopied();
         used = [...used.filter((u) => u.id !== c.id), { id: c.id, code: c.code, at: Date.now() }].slice(-800);
@@ -1460,13 +1462,14 @@ const cm0 = defaultCommunity();
         const ua = navigator.userAgent;
         if (/iPhone|iPad|iPod/i.test(ua)) { location.href = NUSUK_IOS; return; } // App Store: "Open" when installed
         if (/Android/i.test(ua)) {
-          // open the app if it is installed, otherwise its Play Store page
-          location.href = `intent:#Intent;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;package=${NUSUK_ANDROID};S.browser_fallback_url=${encodeURIComponent(NUSUK_PLAY)};end`;
+          // Chrome won't start an app by its package alone. Ask the Nusuk app to open Nusuk's own web
+          // address instead: if the app handles nusuk.sa links it opens straight away, otherwise the
+          // Play Store page opens (where "Open" starts the app).
+          location.href = `intent://www.nusuk.sa/#Intent;scheme=https;package=${NUSUK_ANDROID};S.browser_fallback_url=${encodeURIComponent(NUSUK_PLAY)};end`;
         }
         // computer: nothing to open; the hint says to paste it in the app on the phone
       }
-      openBtn.addEventListener('click', () => {
-        copyCurrent((code) => {
+      function openWithCode(code: string) {
           const hint = $('nk-open-hint');
           const mobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
           hint.innerHTML = `✓ <b class="font-mono">${code}</b> কপি হয়েছে। ${mobile ? 'Nusuk অ্যাপ খুলছে…' : 'ফোনে Nusuk অ্যাপ খুলুন।'} সেখানে <b>Start the Challenge</b> চেপে কোডের ঘরে আঙুল চেপে ধরে <b>Paste</b> করুন।`;
@@ -1474,7 +1477,17 @@ const cm0 = defaultCommunity();
           clearTimeout(openHintTimer);
           openHintTimer = setTimeout(() => hint.classList.add('hidden'), 15_000);
           openNusukApp();
-        });
+      }
+      openBtn.addEventListener('click', async () => {
+        // Just pressed "Copy Code"? Open Nusuk with THAT code (copied again, not counted twice).
+        // Otherwise copy the shown code first.
+        if (lastCopied && Date.now() - lastCopied.at < 15 * 60_000) {
+          const ok = await copyText(lastCopied.code);
+          if (!ok) { status.textContent = 'কপি হয়নি, কোডটি চেপে ধরে কপি করুন'; return; }
+          openWithCode(lastCopied.code);
+          return;
+        }
+        copyCurrent(openWithCode);
       });
 
       skipBtn.addEventListener('click', async () => {
