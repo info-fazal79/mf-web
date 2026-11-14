@@ -120,8 +120,8 @@ import { lucide } from './_lib/lucide';
       .ls-bk-dot { position: relative; width: 18px; height: 18px; border-radius: 9999px; background: #fff; flex-shrink: 0; }
       .ls-bk-dot::after { content: ''; position: absolute; inset: 0; border-radius: 9999px; background: #fff; animation: ls-bk-ping 1.2s cubic-bezier(0, 0, 0.2, 1) infinite; }
       @keyframes ls-bk-ping { 75%, 100% { transform: scale(2.4); opacity: 0; } }
-      /* text runs only to the right of the label (no fade over the label edge) */
-      .ls-bk-body { position: relative; flex: 1; min-width: 0; overflow: hidden; background: #ffffff; }
+      /* text slides under the slanted edge of the label (no white strip, no fade) */
+      .ls-bk-body { position: relative; flex: 1; min-width: 0; margin-left: -26px; overflow: hidden; background: #ffffff; }
       .ls-bk-body::after { content: ''; position: absolute; top: 0; bottom: 0; right: 0; width: 60px; z-index: 1; pointer-events: none; background: linear-gradient(270deg, #ffffff, transparent); }
       .ls-bk-track { position: absolute; top: 0; bottom: 0; left: 0; display: flex; align-items: center; white-space: nowrap; will-change: transform; }
       :global(.ls-bk-text) { font-size: 36px; font-weight: 700; color: #111827; }
