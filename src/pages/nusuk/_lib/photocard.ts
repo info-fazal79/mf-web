@@ -236,8 +236,7 @@ export function initPhotoCard() {
     t = window.setTimeout(async () => {
       const ok = valid();
       err.classList.toggle('hidden', ok || !code());
-      dl.disabled = !ok;
-      share.disabled = !ok;
+      if (!working) { dl.disabled = !ok; share.disabled = !ok; }
       syncCaption();
       await drawPhotoCard(canvas, { code: ok ? code() : '', name: nameIn.value.slice(0, 40), message: CARD_MESSAGES[Number(msgIn.value)] ?? '', theme: theme() });
     }, 120);
@@ -319,36 +318,73 @@ export function initPhotoCard() {
   const fileName = () => `nusuk-code-${code()}.png`;
   const caption = () => capIn.value.trim() || cardCaption(code());
 
+  // While a download / share is being made: the button shows a spinner and can't be pressed again,
+  // then "✓ …" for a moment, so people see it worked and don't press over and over.
+  const SPIN = '<svg class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="3" opacity="0.25"/><path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>';
+  const idle = { dl: dl.innerHTML, share: share.innerHTML };
+  let working = false;
+  const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+  function startBusy(btn: HTMLButtonElement, text: string) {
+    working = true;
+    dl.disabled = true; share.disabled = true;
+    btn.setAttribute('aria-busy', 'true');
+    btn.innerHTML = `${SPIN} ${text}`;
+    return Date.now();
+  }
+  async function endBusy(btn: HTMLButtonElement, done: string | null, started: number) {
+    await wait(Math.max(0, 700 - (Date.now() - started))); // long enough to be seen
+    if (done) { btn.innerHTML = `<span aria-hidden="true">✓</span> ${done}`; await wait(2200); }
+    dl.innerHTML = idle.dl; share.innerHTML = idle.share;
+    btn.removeAttribute('aria-busy');
+    working = false;
+    dl.disabled = !valid(); share.disabled = !valid();
+  }
+
   let viaShare = false;
-  dl.addEventListener('click', async () => {
-    if (!valid()) return;
+  async function download(fromShare: boolean) {
     keep();
-    if (!viaShare) track('download');
-    if (inApp) { saveSheet(canvas.toDataURL('image/png'), viaShare); return; }
+    if (!fromShare) track('download');
+    if (inApp) { saveSheet(canvas.toDataURL('image/png'), fromShare); return 'sheet'; }
     const b = await blob();
-    if (!b) return;
+    if (!b) return 'fail';
     const url = URL.createObjectURL(b);
     const a = document.createElement('a');
     a.href = url; a.download = fileName();
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 4000);
+    return 'ok';
+  }
+  dl.addEventListener('click', async () => {
+    if (!valid() || working) return;
+    const t0 = startBusy(dl, 'তৈরি হচ্ছে…');
+    let r: string = 'fail';
+    try { r = await download(viaShare); } catch { r = 'fail'; }
+    await endBusy(dl, r === 'ok' ? 'ডাউনলোড হয়েছে' : r === 'fail' ? 'আবার চেষ্টা করুন' : null, t0);
   });
   share.addEventListener('click', async () => {
-    if (!valid()) return;
-    keep();
-    const b = await blob();
-    if (!b) return;
-    const file = new File([b], fileName(), { type: 'image/png' });
+    if (!valid() || working) return;
+    const t0 = startBusy(share, 'খুলছে…');
+    let done: string | null = null;
     try {
-      if (navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ files: [file], text: caption() });
-        track('share');
-      } else {
-        track('share');
-        try { await navigator.clipboard.writeText(caption()); } catch {}
-        viaShare = true; dl.click(); viaShare = false;
+      keep();
+      const b = await blob();
+      if (b) {
+        const file = new File([b], fileName(), { type: 'image/png' });
+        if (navigator.canShare?.({ files: [file] })) {
+          await navigator.share({ files: [file], text: caption() });
+          track('share');
+          done = 'শেয়ার হয়েছে';
+        } else {
+          track('share');
+          try { await navigator.clipboard.writeText(caption()); } catch {}
+          viaShare = true;
+          const r = await download(true);
+          viaShare = false;
+          done = r === 'ok' ? 'ডাউনলোড হয়েছে' : null;
+        }
       }
     } catch { /* cancelled */ }
+    await endBusy(share, done, t0);
   });
 }
 
