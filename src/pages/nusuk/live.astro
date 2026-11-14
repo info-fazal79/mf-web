@@ -11,7 +11,10 @@ import { lucide } from './_lib/lucide';
 <html lang="bn">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+    <!-- no page zoom on phones (iOS ignores user-scalable, so pinch and double-tap are stopped here too) -->
+    <style is:inline>html { touch-action: pan-x pan-y; }</style>
+    <script is:inline>document.addEventListener('gesturestart', function (e) { e.preventDefault(); });</script>
     <meta name="robots" content="noindex, nofollow" />
     <title>Live · নুসুক উমরাহ কোড শেয়ার</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />

@@ -127,12 +127,7 @@ export function initDistrictMap() {
     });
     el('g', { class: 'nk-dm-pin' }, svg);
     box.append(svg);
-    svg.addEventListener('click', (e) => {
-      const g = (e.target as Element).closest<SVGGElement>('.nk-dm-d');
-      if (!g) return zoomTo(null);
-      const d = dists[Number(g.dataset.i)];
-      zoomTo(picked === d ? null : d);
-    });
+    gestures(svg);
     svg.addEventListener('keydown', (e) => {
       const g = (e.target as Element).closest<SVGGElement>('.nk-dm-d');
       if (g && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); const d = dists[Number(g.dataset.i)]; zoomTo(picked === d ? null : d); }
@@ -190,7 +185,12 @@ export function initDistrictMap() {
     const on = dists.filter((d) => d.n > 0).length;
     $('nk-dm-total').textContent = bn(total);
     $('nk-dm-dists').textContent = `${bn(on)}/৬৪`;
-    const top = [...dists].filter((d) => d.n > 0).sort((a, b) => b.n - a.n).slice(0, 5);
+    const ranked = [...dists].sort((a, b) => b.n - a.n || a.bn.localeCompare(b.bn, 'bn'));
+    const top = ranked.filter((d) => d.n > 0).slice(0, 3);
+    $('nk-dm-all').innerHTML = ranked.map((d, i) => `<li><button type="button" data-bn="${d.bn}" class="${d.n ? '' : 'nk-dm-zero'}${d.bn === mine ? ' nk-dm-me' : ''}">
+        <span class="nk-dm-r">${d.n ? bn(i + 1) : '–'}</span>
+        <span><b>${d.bn}</b>${d.bn === mine ? ' <span class="nk-dm-you-tag">আপনার জেলা</span>' : ''}${d.n ? `<span class="nk-dm-bar" style="width:${Math.max(4, (d.n / Math.max(max, 1)) * 100)}%"></span>` : ''}</span>
+        <span class="nk-dm-n">${bn(d.n)}</span></button></li>`).join('');
     $('nk-dm-top').innerHTML = top.length
       ? top.map((d, i) => `<li><button type="button" data-bn="${d.bn}" class="nk-dm-chip${d.bn === mine ? ' nk-dm-chip-mine' : ''}"><b>${bn(i + 1)}</b> ${d.bn} <span>${bn(d.n)}</span></button></li>`).join('')
       : '<li class="text-sm text-emerald-900/60">এখনো কোনো জেলা যুক্ত হয়নি, প্রথম জেলাটি আপনার হোক!</li>';
@@ -200,7 +200,7 @@ export function initDistrictMap() {
     const cta = $('nk-dm-cta');
     const you = $('nk-dm-you');
     if (mineD) {
-      const rank = [...dists].sort((a, b) => b.n - a.n).findIndex((d) => d === mineD) + 1;
+      const rank = ranked.indexOf(mineD) + 1;
       you.innerHTML = `আপনার জেলা <b>${mineD.bn}</b>: ${bn(mineD.n)} জন · অবস্থান <b>${bn(rank)}</b> নম্বরে। পরিচিতদের অ্যাকাউন্ট খুলতে বলুন, জেলাকে এগিয়ে নিন!`;
       you.classList.remove('hidden');
       cta.classList.add('hidden');
@@ -227,33 +227,148 @@ export function initDistrictMap() {
     if (matchMedia('(prefers-reduced-motion: reduce)').matches) { vb = to; svg!.setAttribute('viewBox', vb.join(' ')); return; }
     anim = requestAnimationFrame(step);
   }
+  /** zoomed in (by a tap, the buttons or two fingers): one finger then moves the map instead of the page */
+  function zoomedState(to: number[]) {
+    const z = to[2] < W * 0.97;
+    svg!.classList.toggle('nk-dm-zoomed', z);
+    $('nk-dm-reset').classList.toggle('hidden', !z);
+  }
+  /** keep the view on the map (any district can still sit in the middle) */
+  function clamp(v: number[]) {
+    const w = Math.min(W, Math.max(W / 14, v[2]));
+    const h = (w * H) / W;
+    const cx = Math.min(W, Math.max(0, v[0] + v[2] / 2)), cy = Math.min(H, Math.max(0, v[1] + v[3] / 2));
+    return w >= W ? [0, 0, W, H] : [cx - w / 2, cy - h / 2, w, h];
+  }
+  function show(v: number[], animate: boolean) {
+    const to = clamp(v);
+    zoomedState(to);
+    if (animate) setVb(to);
+    else { cancelAnimationFrame(anim); vb = to; svg!.setAttribute('viewBox', vb.join(' ')); }
+  }
+  /** screen point → map point (the svg keeps its shape, centred) */
+  function toMap(x: number, y: number, v = vb) {
+    const r = svg!.getBoundingClientRect();
+    const s = Math.min(r.width / v[2], r.height / v[3]);
+    const ox = r.left + (r.width - v[2] * s) / 2, oy = r.top + (r.height - v[3] * s) / 2;
+    return [v[0] + (x - ox) / s, v[1] + (y - oy) / s, s];
+  }
+  /** zoom by k keeping map point (mx, my) under screen point (sx, sy) */
+  function zoomAt(k: number, sx: number, sy: number, base = vb, animate = false) {
+    const [mx, my] = toMap(sx, sy, base);
+    const w = Math.min(W, Math.max(W / 14, base[2] / k));
+    const h = (w * H) / W;
+    const f = w / base[2];
+    show([mx - (mx - base[0]) * f, my - (my - base[1]) * f, w, h], animate);
+  }
+  function zoomCenter(k: number) {
+    const r = svg!.getBoundingClientRect();
+    zoomAt(k, r.left + r.width / 2, r.top + r.height / 2, vb, true);
+  }
+
+  function gestures(el: SVGSVGElement) {
+    const pts = new Map<number, { x: number; y: number }>();
+    let start: { x: number; y: number; vb: number[]; d: number; mx: number; my: number } | null = null;
+    let moved = false;
+    let downAt = { x: 0, y: 0 };
+    const two = () => [...pts.values()];
+    const begin = () => {
+      const p = two();
+      if (p.length >= 2) {
+        const [a, b] = p;
+        start = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, vb: [...vb], d: Math.hypot(a.x - b.x, a.y - b.y) || 1, mx: 0, my: 0 };
+      } else if (p.length === 1) start = { x: p[0].x, y: p[0].y, vb: [...vb], d: 0, mx: 0, my: 0 };
+      else start = null;
+    };
+    el.addEventListener('pointerdown', (e) => {
+      pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (pts.size === 1) { moved = false; downAt = { x: e.clientX, y: e.clientY }; }
+      if (pts.size === 2) moved = true; // a pinch is never a tap
+      cancelAnimationFrame(anim);
+      begin();
+    });
+    el.addEventListener('pointermove', (e) => {
+      if (!pts.has(e.pointerId) || !start) return;
+      pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      const p = two();
+      if (p.length >= 2) {
+        const [a, b] = p;
+        const d = Math.hypot(a.x - b.x, a.y - b.y);
+        const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+        // zoom around where the fingers started, then follow the fingers
+        const [px, py] = toMap(start.x, start.y, start.vb);
+        const w = Math.min(W, Math.max(W / 14, start.vb[2] * (start.d / d)));
+        const h = (w * H) / W;
+        const r = el.getBoundingClientRect();
+        const s = Math.min(r.width / w, r.height / h);
+        const ox = r.left + (r.width - w * s) / 2, oy = r.top + (r.height - h * s) / 2;
+        show([px - (mx - ox) / s, py - (my - oy) / s, w, h], false);
+        e.preventDefault();
+      } else if (p.length === 1) {
+        if (!moved && Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) < 8) return;
+        moved = true;
+        if (!el.classList.contains('nk-dm-zoomed')) return; // whole map: the page scrolls
+        el.classList.add('nk-dm-drag');
+        const [, , s] = toMap(0, 0, start.vb);
+        show([start.vb[0] - (e.clientX - start.x) / s, start.vb[1] - (e.clientY - start.y) / s, start.vb[2], start.vb[3]], false);
+        e.preventDefault();
+      }
+    });
+    const end = (e: PointerEvent) => {
+      if (!pts.has(e.pointerId)) return;
+      pts.delete(e.pointerId);
+      el.classList.remove('nk-dm-drag');
+      if (e.type === 'pointerup' && pts.size === 0 && !moved) {
+        // a tap: that district comes to the middle, big
+        const hit = document.elementFromPoint(e.clientX, e.clientY)?.closest<SVGGElement>('.nk-dm-d');
+        if (hit) { const d = dists[Number(hit.dataset.i)]; zoomTo(picked === d ? null : d); }
+      }
+      begin();
+    };
+    el.addEventListener('pointerup', end);
+    el.addEventListener('pointercancel', end);
+    el.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse') end(e); });
+    // mouse wheel / trackpad pinch: zoom only once zoomed in, or with Ctrl (so the page still scrolls)
+    el.addEventListener('wheel', (e) => {
+      if (!e.ctrlKey && !el.classList.contains('nk-dm-zoomed')) return;
+      e.preventDefault();
+      zoomAt(Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0025)), e.clientX, e.clientY);
+    }, { passive: false });
+  }
+
   function zoomTo(d: Dist | null) {
     picked = d;
-    svg!.classList.toggle('nk-dm-zoomed', !!d);
     dists.forEach((x) => x.el!.classList.toggle('nk-dm-picked', x === d));
-    $('nk-dm-reset').classList.toggle('hidden', !d);
-    if (!d) { setVb([0, 0, W, H]); $('nk-dm-info').classList.add('hidden'); return; }
+    if (!d) { show([0, 0, W, H], true); $('nk-dm-info').classList.add('hidden'); return; }
     const [x0, y0, x1, y1] = d.box;
     const pad = 22;
     let w = x1 - x0 + pad * 2, h = y1 - y0 + pad * 2;
     // keep the map's shape
     if (w / h > W / H) h = (w * H) / W; else w = (h * W) / H;
-    const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
-    setVb([cx - w / 2, cy - h / 2, w, h]);
+    const cx = d.lx, cy = d.ly; // the district (its name) right in the middle
+    show([cx - w / 2, cy - h / 2, w, h], true);
     info(d);
   }
   function info(d: Dist) {
-    const rank = d.n ? [...dists].sort((a, b) => b.n - a.n).findIndex((x) => x === d) + 1 : 0;
+    const rank = d.n ? [...dists].sort((a, b) => b.n - a.n || a.bn.localeCompare(b.bn, 'bn')).indexOf(d) + 1 : 0;
     const box = $('nk-dm-info');
     box.innerHTML = `<b class="text-base">${d.bn}</b>${d.bn === mine ? ' <span class="nk-dm-you-tag">আপনার জেলা</span>' : ''}
       <span>${d.n ? `${bn(d.n)} জন অ্যাকাউন্ট খুলেছেন · ${bn(rank)} নম্বরে` : 'এখনো কেউ অ্যাকাউন্ট খোলেননি, প্রথম জন হোন!'}</span>`;
     box.classList.remove('hidden');
   }
   $('nk-dm-reset').addEventListener('click', () => zoomTo(null));
-  $('nk-dm-top').addEventListener('click', (e) => {
+  $('nk-dm-in').addEventListener('click', () => svg && zoomCenter(1.6));
+  $('nk-dm-out').addEventListener('click', () => svg && zoomCenter(1 / 1.6));
+  const pick = (e: Event) => {
     const b = (e.target as Element).closest<HTMLButtonElement>('[data-bn]');
     const d = b && dists.find((x) => x.bn === b.dataset.bn);
     if (d) { zoomTo(d); svg?.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+  };
+  $('nk-dm-top').addEventListener('click', pick);
+  $('nk-dm-all').addEventListener('click', pick);
+  $('nk-dm-allbtn').addEventListener('click', () => {
+    const open = $('nk-dm-all').classList.toggle('hidden') === false;
+    $('nk-dm-allbtn').textContent = open ? 'তালিকা বন্ধ করুন ‹' : 'সব জেলা দেখুন ›';
   });
 
   // load when the section comes near; refresh every 90 s while the page is open and visible

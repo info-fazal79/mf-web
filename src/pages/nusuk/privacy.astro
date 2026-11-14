@@ -8,7 +8,10 @@ const updated = '১৩ নভেম্বর ২০২৬';
 <html lang="bn">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+    <!-- no page zoom on phones (iOS ignores user-scalable, so pinch and double-tap are stopped here too) -->
+    <style is:inline>html { touch-action: pan-x pan-y; }</style>
+    <script is:inline>document.addEventListener('gesturestart', function (e) { e.preventDefault(); });</script>
     <title>গোপনীয়তা নীতি | নুসুক কোড শেয়ার ও রিবাত উপহার প্রতিযোগিতা</title>
     <meta name="description" content="নুসুক কোড শেয়ার ও রিবাত উপহার প্রতিযোগিতাে আমরা কোন তথ্য নিই, কেন নিই এবং কীভাবে রাখি।" />
     <meta name="theme-color" content="#053d2d" />

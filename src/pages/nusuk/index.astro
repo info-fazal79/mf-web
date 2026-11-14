@@ -32,7 +32,10 @@ const cm0 = defaultCommunity();
 <html lang="bn">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no" />
+    <!-- no page zoom on phones (iOS ignores user-scalable, so pinch and double-tap are stopped here too) -->
+    <style is:inline>html { touch-action: pan-x pan-y; }</style>
+    <script is:inline>document.addEventListener('gesturestart', function (e) { e.preventDefault(); });</script>
     <title>{c.title} | Muhammad Fazal</title>
     <meta name="description" content={desc} />
     <meta property="og:title" content={c.title} />
@@ -251,13 +254,19 @@ const cm0 = defaultCommunity();
         <div class="px-3 pt-3 pb-5 sm:px-6">
           <div class="relative">
             <div id="nk-dm-map" class="nk-dm-map"><div class="nk-dm-wait">ম্যাপ লোড হচ্ছে…</div></div>
-            <button type="button" id="nk-dm-reset" class="nk-btn nk-ghost absolute top-2 right-2 hidden bg-white/95 px-3 py-1.5 text-xs shadow">⤢ পুরো ম্যাপ</button>
+            <div class="nk-dm-ctrl">
+              <button type="button" id="nk-dm-in" aria-label="জুম ইন">+</button>
+              <button type="button" id="nk-dm-out" aria-label="জুম আউট">−</button>
+              <button type="button" id="nk-dm-reset" class="nk-dm-full hidden">⤢ পুরো ম্যাপ</button>
+            </div>
             <div class="nk-dm-legend" aria-hidden="true"><span><i class="nk-dm-l0"></i>এখনো কেউ নেই</span><span><i class="nk-dm-l1"></i>অ্যাকাউন্ট আছে</span></div>
           </div>
           <div id="nk-dm-info" class="nk-dm-info mt-2 hidden" aria-live="polite"></div>
-          <p class="mt-2 text-center text-xs text-emerald-900/60">যে কোনো জেলায় চাপ দিলে জেলাটি বড় করে দেখাবে</p>
+          <p class="mt-2 text-center text-xs text-emerald-900/60">দুই আঙুলে জুম করুন, টেনে ম্যাপ সরান। কোনো জেলায় চাপ দিলে জেলাটি মাঝখানে বড় হয়ে দেখাবে।</p>
           <h3 class="mt-4 mb-2 text-sm font-bold text-emerald-900">🏆 এগিয়ে থাকা জেলা</h3>
           <ol id="nk-dm-top" class="flex flex-wrap gap-1.5"></ol>
+          <button type="button" id="nk-dm-allbtn" class="nk-btn nk-ghost mt-2 w-full py-2.5 text-sm">সব জেলা দেখুন ›</button>
+          <ol id="nk-dm-all" class="nk-dm-all nk-scroll mt-2 hidden"></ol>
           <p id="nk-dm-abroad" class="mt-2 hidden text-xs text-emerald-900/70"></p>
           <p id="nk-dm-you" class="nk-dm-you mt-3 hidden"></p>
           <a id="nk-dm-cta" href="/nusuk/account" class="nk-btn nk-green mt-3 flex items-center justify-center gap-2 py-3 text-sm"><Fragment set:html={lucide('userPlus', 'h-4 w-4', 2.2)} /> অ্যাকাউন্ট খুলে আপনার জেলা যুক্ত করুন</a>
