@@ -22,6 +22,8 @@ export const CARD_MESSAGES = [
   'আল্লাহর ঘরের মেহমান হওয়ার স্বপ্ন দেখি',
   'কাবার পথে একসাথে, ইনশাআল্লাহ',
 ];
+/** logged as message no. 20 when someone writes their own message */
+export const CUSTOM_MSG = 20;
 
 /** the same anonymous device id the rest of /nusuk uses */
 function deviceId() {
@@ -193,6 +195,9 @@ export function initPhotoCard() {
   const nameIn = $<HTMLInputElement>('nk-pc-name')!;
   const codeIn = $<HTMLInputElement>('nk-pc-code')!;
   const msgIn = $<HTMLSelectElement>('nk-pc-msg')!;
+  const customIn = $<HTMLInputElement>('nk-pc-custom')!;
+  const isCustom = () => msgIn.value === 'custom';
+  const message = () => (isCustom() ? customIn.value.trim().slice(0, 60) : CARD_MESSAGES[Number(msgIn.value)] ?? '');
   const canvas = $<HTMLCanvasElement>('nk-pc-canvas')!;
   const err = $('nk-pc-err')!;
   const dl = $<HTMLButtonElement>('nk-pc-dl')!;
@@ -225,7 +230,8 @@ export function initPhotoCard() {
     if (inp) rememberMyCode(inp.value);
   }, true);
 
-  msgIn.innerHTML = CARD_MESSAGES.map((m, i) => (m ? `<option value="${i}">${m}</option>` : '')).join('');
+  msgIn.innerHTML = CARD_MESSAGES.map((m, i) => (m ? `<option value="${i}">${m}</option>` : '')).join('')
+    + '<option value="custom">✏️ নিজের বার্তা লিখুন…</option>';
   const theme = (): CardTheme => (looks.find((l) => l.checked)?.value as CardTheme) || 'green';
   const code = () => codeIn.value.replace(/\s/g, '');
   const valid = () => CODE_RE.test(code());
@@ -238,11 +244,15 @@ export function initPhotoCard() {
       err.classList.toggle('hidden', ok || !code());
       if (!working) { dl.disabled = !ok; share.disabled = !ok; }
       syncCaption();
-      await drawPhotoCard(canvas, { code: ok ? code() : '', name: nameIn.value.slice(0, 40), message: CARD_MESSAGES[Number(msgIn.value)] ?? '', theme: theme() });
+      await drawPhotoCard(canvas, { code: ok ? code() : '', name: nameIn.value.slice(0, 40), message: message(), theme: theme() });
     }, 120);
   };
-  [nameIn, codeIn].forEach((el) => el.addEventListener('input', redraw));
-  msgIn.addEventListener('change', redraw);
+  [nameIn, codeIn, customIn].forEach((el) => el.addEventListener('input', redraw));
+  msgIn.addEventListener('change', () => {
+    customIn.classList.toggle('hidden', !isCustom());
+    if (isCustom()) customIn.focus();
+    redraw();
+  });
   looks.forEach((l) => l.addEventListener('change', redraw));
 
   if (!navigator.canShare && !/FBAN|FBAV|FB_IAB|FBIOS|FB4A|Messenger|Instagram/i.test(navigator.userAgent)) share.classList.add('hidden');
@@ -265,7 +275,7 @@ export function initPhotoCard() {
   const track = (action: 'download' | 'share') => {
     const k = `nusuk:pc:${action}:${code()}`;
     try { if (Date.now() - Number(sessionStorage.getItem(k) || 0) < 60_000) return; sessionStorage.setItem(k, String(Date.now())); } catch {}
-    rpc('nusuk_photocard_log', { p_action: action, p_code: code(), p_name: nameIn.value.trim().slice(0, 40), p_theme: theme(), p_msg: Number(msgIn.value) || 0, p_device: deviceId() }).catch(() => {});
+    rpc('nusuk_photocard_log', { p_action: action, p_code: code(), p_name: nameIn.value.trim().slice(0, 40), p_theme: theme(), p_msg: isCustom() ? CUSTOM_MSG : Number(msgIn.value) || 0, p_device: deviceId() }).catch(() => {});
   };
 
   // Facebook / Messenger / Instagram open links in their own browser, which can't download a file or
@@ -276,7 +286,7 @@ export function initPhotoCard() {
   const reopenUrl = () => {
     const q = new URLSearchParams({ pc: code(), pct: theme() });
     if (nameIn.value.trim()) q.set('pcn', nameIn.value.trim().slice(0, 40));
-    if (Number(msgIn.value)) q.set('pcm', msgIn.value);
+    if (isCustom() && message()) { q.set('pcm', 'custom'); q.set('pcx', message()); } else if (Number(msgIn.value)) q.set('pcm', msgIn.value);
     return `${location.origin}/nusuk?${q}`;
   };
   const browserUrl = () => {
@@ -310,6 +320,7 @@ export function initPhotoCard() {
       const lk = q.get('pct');
       if (lk) put(MY_LOOK, lk);
       if (q.get('pcm')) msgIn.value = q.get('pcm')!;
+      if (isCustom()) { customIn.value = (q.get('pcx') ?? '').slice(0, 60); customIn.classList.remove('hidden'); }
       history.replaceState(null, '', location.pathname + location.hash);
       setTimeout(() => open.click(), 600);
     }

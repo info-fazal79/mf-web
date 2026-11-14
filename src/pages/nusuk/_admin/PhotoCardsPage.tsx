@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Download, ExternalLink, RefreshCw, Share2, Users } from 'lucide-react';
 import { supabase as sb } from '@/lib/supabase';
-import { CARD_MESSAGES } from '../_lib/photocard';
+import { CARD_MESSAGES, CUSTOM_MSG } from '../_lib/photocard';
 
 type ToastFn = (t: string, ok?: boolean) => void;
 type Counts = { downloads: number; shares: number; people: number; codes?: number };
@@ -113,6 +113,9 @@ export default function PhotoCardsPage({ toast }: { toast: ToastFn }) {
                 {CARD_MESSAGES.map((m, i) => (m || d.messages[String(i)]) && (
                   <li key={i} className="flex items-center justify-between gap-2"><span className="min-w-0">{m || <span className="text-emerald-900/50">(removed message)</span>}</span><b className="shrink-0 tabular-nums">{n(d.messages[String(i)])}</b></li>
                 ))}
+                {!!d.messages[String(CUSTOM_MSG)] && (
+                  <li className="flex items-center justify-between gap-2"><span className="min-w-0">✏️ Own message (written by the person)</span><b className="shrink-0 tabular-nums">{n(d.messages[String(CUSTOM_MSG)])}</b></li>
+                )}
               </ul>
               <p className="mt-2 text-xs text-emerald-900/60">Colours: {Object.entries(THEME).map(([k, v]) => `${v} ${n(d.themes[k])}`).join(' · ')}</p>
             </div>
