@@ -18,10 +18,14 @@ export type LiveCfg = {
   rotate_themes: Theme[];
   hide: string[]; // panels to hide
   title: string;
-  /** Breaking news bar above the ticker: headlines shown one after another */
+  /** Breaking news bar above the ticker: headlines scroll right to left, one after another, in a loop */
   breaking: Breaking;
 };
-export type Breaking = { on: boolean; label: string; items: string[]; secs: number };
+export type BkItem = { text: string; on: boolean }; // on = false: kept in the list but hidden from the stream
+export type BkSpeed = 'slow' | 'normal' | 'fast';
+export type Breaking = { on: boolean; label: string; items: BkItem[]; speed: BkSpeed };
+/** scroll speed in px per second on the 1920-wide stage */
+export const BK_SPEED: Record<BkSpeed, number> = { slow: 90, normal: 140, fast: 200 };
 export const DEFAULT_BREAKING_LABEL = 'ব্রেকিং নিউজ';
 
 export const defaultLiveCfg = (): LiveCfg => ({
@@ -36,7 +40,7 @@ export const defaultLiveCfg = (): LiveCfg => ({
   rotate_themes: ['green', 'cream', 'navy'],
   hide: [],
   title: '',
-  breaking: { on: false, label: '', items: [''], secs: 8 },
+  breaking: { on: false, label: '', items: [{ text: '', on: true }], speed: 'normal' },
 });
 
 const isTheme = (t: unknown): t is Theme => t === 'green' || t === 'mint' || t === 'cream' || t === 'navy';
@@ -64,12 +68,18 @@ export function parseLiveCfg(raw: unknown): LiveCfg {
 
 function parseBreaking(raw: unknown): Breaking {
   const b = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
-  const items = Array.isArray(b.items) ? (b.items as unknown[]).filter((x): x is string => typeof x === 'string').map((x) => x.slice(0, 200)).slice(0, 20) : [];
+  const items: BkItem[] = Array.isArray(b.items)
+    ? (b.items as unknown[]).flatMap((x): BkItem[] => {
+        if (typeof x === 'string') return [{ text: x.slice(0, 200), on: true }]; // first version saved plain strings
+        if (x && typeof x === 'object' && typeof (x as BkItem).text === 'string') return [{ text: (x as BkItem).text.slice(0, 200), on: (x as BkItem).on !== false }];
+        return [];
+      }).slice(0, 20)
+    : [];
   return {
     on: b.on === true,
     label: typeof b.label === 'string' ? b.label.slice(0, 30) : '',
-    items: items.length ? items : [''],
-    secs: Math.min(60, Math.max(4, Math.round(Number(b.secs) || 8))),
+    items: items.length ? items : [{ text: '', on: true }],
+    speed: b.speed === 'slow' || b.speed === 'fast' ? b.speed : 'normal',
   };
 }
 

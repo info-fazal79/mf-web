@@ -121,20 +121,18 @@ import { lucide } from './_lib/lucide';
       .ls-bk-dot { position: relative; width: 18px; height: 18px; border-radius: 9999px; background: #fff; flex-shrink: 0; }
       .ls-bk-dot::after { content: ''; position: absolute; inset: 0; border-radius: 9999px; background: #fff; animation: ls-bk-ping 1.2s cubic-bezier(0, 0, 0.2, 1) infinite; }
       @keyframes ls-bk-ping { 75%, 100% { transform: scale(2.4); opacity: 0; } }
-      .ls-bk-body { position: relative; flex: 1; min-width: 0; margin-left: -26px; padding-left: 52px; overflow: hidden;
-        background: linear-gradient(90deg, #fff4f4, #ffffff 30%); }
-      :global(.ls-bk-item) { position: absolute; left: 52px; right: 24px; top: 0; bottom: 0; display: flex; align-items: center; white-space: nowrap;
-        font-size: 36px; font-weight: 700; color: #111827; }
-      :global(.ls-bk-item > span) { display: inline-block; will-change: transform; }
-      :global(.ls-bk-in) { animation: ls-bk-in 0.75s cubic-bezier(0.2, 0.9, 0.25, 1) both; }
-      @keyframes ls-bk-in { 0% { opacity: 0; transform: translateY(100%); clip-path: inset(0 100% 0 0); } 60% { opacity: 1; transform: none; } 100% { clip-path: inset(0 0 0 0); } }
-      :global(.ls-bk-out) { animation: ls-bk-out 0.5s ease-in both; }
-      @keyframes ls-bk-out { to { opacity: 0; transform: translateY(-100%); } }
-      :global(.ls-bk-flashbar) { position: absolute; top: 0; bottom: 0; left: 26px; width: 90px; background: linear-gradient(90deg, transparent, rgba(225, 29, 46, 0.35), transparent);
-        animation: ls-bk-wipe 0.9s ease-out both; pointer-events: none; }
-      @keyframes ls-bk-wipe { from { transform: translateX(0); opacity: 1; } to { transform: translateX(1500px); opacity: 0; } }
-      .ls-bk-count { display: flex; align-items: center; padding: 0 26px; flex-shrink: 0; font: 800 22px/1 system-ui, sans-serif; color: #c8102e; background: #fff; }
-      .ls-bk-progress { position: absolute; left: 0; bottom: 0; height: 4px; width: 100%; background: #c8102e; transform-origin: 0 50%; transform: scaleX(0); }
+      .ls-bk-body { position: relative; flex: 1; min-width: 0; margin-left: -26px; overflow: hidden;
+        background: linear-gradient(90deg, #fff4f4, #ffffff 18%); }
+      /* fade the text in/out at both ends of the bar */
+      .ls-bk-body::before, .ls-bk-body::after { content: ''; position: absolute; top: 0; bottom: 0; width: 60px; z-index: 1; pointer-events: none; }
+      .ls-bk-body::before { left: 26px; background: linear-gradient(90deg, #fff4f4, transparent); }
+      .ls-bk-body::after { right: 0; background: linear-gradient(270deg, #ffffff, transparent); }
+      .ls-bk-track { position: absolute; top: 0; bottom: 0; left: 0; display: flex; align-items: center; white-space: nowrap; will-change: transform; }
+      :global(.ls-bk-text) { font-size: 36px; font-weight: 700; color: #111827; }
+      /* end of a headline: small Ribat logo in a red ring */
+      :global(.ls-bk-end) { display: inline-grid; place-items: center; width: 44px; height: 44px; margin: 0 40px; border-radius: 9999px; background: #e9ef9f;
+        box-shadow: 0 0 0 3px #c8102e; overflow: hidden; flex-shrink: 0; }
+      :global(.ls-bk-end img) { width: 100%; height: 100%; object-fit: cover; }
       /* room for the breaking news bar in the raffle view */
       :global(body.ls-has-bk) #lr-wheelbox { height: 520px; }
       :global(body.ls-has-bk) #lr-topnote { margin-top: 1.25rem; }
@@ -273,9 +271,7 @@ import { lucide } from './_lib/lucide';
             <span class="ls-bk-dot"></span>
             <span class="ls-bk-labeltext"><small>BREAKING</small><b id="ls-bk-label">ব্রেকিং নিউজ</b></span>
           </div>
-          <div id="ls-bk-body" class="ls-bk-body"></div>
-          <div id="ls-bk-count" class="ls-bk-count"></div>
-          <div id="ls-bk-progress" class="ls-bk-progress"></div>
+          <div id="ls-bk-body" class="ls-bk-body"><div id="ls-bk-track" class="ls-bk-track"></div></div>
         </div>
         <footer class="ls-tickerbar overflow-hidden py-3 text-2xl font-bold" data-panel="ticker">
           <div id="ls-ticker" class="ls-ticker inline-block"></div>
