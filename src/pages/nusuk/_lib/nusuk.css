@@ -30,7 +30,13 @@ html { scroll-padding-top: 4.5rem; }
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'%3E%3Cpath fill='none' stroke='%23c9a227' stroke-opacity='0.13' d='M24 2l6.5 15.5L46 24l-15.5 6.5L24 46l-6.5-15.5L2 24l15.5-6.5z'/%3E%3C/svg%3E");
   transition: box-shadow 0.2s;
 }
-.nk-headbar.is-stuck { box-shadow: 0 6px 18px -8px rgba(2, 30, 22, 0.55); }
+/* the bar and the hero below it are two boxes: on phones a 1px light seam could show between them
+   while scrolling or pulling to refresh. A 1px green edge under the bar + the hero tucked 1px up hides it,
+   and the area above/below the page when it bounces is green too (not the cream page colour). */
+.nk-headbar { box-shadow: 0 1px 0 0 var(--color-emerald-900); }
+.nk-headbar.is-stuck { box-shadow: 0 1px 0 0 var(--color-emerald-900), 0 6px 18px -8px rgba(2, 30, 22, 0.55); }
+#nk-headbar + header.nk-pattern { margin-top: -1px; padding-top: 1px; }
+html:has(#nk-headbar) { background-color: var(--color-emerald-900); }
 /* Photo card maker */
 .nk-pcard { background: linear-gradient(120deg, #fff 55%, #fbf5e3); }
 .nk-pcard-thumb { position: relative; width: 4.6rem; height: 5.75rem; border-radius: 0.7rem; background: linear-gradient(150deg, #0b5a43, #022a1f); box-shadow: 0 8px 18px -8px rgba(2, 42, 31, 0.6); transform: rotate(-5deg); border: 2px solid rgba(242, 201, 76, 0.6); }
