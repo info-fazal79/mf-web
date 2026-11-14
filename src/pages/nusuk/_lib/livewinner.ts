@@ -65,7 +65,7 @@ export function initLiveWinner() {
   function renderList(raw: unknown[]) {
     const list = parseWinners({ winners: raw });
     $('lw-total').textContent = bn(list.length);
-    $('lw-list').innerHTML = list.slice(0, 7).map((w, i) => `
+    $('lw-list').innerHTML = list.slice(0, 5).map((w, i) => `
       <li class="flex items-center gap-3 rounded-xl px-3 py-2 ${i === 0 ? 'ls-chip' : ''}">
         <span class="text-2xl" aria-hidden="true">${w.prize === 'umrah' ? '🕋' : w.prize === 'zamzam' ? '💧' : '🎁'}</span>
         <span class="min-w-0 flex-1 truncate text-2xl font-semibold">${esc(w.name)}</span>

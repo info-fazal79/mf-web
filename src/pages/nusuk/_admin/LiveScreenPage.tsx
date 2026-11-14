@@ -3,7 +3,7 @@
    so changes show on the stream by themselves (no need to touch OBS). */
 import { useEffect, useMemo, useState } from 'react';
 import { supabase as sb } from '@/lib/supabase';
-import { THEMES, defaultLiveCfg, parseLiveCfg, themeAt, type LiveCfg, type Slot, type Theme } from '../_lib/livecfg';
+import { DEFAULT_BREAKING_LABEL, THEMES, defaultLiveCfg, parseLiveCfg, themeAt, type Breaking, type LiveCfg, type Slot, type Theme } from '../_lib/livecfg';
 
 type ToastFn = (t: string, ok?: boolean) => void;
 const errText = (e: unknown) => (e && typeof e === 'object' && 'message' in e ? String((e as { message: string }).message) : String(e));
@@ -83,6 +83,16 @@ export default function LiveScreenPage({ toast }: { toast: ToastFn }) {
     toast('Saved · the live screen changes within 10 seconds');
   }
   const setSlot = (i: number, p: Partial<Slot>) => set({ schedule: c.schedule.map((s, j) => (j === i ? { ...s, ...p } : s)) });
+  const setBk = (p: Partial<Breaking>) => set({ breaking: { ...c.breaking, ...p } });
+  const setBkItem = (i: number, v: string) => setBk({ items: c.breaking.items.map((x, j) => (j === i ? v : x)) });
+  const moveBk = (i: number, d: -1 | 1) => {
+    const a = [...c.breaking.items];
+    const j = i + d;
+    if (j < 0 || j >= a.length) return;
+    [a[i], a[j]] = [a[j], a[i]];
+    setBk({ items: a });
+  };
+  const bkCount = c.breaking.items.filter((x) => x.trim()).length;
   const togglePanel = (k: string) => set({ hide: c.hide.includes(k) ? c.hide.filter((x) => x !== k) : [...c.hide, k] });
   const toggleRotate = (t: Theme) => {
     const has = c.rotate_themes.includes(t);
@@ -190,6 +200,48 @@ export default function LiveScreenPage({ toast }: { toast: ToastFn }) {
         <label className="mt-4 grid max-w-xl gap-1 text-sm font-semibold">Headline (optional)
           <input className="nk-input font-normal" maxLength={80} value={c.title} onChange={(e) => set({ title: e.target.value })} placeholder="নুসুক উমরাহ কোড শেয়ার · লাইভ" />
         </label>
+      </section>
+
+      <section className="nk-card grid gap-3 p-4 sm:p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-base font-bold text-emerald-950">🔴 Breaking news</h2>
+            <p className="mt-0.5 text-sm text-emerald-900/70">A news-channel style bar above the yellow ticker. The headlines come one after another; long ones scroll by themselves. Shows on every view (normal, raffle, winner).</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <label className="flex items-center gap-2 text-sm font-semibold">
+              <input type="checkbox" className="h-4 w-4 accent-red-600" checked={c.breaking.on} onChange={(e) => setBk({ on: e.target.checked })} /> Show on the live screen
+            </label>
+            <button type="button" className="nk-btn nk-green px-4 py-2 text-sm" disabled={busy || !dirty} onClick={save}>{busy ? 'Saving…' : dirty ? 'Save' : 'Saved'}</button>
+          </div>
+        </div>
+        <div className="grid gap-2">
+          {c.breaking.items.map((t, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <span className="w-6 shrink-0 text-right text-sm font-bold text-red-700">{i + 1}.</span>
+              <input className="nk-input flex-1" maxLength={200} value={t} placeholder={i === 0 ? 'যেমন: আজ রাত ৯টায় নতুন বিজয়ী ঘোষণা, লাইভে থাকুন!' : 'আরেকটি খবর লিখুন'}
+                onChange={(e) => setBkItem(i, e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter' && c.breaking.items.length < 20) { e.preventDefault(); setBk({ items: [...c.breaking.items.slice(0, i + 1), '', ...c.breaking.items.slice(i + 1)] }); } }} />
+              <button type="button" className="nk-btn nk-ghost px-2 py-1.5 text-xs" disabled={i === 0} onClick={() => moveBk(i, -1)} aria-label="Move up">↑</button>
+              <button type="button" className="nk-btn nk-ghost px-2 py-1.5 text-xs" disabled={i === c.breaking.items.length - 1} onClick={() => moveBk(i, 1)} aria-label="Move down">↓</button>
+              <button type="button" className="nk-btn nk-ghost px-2 py-1.5 text-xs text-red-700" onClick={() => setBk({ items: c.breaking.items.length > 1 ? c.breaking.items.filter((_, j) => j !== i) : [''] })} aria-label="Remove">✕</button>
+            </div>
+          ))}
+          {c.breaking.items.length < 20 && (
+            <button type="button" className="nk-btn nk-ghost w-fit px-3 py-1.5 text-sm" onClick={() => setBk({ items: [...c.breaking.items, ''] })}>+ Add new</button>
+          )}
+        </div>
+        <div className="flex flex-wrap items-end gap-4">
+          <label className="grid gap-1 text-sm font-semibold">Label
+            <input className="nk-input w-56 font-normal" maxLength={30} value={c.breaking.label} placeholder={DEFAULT_BREAKING_LABEL} onChange={(e) => setBk({ label: e.target.value })} />
+          </label>
+          <label className="grid gap-1 text-sm font-semibold">Each headline stays
+            <span className="flex items-center gap-2 font-normal">
+              <input type="number" min={4} max={60} className="nk-input w-20" value={c.breaking.secs} onChange={(e) => setBk({ secs: Math.min(60, Math.max(4, Math.round(+e.target.value) || 8)) })} /> seconds
+            </span>
+          </label>
+          <p className="text-xs text-emerald-900/60">{bkCount} headline{bkCount === 1 ? '' : 's'} · Enter in a box adds a new line · press Save, the stream changes within 10 seconds.</p>
+        </div>
       </section>
 
       <div className="grid gap-4 lg:grid-cols-[1fr_22rem]">

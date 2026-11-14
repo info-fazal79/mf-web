@@ -7,7 +7,61 @@
  */
 import { rpc } from './rpc';
 import { countdownText, countryName, flagUrl, parseToday, prizeLong } from './content';
-import { parseLiveCfg, themeAt, type LiveCfg } from './livecfg';
+import { DEFAULT_BREAKING_LABEL, parseLiveCfg, themeAt, type LiveCfg } from './livecfg';
+
+/* ---- Breaking news bar: one headline after another, news-channel style ---- */
+const bk = { key: '', items: [] as string[], i: -1, secs: 8, timer: 0 as ReturnType<typeof setTimeout> | 0 };
+function bkEsc(t: string) { return t.replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]!); }
+const bnNum = (n: number) => String(n).replace(/\d/g, (d) => '০১২৩৪৫৬৭৮৯'[+d]);
+function bkNext() {
+  const body = document.getElementById('ls-bk-body');
+  if (!body || !bk.items.length) return;
+  bk.i = (bk.i + 1) % bk.items.length;
+  body.querySelectorAll('.ls-bk-item').forEach((el) => { el.classList.remove('ls-bk-in'); el.classList.add('ls-bk-out'); setTimeout(() => el.remove(), 500); });
+  const el = document.createElement('div');
+  el.className = 'ls-bk-item ls-bk-in';
+  el.innerHTML = `<span>${bkEsc(bk.items[bk.i])}</span>`;
+  body.appendChild(el);
+  const flash = document.createElement('div');
+  flash.className = 'ls-bk-flashbar';
+  body.appendChild(flash);
+  setTimeout(() => flash.remove(), 950);
+  const count = document.getElementById('ls-bk-count')!;
+  count.textContent = bk.items.length > 1 ? `${bnNum(bk.i + 1)}/${bnNum(bk.items.length)}` : '';
+  // long headline: after it comes in, glide left so the whole sentence is read
+  let ms = bk.secs * 1000;
+  requestAnimationFrame(() => {
+    const span = el.firstElementChild as HTMLElement;
+    const over = span.scrollWidth - el.clientWidth;
+    if (over > 0) {
+      const move = Math.round(over / 90 * 1000);
+      span.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(0)', offset: 0.18 }, { transform: `translateX(${-over}px)`, offset: 0.9 }, { transform: `translateX(${-over}px)` }], { duration: move + 2200, delay: 900, fill: 'forwards', easing: 'linear' });
+      ms = Math.max(ms, move + 4000);
+    }
+    const bar = document.getElementById('ls-bk-progress')!;
+    bar.getAnimations().forEach((a) => a.cancel());
+    bar.animate([{ transform: 'scaleX(0)' }, { transform: 'scaleX(1)' }], { duration: ms, easing: 'linear', fill: 'forwards' });
+    if (bk.timer) clearTimeout(bk.timer);
+    bk.timer = setTimeout(bkNext, ms);
+  });
+}
+function breaking(c: LiveCfg) {
+  const items = c.breaking.items.map((x) => x.trim()).filter(Boolean);
+  const on = c.breaking.on && items.length > 0;
+  document.getElementById('ls-bk')?.toggleAttribute('data-hidden', !on);
+  document.body.classList.toggle('ls-has-bk', on);
+  const label = document.getElementById('ls-bk-label');
+  if (label) label.textContent = c.breaking.label.trim() || DEFAULT_BREAKING_LABEL;
+  const key = on ? JSON.stringify([items, c.breaking.secs]) : '';
+  if (key === bk.key) return;
+  bk.key = key;
+  if (bk.timer) { clearTimeout(bk.timer); bk.timer = 0; }
+  if (!on) return;
+  bk.items = items;
+  bk.secs = c.breaking.secs;
+  bk.i = -1;
+  bkNext();
+}
 
 type Series = { start: string; step: number; values: number[] };
 type Screen = {
@@ -69,6 +123,7 @@ export function initLiveScreen() {
     document.querySelectorAll<HTMLElement>('[data-panel]').forEach((el) => el.toggleAttribute('data-hidden', hide.has(el.dataset.panel!)));
     if (changed) { loadQuiz(); loadFeatured(); }
     $('ls-title').textContent = (urlTitle ?? cfg.title).trim().slice(0, 80) || defaultTitle;
+    breaking(cfg);
   }
   async function loadCfg() {
     try { cfg = parseLiveCfg(await rpc<unknown>('nusuk_live_screen_cfg')); } catch { /* update 30 not run yet: defaults */ }

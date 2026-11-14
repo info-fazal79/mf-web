@@ -104,6 +104,40 @@ import { lucide } from './_lib/lucide';
       @keyframes lw-dots { 0% { content: ''; } 25% { content: '.'; } 50% { content: '..'; } 75% { content: '...'; } }
       .lr-pop { animation: lr-pop 0.6s cubic-bezier(0.2, 1.4, 0.4, 1) both; }
       @keyframes lr-pop { from { opacity: 0; transform: translate(-50%, -50%) scale(0.7); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
+      /* ---------- Breaking news bar ---------- */
+      .ls-bk { position: relative; display: flex; flex-shrink: 0; align-items: stretch; height: 76px; background: #ffffff; color: #111827; overflow: hidden;
+        box-shadow: 0 -8px 24px -12px rgba(0, 0, 0, 0.55); border-top: 4px solid #c8102e; animation: ls-bk-show 0.6s ease-out both; }
+      @keyframes ls-bk-show { from { transform: translateY(100%); } to { transform: none; } }
+      .ls-bk-label { position: relative; z-index: 2; display: flex; align-items: center; gap: 14px; padding: 0 46px 0 28px; flex-shrink: 0;
+        color: #fff; background: linear-gradient(135deg, #e11d2e, #a50d1f); clip-path: polygon(0 0, 100% 0, calc(100% - 26px) 100%, 0 100%); overflow: hidden;
+        animation: ls-bk-flash 2.4s ease-in-out infinite; }
+      .ls-bk-label::after { content: ''; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 25%, rgba(255, 255, 255, 0.55) 50%, transparent 75%);
+        transform: translateX(-130%); animation: ls-bk-sweep 2.4s ease-in-out infinite; }
+      @keyframes ls-bk-sweep { 0%, 40% { transform: translateX(-130%); } 80%, 100% { transform: translateX(130%); } }
+      @keyframes ls-bk-flash { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.25); } }
+      .ls-bk-labeltext { display: flex; flex-direction: column; line-height: 1; }
+      .ls-bk-labeltext small { font: 800 15px/1 system-ui, sans-serif; letter-spacing: 0.32em; opacity: 0.85; }
+      .ls-bk-labeltext b { margin-top: 4px; font-size: 34px; font-weight: 800; }
+      .ls-bk-dot { position: relative; width: 18px; height: 18px; border-radius: 9999px; background: #fff; flex-shrink: 0; }
+      .ls-bk-dot::after { content: ''; position: absolute; inset: 0; border-radius: 9999px; background: #fff; animation: ls-bk-ping 1.2s cubic-bezier(0, 0, 0.2, 1) infinite; }
+      @keyframes ls-bk-ping { 75%, 100% { transform: scale(2.4); opacity: 0; } }
+      .ls-bk-body { position: relative; flex: 1; min-width: 0; margin-left: -26px; padding-left: 52px; overflow: hidden;
+        background: linear-gradient(90deg, #fff4f4, #ffffff 30%); }
+      :global(.ls-bk-item) { position: absolute; left: 52px; right: 24px; top: 0; bottom: 0; display: flex; align-items: center; white-space: nowrap;
+        font-size: 36px; font-weight: 700; color: #111827; }
+      :global(.ls-bk-item > span) { display: inline-block; will-change: transform; }
+      :global(.ls-bk-in) { animation: ls-bk-in 0.75s cubic-bezier(0.2, 0.9, 0.25, 1) both; }
+      @keyframes ls-bk-in { 0% { opacity: 0; transform: translateY(100%); clip-path: inset(0 100% 0 0); } 60% { opacity: 1; transform: none; } 100% { clip-path: inset(0 0 0 0); } }
+      :global(.ls-bk-out) { animation: ls-bk-out 0.5s ease-in both; }
+      @keyframes ls-bk-out { to { opacity: 0; transform: translateY(-100%); } }
+      :global(.ls-bk-flashbar) { position: absolute; top: 0; bottom: 0; left: 26px; width: 90px; background: linear-gradient(90deg, transparent, rgba(225, 29, 46, 0.35), transparent);
+        animation: ls-bk-wipe 0.9s ease-out both; pointer-events: none; }
+      @keyframes ls-bk-wipe { from { transform: translateX(0); opacity: 1; } to { transform: translateX(1500px); opacity: 0; } }
+      .ls-bk-count { display: flex; align-items: center; padding: 0 26px; flex-shrink: 0; font: 800 22px/1 system-ui, sans-serif; color: #c8102e; background: #fff; }
+      .ls-bk-progress { position: absolute; left: 0; bottom: 0; height: 4px; width: 100%; background: #c8102e; transform-origin: 0 50%; transform: scaleX(0); }
+      /* room for the breaking news bar in the raffle view */
+      :global(body.ls-has-bk) #lr-wheelbox { height: 520px; }
+      :global(body.ls-has-bk) #lr-topnote { margin-top: 1.25rem; }
       [data-hidden] { display: none !important; }
     </style>
   </head>
@@ -207,13 +241,6 @@ import { lucide } from './_lib/lucide';
           <div id="lw-latest" class="ls-panel flex min-h-0 flex-1 items-center px-10 py-6"></div>
         </div>
         <div class="flex min-h-0 flex-col gap-5">
-          <div class="ls-panel flex min-h-0 flex-1 flex-col p-5">
-            <div class="flex items-baseline justify-between">
-              <h2 class="flex items-center gap-2.5 text-2xl font-bold"><span class="ls-h-ico"><Fragment set:html={lucide('trophy', 'h-6 w-6', 2.2)} /></span>বাংলাদেশি বিজয়ীরা</h2>
-              <span class="text-xl ls-muted">মোট <b id="lw-total" class="ls-accent">০</b> জন</span>
-            </div>
-            <ol id="lw-list" class="mt-3 grid min-h-0 content-start gap-1.5 overflow-hidden"></ol>
-          </div>
           <div class="ls-panel flex items-center gap-5 p-5">
             <div id="lw-qr" class="h-[150px] w-[150px] shrink-0 overflow-hidden rounded-xl bg-white p-1"></div>
             <div class="min-w-0">
@@ -221,6 +248,13 @@ import { lucide } from './_lib/lucide';
               <div class="mt-1 text-xl ls-muted">স্ক্যান করুন, নুসুক কোড কপি করুন, উমরাহ জেতার সুযোগ বাড়ান</div>
               <div class="mt-2 font-mono text-2xl font-bold ls-accent">muhammadfazal.com/nusuk</div>
             </div>
+          </div>
+          <div class="ls-panel flex min-h-0 flex-1 flex-col p-5">
+            <div class="flex items-baseline justify-between">
+              <h2 class="flex items-center gap-2.5 text-2xl font-bold"><span class="ls-h-ico"><Fragment set:html={lucide('trophy', 'h-6 w-6', 2.2)} /></span>সর্বশেষ বিজয়ীরা</h2>
+              <span class="text-xl ls-muted">মোট <b id="lw-total" class="ls-accent">০</b> জন</span>
+            </div>
+            <ol id="lw-list" class="mt-3 grid min-h-0 content-start gap-1.5 overflow-hidden"></ol>
           </div>
         </div>
         <div id="lw-reveal" class="absolute inset-0 z-10 overflow-hidden rounded-[1.5rem]" data-hidden>
@@ -232,10 +266,21 @@ import { lucide } from './_lib/lucide';
         </div>
       </section>
 
-      <!-- Ticker -->
-      <footer class="ls-tickerbar -mx-8 -mb-8 overflow-hidden py-3 text-2xl font-bold" data-panel="ticker">
-        <div id="ls-ticker" class="ls-ticker inline-block"></div>
-      </footer>
+      <!-- Bottom: breaking news (Nusuk Manager → Live screen → Breaking news) + ticker -->
+      <div class="-mx-8 -mb-8 flex shrink-0 flex-col">
+        <div id="ls-bk" class="ls-bk" data-hidden>
+          <div class="ls-bk-label">
+            <span class="ls-bk-dot"></span>
+            <span class="ls-bk-labeltext"><small>BREAKING</small><b id="ls-bk-label">ব্রেকিং নিউজ</b></span>
+          </div>
+          <div id="ls-bk-body" class="ls-bk-body"></div>
+          <div id="ls-bk-count" class="ls-bk-count"></div>
+          <div id="ls-bk-progress" class="ls-bk-progress"></div>
+        </div>
+        <footer class="ls-tickerbar overflow-hidden py-3 text-2xl font-bold" data-panel="ticker">
+          <div id="ls-ticker" class="ls-ticker inline-block"></div>
+        </footer>
+      </div>
     </div>
 
     <script>

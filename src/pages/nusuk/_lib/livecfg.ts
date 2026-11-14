@@ -18,7 +18,11 @@ export type LiveCfg = {
   rotate_themes: Theme[];
   hide: string[]; // panels to hide
   title: string;
+  /** Breaking news bar above the ticker: headlines shown one after another */
+  breaking: Breaking;
 };
+export type Breaking = { on: boolean; label: string; items: string[]; secs: number };
+export const DEFAULT_BREAKING_LABEL = 'ব্রেকিং নিউজ';
 
 export const defaultLiveCfg = (): LiveCfg => ({
   mode: 'fixed',
@@ -32,6 +36,7 @@ export const defaultLiveCfg = (): LiveCfg => ({
   rotate_themes: ['green', 'cream', 'navy'],
   hide: [],
   title: '',
+  breaking: { on: false, label: '', items: [''], secs: 8 },
 });
 
 const isTheme = (t: unknown): t is Theme => t === 'green' || t === 'mint' || t === 'cream' || t === 'navy';
@@ -53,6 +58,18 @@ export function parseLiveCfg(raw: unknown): LiveCfg {
     rotate_themes: rt.length ? rt : d.rotate_themes,
     hide: Array.isArray(r.hide) ? (r.hide as unknown[]).filter((x): x is string => typeof x === 'string').slice(0, 10) : [],
     title: typeof r.title === 'string' ? r.title.slice(0, 80) : '',
+    breaking: parseBreaking(r.breaking),
+  };
+}
+
+function parseBreaking(raw: unknown): Breaking {
+  const b = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
+  const items = Array.isArray(b.items) ? (b.items as unknown[]).filter((x): x is string => typeof x === 'string').map((x) => x.slice(0, 200)).slice(0, 20) : [];
+  return {
+    on: b.on === true,
+    label: typeof b.label === 'string' ? b.label.slice(0, 30) : '',
+    items: items.length ? items : [''],
+    secs: Math.min(60, Math.max(4, Math.round(Number(b.secs) || 8))),
   };
 }
 
