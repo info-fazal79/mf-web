@@ -1469,25 +1469,19 @@ const cm0 = defaultCommunity();
         }
         // computer: nothing to open; the hint says to paste it in the app on the phone
       }
-      function openWithCode(code: string) {
-          const hint = $('nk-open-hint');
-          const mobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-          hint.innerHTML = `✓ <b class="font-mono">${code}</b> কপি হয়েছে। ${mobile ? 'Nusuk অ্যাপ খুলছে…' : 'ফোনে Nusuk অ্যাপ খুলুন।'} সেখানে <b>Start the Challenge</b> চেপে কোডের ঘরে আঙুল চেপে ধরে <b>Paste</b> করুন।`;
-          hint.classList.remove('hidden');
-          clearTimeout(openHintTimer);
-          openHintTimer = setTimeout(() => hint.classList.add('hidden'), 15_000);
-          openNusukApp();
-      }
-      openBtn.addEventListener('click', async () => {
-        // Just pressed "Copy Code"? Open Nusuk with THAT code (copied again, not counted twice).
-        // Otherwise copy the shown code first.
-        if (lastCopied && Date.now() - lastCopied.at < 15 * 60_000) {
-          const ok = await copyText(lastCopied.code);
-          if (!ok) { status.textContent = 'কপি হয়নি, কোডটি চেপে ধরে কপি করুন'; return; }
-          openWithCode(lastCopied.code);
-          return;
-        }
-        copyCurrent(openWithCode);
+      // Open Nusuk only opens the app; it never copies a code. People press "Copy Code" first,
+      // then paste that code in the Nusuk app.
+      openBtn.addEventListener('click', () => {
+        const hint = $('nk-open-hint');
+        const mobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+        const recent = lastCopied && Date.now() - lastCopied.at < 15 * 60_000 ? lastCopied.code : null;
+        hint.innerHTML = recent
+          ? `আপনার কপি করা কোড: <b class="font-mono">${recent}</b>। ${mobile ? 'Nusuk অ্যাপ খুলছে…' : 'ফোনে Nusuk অ্যাপ খুলুন।'} সেখানে <b>Start the Challenge</b> চেপে কোডের ঘরে আঙুল চেপে ধরে <b>Paste</b> করুন।`
+          : `আগে <b>Copy Code</b> চেপে কোডটি কপি করুন, তারপর Nusuk অ্যাপে <b>Start the Challenge</b> চেপে কোডের ঘরে <b>Paste</b> করুন।`;
+        hint.classList.remove('hidden');
+        clearTimeout(openHintTimer);
+        openHintTimer = setTimeout(() => hint.classList.add('hidden'), 15_000);
+        openNusukApp();
       });
 
       skipBtn.addEventListener('click', async () => {
