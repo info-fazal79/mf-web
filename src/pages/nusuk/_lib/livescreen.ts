@@ -113,6 +113,20 @@ export function initLiveScreen() {
     if (changed) { loadQuiz(); loadFeatured(); }
     $('ls-title').textContent = (urlTitle ?? cfg.title).trim().slice(0, 80) || defaultTitle;
     breaking(cfg);
+    question(cfg);
+  }
+  // Audience question (Nusuk Manager → Live screen → Questions): pops up at the top while one is shown
+  let qShown = '';
+  function question(c: LiveCfg) {
+    const box = document.getElementById('ls-q');
+    if (!box) return;
+    const t = c.questions.show == null ? '' : (c.questions.items[c.questions.show] ?? '').trim();
+    if (t === qShown) return;
+    qShown = t;
+    if (!t) { box.classList.remove('lsq-in'); box.classList.add('lsq-out'); return; }
+    document.getElementById('ls-q-text')!.textContent = t;
+    box.removeAttribute('data-hidden');
+    box.classList.remove('lsq-out', 'lsq-in'); void box.offsetWidth; box.classList.add('lsq-in');
   }
   async function loadCfg() {
     try { cfg = parseLiveCfg(await rpc<unknown>('nusuk_live_screen_cfg')); } catch { /* update 30 not run yet: defaults */ }
@@ -291,7 +305,7 @@ export function initLiveScreen() {
 
   applyCfg();
   loadCfg(); loadScreen(); loadCharts(); loadQuiz(); loadFeatured();
-  setInterval(loadCfg, 10_000); // admin changes (theme, panels, headline) show within 10 s
+  setInterval(loadCfg, 5_000); // admin changes (theme, panels, headline, questions) show within 5 s
   setInterval(applyCfg, 30_000); // scheduled / rotating themes switch on time
   setInterval(loadScreen, 15_000); // the server shares one result for 15 s (update 41)
   setInterval(loadCharts, 30_000);

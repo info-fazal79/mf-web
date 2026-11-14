@@ -104,6 +104,21 @@ import { lucide } from './_lib/lucide';
       @keyframes lw-dots { 0% { content: ''; } 25% { content: '.'; } 50% { content: '..'; } 75% { content: '...'; } }
       .lr-pop { animation: lr-pop 0.6s cubic-bezier(0.2, 1.4, 0.4, 1) both; }
       @keyframes lr-pop { from { opacity: 0; transform: translate(-50%, -50%) scale(0.7); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
+      /* ---------- Audience question pop-up ---------- */
+      .lsq { position: absolute; left: 50%; top: 128px; z-index: 30; width: 1240px; translate: -50% 0; pointer-events: none; }
+      .lsq-card { padding: 26px 40px 30px; text-align: center; color: #fff; border: 3px solid #f2c94c; border-radius: 1.75rem;
+        background: linear-gradient(135deg, #0b5a43, #053d2d 70%); box-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.6); }
+      .lsq-tag { display: inline-flex; align-items: center; gap: 12px; padding: 6px 20px; border-radius: 9999px; font-size: 26px; font-weight: 800;
+        color: #3b2a00; background: linear-gradient(135deg, #ffe08a, #e0b93a); }
+      .lsq-dot { width: 14px; height: 14px; border-radius: 9999px; background: #b91c1c; animation: ls-pulse 1.2s ease-in-out infinite; }
+      .lsq-text { margin-top: 14px; font-size: 50px; font-weight: 800; line-height: 1.25; }
+      .lsq-in { animation: lsq-in 0.7s cubic-bezier(0.2, 1.3, 0.4, 1) both; }
+      .lsq-in .lsq-card { animation: lsq-glow 2.4s ease-in-out 0.8s infinite; }
+      .lsq-out { animation: lsq-out 0.5s ease-in both; }
+      @keyframes lsq-in { from { opacity: 0; transform: translateY(-60px) scale(0.92); } to { opacity: 1; transform: none; } }
+      @keyframes lsq-out { to { opacity: 0; transform: translateY(-50px) scale(0.95); visibility: hidden; } }
+      @keyframes lsq-glow { 0%, 100% { box-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.55), 0 0 0 0 rgba(242, 201, 76, 0.6); } 50% { box-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.55), 0 0 0 14px rgba(242, 201, 76, 0); } }
+
       /* ---------- Breaking news bar ---------- */
       .ls-bk { position: relative; display: flex; flex-shrink: 0; align-items: stretch; height: 76px; background: #ffffff; color: #111827; overflow: hidden;
         box-shadow: 0 -8px 24px -12px rgba(0, 0, 0, 0.55); border-top: 4px solid #c8102e; animation: ls-bk-show 0.6s ease-out; contain: layout paint; }
@@ -261,6 +276,14 @@ import { lucide } from './_lib/lucide';
           </div>
         </div>
       </section>
+
+      <!-- Audience question pop-up (Nusuk Manager → Live screen → Questions) -->
+      <div id="ls-q" class="lsq" data-hidden aria-live="polite">
+        <div class="lsq-card">
+          <div class="lsq-tag"><span class="lsq-dot"></span>প্রশ্ন · উত্তর দিন কমেন্টে</div>
+          <div id="ls-q-text" class="lsq-text"></div>
+        </div>
+      </div>
 
       <!-- Bottom: breaking news (Nusuk Manager → Live screen → Breaking news) + ticker -->
       <div class="-mx-8 -mb-8 flex shrink-0 flex-col">

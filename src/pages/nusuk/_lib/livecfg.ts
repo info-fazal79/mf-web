@@ -20,7 +20,18 @@ export type LiveCfg = {
   title: string;
   /** Breaking news bar above the ticker: headlines scroll right to left, one after another, in a loop */
   breaking: Breaking;
+  /** Questions for the audience: the one being shown pops up at the top of the screen */
+  questions: Questions;
 };
+/** show = index of the question on screen, or null (all hidden) */
+export type Questions = { items: string[]; show: number | null };
+export const SAMPLE_QUESTIONS = [
+  'আজকের বিজয়ী কোন দেশ থেকে হতে পারেন বলে আপনার মনে হয়? কমেন্টে লিখুন 👇',
+  'আপনি আজ কয়টি নুসুক কোড ব্যবহার করেছেন? কমেন্টে জানান 👇',
+  'আপনি কোন জেলা থেকে লাইভ দেখছেন? কমেন্টে লিখুন 👇',
+  'উমরাহ জিতলে প্রথমে কার জন্য দোয়া করবেন? কমেন্টে লিখুন 👇',
+  'আজ কি বাংলাদেশ থেকে কেউ বিজয়ী হবেন? হ্যাঁ হলে কমেন্টে “ইনশাআল্লাহ” লিখুন 👇',
+];
 export type BkItem = { text: string; on: boolean }; // on = false: kept in the list but hidden from the stream
 export type BkSpeed = 'slow' | 'normal' | 'fast';
 export type Breaking = { on: boolean; label: string; items: BkItem[]; speed: BkSpeed };
@@ -41,6 +52,7 @@ export const defaultLiveCfg = (): LiveCfg => ({
   hide: [],
   title: '',
   breaking: { on: false, label: '', items: [{ text: '', on: true }], speed: 'normal' },
+  questions: { items: [...SAMPLE_QUESTIONS], show: null },
 });
 
 const isTheme = (t: unknown): t is Theme => t === 'green' || t === 'mint' || t === 'cream' || t === 'navy';
@@ -63,7 +75,16 @@ export function parseLiveCfg(raw: unknown): LiveCfg {
     hide: Array.isArray(r.hide) ? (r.hide as unknown[]).filter((x): x is string => typeof x === 'string').slice(0, 10) : [],
     title: typeof r.title === 'string' ? r.title.slice(0, 80) : '',
     breaking: parseBreaking(r.breaking),
+    questions: parseQuestions(r.questions),
   };
+}
+
+function parseQuestions(raw: unknown): Questions {
+  if (!raw || typeof raw !== 'object') return { items: [...SAMPLE_QUESTIONS], show: null };
+  const q = raw as Record<string, unknown>;
+  const items = Array.isArray(q.items) ? (q.items as unknown[]).filter((x): x is string => typeof x === 'string').map((x) => x.slice(0, 200)).slice(0, 30) : [];
+  const show = typeof q.show === 'number' && q.show >= 0 && q.show < items.length ? q.show : null;
+  return { items: items.length ? items : [''], show };
 }
 
 function parseBreaking(raw: unknown): Breaking {

@@ -3,7 +3,7 @@
    so changes show on the stream by themselves (no need to touch OBS). */
 import { useEffect, useMemo, useState } from 'react';
 import { supabase as sb } from '@/lib/supabase';
-import { DEFAULT_BREAKING_LABEL, THEMES, defaultLiveCfg, parseLiveCfg, themeAt, type BkItem, type BkSpeed, type Breaking, type LiveCfg, type Slot, type Theme } from '../_lib/livecfg';
+import { DEFAULT_BREAKING_LABEL, SAMPLE_QUESTIONS, THEMES, defaultLiveCfg, parseLiveCfg, themeAt, type BkItem, type BkSpeed, type Breaking, type LiveCfg, type Slot, type Theme } from '../_lib/livecfg';
 
 type ToastFn = (t: string, ok?: boolean) => void;
 const errText = (e: unknown) => (e && typeof e === 'object' && 'message' in e ? String((e as { message: string }).message) : String(e));
@@ -70,20 +70,34 @@ export default function LiveScreenPage({ toast }: { toast: ToastFn }) {
   const url = `${typeof location !== 'undefined' ? location.origin : ''}/nusuk/live`;
   const current = useMemo(() => themeAt(c, now), [c, now]);
 
-  async function save() {
+  async function save(next: LiveCfg = c) {
     setBusy(true);
     const { data, error: e1 } = await sb!.from('nusuk_settings').select('content').eq('id', 1).single();
     if (e1) { setBusy(false); return toast(errText(e1), false); }
-    const content = { ...((data?.content as object) ?? {}), livescreen: c };
+    const content = { ...((data?.content as object) ?? {}), livescreen: next };
     const { error } = await sb!.from('nusuk_settings').update({ content, updated_at: new Date().toISOString() }).eq('id', 1);
     setBusy(false);
     if (error) return toast(errText(error), false);
     setDirty(false);
-    setPreviewKey((k) => k + 1);
-    toast('Saved · the live screen changes within 10 seconds');
+    toast('Saved · the live screen changes within 5 seconds');
   }
   const setSlot = (i: number, p: Partial<Slot>) => set({ schedule: c.schedule.map((s, j) => (j === i ? { ...s, ...p } : s)) });
   const setBk = (p: Partial<Breaking>) => set({ breaking: { ...c.breaking, ...p } });
+  // ---- Audience questions ----
+  const setQ = (p: Partial<LiveCfg['questions']>) => set({ questions: { ...c.questions, ...p } });
+  const setQText = (i: number, t: string) => setQ({ items: c.questions.items.map((x, j) => (j === i ? t : x)) });
+  const removeQ = (i: number) => {
+    const items = c.questions.items.length > 1 ? c.questions.items.filter((_, j) => j !== i) : [''];
+    const show = c.questions.show == null || c.questions.show === i ? null : c.questions.show > i ? c.questions.show - 1 : c.questions.show;
+    setQ({ items, show });
+  };
+  /** Show / hide is saved at once (with any other edits), so it reaches the stream within 5 s */
+  async function showQ(i: number | null) {
+    if (i != null && !c.questions.items[i]?.trim()) return toast('Write the question first', false);
+    const next = { ...c, questions: { ...c.questions, show: i } };
+    setC(next);
+    await save(next);
+  }
   const setBkItem = (i: number, p: Partial<BkItem>) => setBk({ items: c.breaking.items.map((x, j) => (j === i ? { ...x, ...p } : x)) });
   const blank = (): BkItem => ({ text: '', on: true });
   const moveBk = (i: number, d: -1 | 1) => {
@@ -114,7 +128,7 @@ export default function LiveScreenPage({ toast }: { toast: ToastFn }) {
               so you can change the theme or panels during a live and it changes on the stream. OBS keeps the same link.
             </p>
           </div>
-          <button type="button" className="nk-btn nk-green px-4 py-2 text-sm" disabled={busy || !dirty} onClick={save}>{busy ? 'Saving…' : dirty ? 'Save' : 'Saved'}</button>
+          <button type="button" className="nk-btn nk-green px-4 py-2 text-sm" disabled={busy || !dirty} onClick={() => save()}>{busy ? 'Saving…' : dirty ? 'Save' : 'Saved'}</button>
         </div>
         <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_auto]">
           <input readOnly className="nk-input font-mono text-sm" value={url} onFocus={(e) => e.target.select()} aria-label="Live screen link" />
@@ -214,7 +228,7 @@ export default function LiveScreenPage({ toast }: { toast: ToastFn }) {
             <label className="flex items-center gap-2 text-sm font-semibold">
               <input type="checkbox" className="h-4 w-4 accent-red-600" checked={c.breaking.on} onChange={(e) => setBk({ on: e.target.checked })} /> Show on the live screen
             </label>
-            <button type="button" className="nk-btn nk-green px-4 py-2 text-sm" disabled={busy || !dirty} onClick={save}>{busy ? 'Saving…' : dirty ? 'Save' : 'Saved'}</button>
+            <button type="button" className="nk-btn nk-green px-4 py-2 text-sm" disabled={busy || !dirty} onClick={() => save()}>{busy ? 'Saving…' : dirty ? 'Save' : 'Saved'}</button>
           </div>
         </div>
         <div className="grid gap-2">
@@ -248,6 +262,37 @@ export default function LiveScreenPage({ toast }: { toast: ToastFn }) {
             </div>
           </div>
           <p className="text-xs text-emerald-900/60">{bkCount} on the stream{bkHidden ? ` · ${bkHidden} hidden` : ''} · Enter in a box adds a new line · press Save, the stream changes within 10 seconds.</p>
+        </div>
+      </section>
+
+      <section className="nk-card grid gap-3 p-4 sm:p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-base font-bold text-emerald-950">💬 Questions for the audience</h2>
+            <p className="mt-0.5 text-sm text-emerald-900/70">Press <b>Show</b> and the question pops up at the top of the live screen (any view) within 5 seconds; <b>Hide</b> takes it down. One question at a time. Edit the text, then Save.</p>
+          </div>
+          <div className="flex items-center gap-2">
+            {c.questions.show != null && <button type="button" className="nk-btn border border-red-300 bg-white px-4 py-2 text-sm text-red-700" disabled={busy} onClick={() => showQ(null)}>Hide question</button>}
+            <button type="button" className="nk-btn nk-green px-4 py-2 text-sm" disabled={busy || !dirty} onClick={() => save()}>{busy ? 'Saving…' : dirty ? 'Save' : 'Saved'}</button>
+          </div>
+        </div>
+        <div className="grid gap-2">
+          {c.questions.items.map((q, i) => {
+            const on = c.questions.show === i;
+            return (
+              <div key={i} className={`flex items-center gap-2 rounded-xl p-1.5 ${on ? 'bg-gold-400/20 ring-2 ring-gold-500' : ''}`}>
+                <span className="w-6 shrink-0 text-right text-sm font-bold text-emerald-800">{i + 1}.</span>
+                <input className="nk-input flex-1" maxLength={200} value={q} onChange={(e) => setQText(i, e.target.value)} placeholder="আপনার প্রশ্ন লিখুন" />
+                <button type="button" disabled={busy} onClick={() => showQ(on ? null : i)}
+                  className={`nk-btn shrink-0 px-3 py-1.5 text-xs ${on ? 'bg-red-600 text-white' : 'nk-green'}`}>{on ? '● On screen · Hide' : 'Show'}</button>
+                <button type="button" className="nk-btn nk-ghost px-2 py-1.5 text-xs text-red-700" onClick={() => removeQ(i)} aria-label="Remove">✕</button>
+              </div>
+            );
+          })}
+          <div className="flex flex-wrap gap-2">
+            {c.questions.items.length < 30 && <button type="button" className="nk-btn nk-ghost w-fit px-3 py-1.5 text-sm" onClick={() => setQ({ items: [...c.questions.items, ''] })}>+ Add question</button>}
+            <button type="button" className="nk-btn nk-ghost w-fit px-3 py-1.5 text-sm" onClick={() => setQ({ items: [...c.questions.items, ...SAMPLE_QUESTIONS.filter((s) => !c.questions.items.includes(s))].slice(0, 30) })}>+ Add the sample questions</button>
+          </div>
         </div>
       </section>
 
