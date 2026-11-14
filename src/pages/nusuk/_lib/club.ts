@@ -275,7 +275,15 @@ export function memberClient() {
 const JOINED_KEY = 'nusuk:member:joined';
 /** Remember on this browser that the signed-in person has a finished account (set by the account page). */
 export function markJoined(joined: boolean) {
-  try { if (joined) localStorage.setItem(JOINED_KEY, '1'); else localStorage.removeItem(JOINED_KEY); } catch {}
+  try { if (joined) localStorage.setItem(JOINED_KEY, '1'); else { localStorage.removeItem(JOINED_KEY); localStorage.removeItem(DISTRICT_KEY); } } catch {}
+}
+/** The member's district, remembered for the /nusuk district map (null = not known yet) */
+const DISTRICT_KEY = 'nusuk:member:district';
+export function setMyDistrict(d: string) {
+  try { localStorage.setItem(DISTRICT_KEY, d.trim().slice(0, 40)); } catch {}
+}
+export function getMyDistrict(): string | null {
+  try { return localStorage.getItem(DISTRICT_KEY); } catch { return null; }
 }
 /** Signed in here AND already made their account (profile saved). */
 export function isJoinedMember() {

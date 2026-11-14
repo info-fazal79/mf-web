@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNod
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { ArrowLeft, Check, Clock, UserRound, Copy, Download, Gift, History, LogOut, PenLine, Share2, Sparkles, Ticket, Trophy, UserPlus, Users } from 'lucide-react';
 import {
-  CODE_RE, KIND_LABEL, markJoined, showOf, SAVE_ERR, bn, bnDate, bnTime, contestRules, fillCaption, memberClient, rememberRef, savedRef,
+  CODE_RE, KIND_LABEL, markJoined, setMyDistrict, showOf, SAVE_ERR, bn, bnDate, bnTime, contestRules, fillCaption, memberClient, rememberRef, savedRef,
   type ClubMe, type Contest, type Member, type SaveResult,
 } from '../_lib/club';
 import { drawCard, cardBlob } from '../_lib/clubcard';
@@ -56,6 +56,7 @@ export default function ClubApp() {
     setError('');
     setMe(data as ClubMe);
     markJoined(Boolean((data as ClubMe).member));
+    if ((data as ClubMe).member) setMyDistrict((data as ClubMe).member!.district ?? ''); // pin on the /nusuk district map
     if ((data as ClubMe).member?.nusuk_code) rememberMyCode((data as ClubMe).member!.nusuk_code); // photo card on /nusuk // the /nusuk top bar (50 Keys offer) is hidden for members
   }, []);
 

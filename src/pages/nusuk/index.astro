@@ -121,9 +121,10 @@ const cm0 = defaultCommunity();
             <li><a href="#copy" data-menu="copy" class="flex items-center gap-3 rounded-xl px-3 py-2.5 font-semibold text-emerald-950 hover:bg-emerald-50"><span class="text-emerald-700"><Fragment set:html={lucide('copy', 'h-5 w-5')} /></span>কোড কপি করুন</a></li>
             <li><a href="#feature" data-menu="feature" class="flex items-center gap-3 rounded-xl px-3 py-2.5 font-semibold text-emerald-950 hover:bg-emerald-50"><span class="text-emerald-700"><Fragment set:html={lucide('star', 'h-5 w-5')} /></span>কোড ফিচার করুন</a></li>
             <li><a href="#nk-today" data-menu="nk-today" class="flex items-center gap-3 rounded-xl px-3 py-2.5 font-semibold text-emerald-950 hover:bg-emerald-50"><span class="text-emerald-700"><Fragment set:html={lucide('crown', 'h-5 w-5')} /></span>আজকের বিজয়ী</a></li>
-            <li><a href="#nk-quiz" data-menu="nk-quiz" class="flex items-center gap-3 rounded-xl px-3 py-2.5 font-semibold text-emerald-950 hover:bg-emerald-50"><span class="text-emerald-700"><Fragment set:html={lucide('target', 'h-5 w-5')} /></span>দৈনিক ইসলামিক কুইজ</a></li>
+            <li><a href="#nk-dm" data-menu="nk-dm" class="flex items-center gap-3 rounded-xl px-3 py-2.5 font-semibold text-emerald-950 hover:bg-emerald-50"><span class="text-emerald-700"><Fragment set:html={lucide('mapPin', 'h-5 w-5')} /></span>জেলাভিত্তিক মানচিত্র</a></li>
             <li><a href="#nk-pcard" data-menu="nk-pcard" class="flex items-center gap-3 rounded-xl px-3 py-2.5 font-semibold text-emerald-950 hover:bg-emerald-50"><span class="text-emerald-700"><Fragment set:html={lucide('imageDown', 'h-5 w-5')} /></span>ফটো কার্ড বানান</a></li>
             <li><a href="#nk-ins" data-menu="nk-ins" class="flex items-center gap-3 rounded-xl px-3 py-2.5 font-semibold text-emerald-950 hover:bg-emerald-50"><span class="text-emerald-700"><Fragment set:html={lucide('chartLine', 'h-5 w-5')} /></span>লাইভ পরিসংখ্যান</a></li>
+            <li><a href="#nk-quiz" data-menu="nk-quiz" class="flex items-center gap-3 rounded-xl px-3 py-2.5 font-semibold text-emerald-950 hover:bg-emerald-50"><span class="text-emerald-700"><Fragment set:html={lucide('target', 'h-5 w-5')} /></span>দৈনিক ইসলামিক কুইজ</a></li>
             <li><a href="#nk-winners" data-menu="nk-winners" class="flex items-center gap-3 rounded-xl px-3 py-2.5 font-semibold text-emerald-950 hover:bg-emerald-50"><span class="text-emerald-700"><Fragment set:html={lucide('trophy', 'h-5 w-5')} /></span>বাংলাদেশি বিজয়ীরা</a></li>
             <li><a href="#faq" data-menu="faq" class="flex items-center gap-3 rounded-xl px-3 py-2.5 font-semibold text-emerald-950 hover:bg-emerald-50"><span class="text-emerald-700"><Fragment set:html={lucide('circleHelp', 'h-5 w-5')} /></span>জরুরি প্রশ্ন ও উত্তর</a></li>
             <li><a href="#submit" data-menu="submit" class="flex items-center gap-3 rounded-xl px-3 py-2.5 font-semibold text-emerald-950 hover:bg-emerald-50"><span class="text-emerald-700"><Fragment set:html={lucide('send', 'h-5 w-5')} /></span>কোড জমা দিন</a></li>
@@ -232,27 +233,35 @@ const cm0 = defaultCommunity();
         </div>
       </section>
 
-      <!-- ===== Daily quiz (Nusuk Manager → Quiz). Hidden until the quiz is switched on. ===== -->
-      <section id="nk-quiz" class="nk-card nk-quiz mt-8 hidden overflow-hidden" aria-labelledby="nk-quiz-title">
-        <div class="nk-quiz-head px-5 pt-5 pb-4 text-white sm:px-6">
+      <!-- ===== District map: how many accounts from each district (update 43) ===== -->
+      <section id="nk-dm" class="nk-card nk-dm mt-8 scroll-mt-20 overflow-hidden p-0" aria-labelledby="nk-dm-h">
+        <div class="nk-dm-head px-5 pt-5 pb-4 text-white sm:px-6">
           <div class="flex items-start gap-3">
-            <span class="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white/15 text-2xl" aria-hidden="true">🎯</span>
+            <span class="nk-dm-icon grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white/15 text-gold-100" aria-hidden="true"><Fragment set:html={lucide('mapPin', 'h-6 w-6', 2.2)} /></span>
             <div class="min-w-0 flex-1">
-              <h2 id="nk-quiz-title" class="text-lg font-bold leading-tight">দৈনিক ইসলামিক কুইজ</h2>
-              <p id="nk-quiz-sub" class="mt-0.5 text-sm text-emerald-50/85"></p>
+              <h2 id="nk-dm-h" class="text-lg font-bold leading-tight">আপনার জেলা কতটা এগিয়ে?</h2>
+              <p class="mt-1 text-sm text-emerald-50/85">যারা এই পেজে <b class="text-gold-100">অ্যাকাউন্ট খুলেছেন</b>, তারা কোন জেলা থেকে। অ্যাকাউন্ট খুললেই আপনার জেলা ম্যাপে গাঢ় সবুজ হয়ে উঠবে, সংখ্যাও বাড়বে। নিজের জেলাকে এগিয়ে নিন!</p>
             </div>
           </div>
-          <div id="nk-quiz-times" class="mt-3 flex flex-wrap items-center gap-1.5"></div>
-          <button id="nk-quiz-play" type="button" class="nk-btn nk-gold mt-4 w-full py-3.5 text-base shadow-lg"><span aria-hidden="true">▶</span> <span id="nk-quiz-play-label">কুইজ খেলুন</span></button>
-          <p id="nk-quiz-me" class="mt-2 text-center text-xs text-gold-100/90"></p>
-        </div>
-        <div class="px-5 pt-4 pb-5 sm:px-6">
-          <div class="mb-2 flex items-center justify-between">
-            <h3 class="text-sm font-bold text-emerald-900">🏆 শীর্ষ ৩ জন</h3>
-            <span class="text-[11px] text-emerald-900/55">▲▼ গতকালের তুলনায়</span>
+          <div class="mt-4 grid grid-cols-2 gap-2 text-center">
+            <div class="rounded-xl bg-white/10 px-2 py-2"><div class="text-xs text-emerald-50/80">মোট অ্যাকাউন্ট</div><div id="nk-dm-total" class="text-xl font-bold tabular-nums text-gold-100">…</div></div>
+            <div class="rounded-xl bg-white/10 px-2 py-2"><div class="text-xs text-emerald-50/80">যুক্ত হওয়া জেলা</div><div id="nk-dm-dists" class="text-xl font-bold tabular-nums text-gold-100">…</div></div>
           </div>
-          <ol id="nk-quiz-top" class="grid gap-1"></ol>
-          <button id="nk-quiz-board" type="button" class="nk-btn nk-ghost mt-3 w-full py-2.5 text-sm">পুরো লিডারবোর্ড দেখুন ›</button>
+        </div>
+        <div class="px-3 pt-3 pb-5 sm:px-6">
+          <div class="relative">
+            <div id="nk-dm-map" class="nk-dm-map"><div class="nk-dm-wait">ম্যাপ লোড হচ্ছে…</div></div>
+            <button type="button" id="nk-dm-reset" class="nk-btn nk-ghost absolute top-2 right-2 hidden bg-white/95 px-3 py-1.5 text-xs shadow">⤢ পুরো ম্যাপ</button>
+            <div class="nk-dm-legend" aria-hidden="true"><span><i class="nk-dm-l0"></i>এখনো কেউ নেই</span><span><i class="nk-dm-l1"></i>অ্যাকাউন্ট আছে</span></div>
+          </div>
+          <div id="nk-dm-info" class="nk-dm-info mt-2 hidden" aria-live="polite"></div>
+          <p class="mt-2 text-center text-xs text-emerald-900/60">যে কোনো জেলায় চাপ দিলে জেলাটি বড় করে দেখাবে</p>
+          <h3 class="mt-4 mb-2 text-sm font-bold text-emerald-900">🏆 এগিয়ে থাকা জেলা</h3>
+          <ol id="nk-dm-top" class="flex flex-wrap gap-1.5"></ol>
+          <p id="nk-dm-abroad" class="mt-2 hidden text-xs text-emerald-900/70"></p>
+          <p id="nk-dm-you" class="nk-dm-you mt-3 hidden"></p>
+          <a id="nk-dm-cta" href="/nusuk/account" class="nk-btn nk-green mt-3 flex items-center justify-center gap-2 py-3 text-sm"><Fragment set:html={lucide('userPlus', 'h-4 w-4', 2.2)} /> অ্যাকাউন্ট খুলে আপনার জেলা যুক্ত করুন</a>
+          <p class="mt-3 text-center text-[10px] text-emerald-900/40">মানচিত্র: geoBoundaries (BBS, OCHA) · CC BY 3.0 IGO</p>
         </div>
       </section>
 
@@ -292,6 +301,30 @@ const cm0 = defaultCommunity();
         <div id="nk-ins-chart" class="mt-3" aria-live="off"></div>
         <div id="nk-ins-tip" class="pointer-events-none absolute top-0 z-10 hidden -translate-x-1/2 -translate-y-full rounded-lg bg-emerald-950 px-2.5 py-1.5 text-xs whitespace-nowrap text-white shadow-lg"></div>
         <p id="nk-ins-cap" class="mt-2 text-center text-xs text-emerald-900/60"></p>
+      </section>
+
+      <!-- ===== Daily quiz (Nusuk Manager → Quiz). Hidden until the quiz is switched on. ===== -->
+      <section id="nk-quiz" class="nk-card nk-quiz mt-8 hidden overflow-hidden" aria-labelledby="nk-quiz-title">
+        <div class="nk-quiz-head px-5 pt-5 pb-4 text-white sm:px-6">
+          <div class="flex items-start gap-3">
+            <span class="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white/15 text-2xl" aria-hidden="true">🎯</span>
+            <div class="min-w-0 flex-1">
+              <h2 id="nk-quiz-title" class="text-lg font-bold leading-tight">দৈনিক ইসলামিক কুইজ</h2>
+              <p id="nk-quiz-sub" class="mt-0.5 text-sm text-emerald-50/85"></p>
+            </div>
+          </div>
+          <div id="nk-quiz-times" class="mt-3 flex flex-wrap items-center gap-1.5"></div>
+          <button id="nk-quiz-play" type="button" class="nk-btn nk-gold mt-4 w-full py-3.5 text-base shadow-lg"><span aria-hidden="true">▶</span> <span id="nk-quiz-play-label">কুইজ খেলুন</span></button>
+          <p id="nk-quiz-me" class="mt-2 text-center text-xs text-gold-100/90"></p>
+        </div>
+        <div class="px-5 pt-4 pb-5 sm:px-6">
+          <div class="mb-2 flex items-center justify-between">
+            <h3 class="text-sm font-bold text-emerald-900">🏆 শীর্ষ ৩ জন</h3>
+            <span class="text-[11px] text-emerald-900/55">▲▼ গতকালের তুলনায়</span>
+          </div>
+          <ol id="nk-quiz-top" class="grid gap-1"></ol>
+          <button id="nk-quiz-board" type="button" class="nk-btn nk-ghost mt-3 w-full py-2.5 text-sm">পুরো লিডারবোর্ড দেখুন ›</button>
+        </div>
       </section>
 
       <!-- ===== Bangladeshi winners (filled from Nusuk Manager → Winners) ===== -->
@@ -793,7 +826,9 @@ const cm0 = defaultCommunity();
       import { parsePopup, popupRunning } from './_lib/popup';
       import { initLive } from './_lib/live';
       import { initPhotoCard, setPhotoCardLinks } from './_lib/photocard';
+      import { initDistrictMap } from './_lib/distmap';
       initPhotoCard();
+      initDistrictMap();
       import { CODE_RE, countdownText, countryName, defaultVideoLabel, flagUrl, parseToday, parseTopBar, parseVideo, subscribeUrl, parseWinners, prizeLabel, type Winner } from './_lib/content';
 
       // Bangladesh flag (green field, red disc set toward the hoist). Inline SVG so it renders on every OS.
