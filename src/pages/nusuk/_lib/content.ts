@@ -94,6 +94,15 @@ export const parseWinners = (c: unknown): Winner[] => {
 /** `next_at` (ISO, optional): when the next winner will be announced, shown as a live countdown on the card. */
 export type TodayWinner = { name: string; country: string; prize: Prize; prize_text?: string; date: string; link?: string; next_at?: string };
 
+/** "আজকের বিজয়ী" only when the winner's date is today (Bangladesh); yesterday's → "গতকালের বিজয়ী", older → "গত দিনের বিজয়ী" */
+export function winnerDayLabel(date: string | undefined, nowMs = Date.now()) {
+  const day = (t: number) => new Date(t).toLocaleDateString('en-CA', { timeZone: 'Asia/Dhaka' });
+  const d = (date ?? '').slice(0, 10);
+  if (!d || d === day(nowMs)) return 'আজকের বিজয়ী';
+  if (d === day(nowMs - 86_400_000)) return 'গতকালের বিজয়ী';
+  return 'গত দিনের বিজয়ী';
+}
+
 export const parseToday = (c: unknown): TodayWinner | null => {
   const t = c && typeof c === 'object' ? (c as Record<string, unknown>).today_winner : null;
   if (!t || typeof t !== 'object') return null;

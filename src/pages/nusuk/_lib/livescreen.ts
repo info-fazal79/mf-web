@@ -6,7 +6,7 @@
  *   nusuk_featured_list() featured codes with end times                  · every 30 s
  */
 import { rpc } from './rpc';
-import { countdownText, countryName, flagUrl, parseToday, prizeLong } from './content';
+import { countdownText, countryName, flagUrl, parseToday, prizeLong, winnerDayLabel } from './content';
 import { BK_SPEED, DEFAULT_BREAKING_LABEL, parseLiveCfg, themeAt, type LiveCfg } from './livecfg';
 
 /* ---- Breaking news bar: headlines run right to left, one after another, looping ---- */
@@ -218,6 +218,8 @@ export function initLiveScreen() {
   function renderWinner(raw: unknown, count: number) {
     clearInterval(winTimer);
     const w = parseToday({ today_winner: raw });
+    const tt = document.getElementById('ls-win-title');
+    if (tt) tt.textContent = w ? winnerDayLabel(w.date, now()) : 'আজকের বিজয়ী';
     if (!w) { $('ls-win').innerHTML = `<div class="text-xl ls-muted">বাংলাদেশি বিজয়ী এ পর্যন্ত: <b class="ls-accent">${bn(count)}</b> জন</div>`; return; }
     $('ls-win').innerHTML = `
       <div class="flex items-center gap-4">

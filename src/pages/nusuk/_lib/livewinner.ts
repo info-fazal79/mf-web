@@ -6,7 +6,7 @@
  * Data comes from nusuk_club_live_draw() (update_40), read every 2 s by liveraffle.ts.
  */
 import qrcode from 'qrcode-generator';
-import { countdownText, countryName, flagUrl, parseToday, parseWinners, prizeLong, type TodayWinner } from './content';
+import { countdownText, countryName, flagUrl, parseToday, parseWinners, prizeLong, type TodayWinner, winnerDayLabel } from './content';
 import { lucide } from './lucide';
 
 export type WinnerData = { mode: 'winner'; now: string; today?: unknown; winners?: unknown[] };
@@ -52,7 +52,7 @@ export function initLiveWinner() {
         <img src="${flagUrl(today.country, 160)}" alt="" class="h-[120px] w-[180px] shrink-0 rounded-2xl object-cover shadow-lg ring-4 ring-white/40" />
         <div class="min-w-0">
           <div class="flex items-center gap-4">
-            <span class="lw-today-badge">🎉 আজকের বিজয়ী</span>
+            <span class="lw-today-badge">🎉 ${winnerDayLabel(today.date, Date.now() + skew)}</span>
             ${today.date ? `<span class="text-2xl ls-muted">${esc(dateText(today.date))}</span>` : ''}
           </div>
           <div class="mt-2 truncate text-[64px] font-bold leading-tight">${esc(today.name)}</div>
