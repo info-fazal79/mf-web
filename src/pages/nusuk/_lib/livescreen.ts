@@ -28,14 +28,14 @@ function bkStart(items: string[], speed: number) {
   while (one * copies < w && copies < 20) copies++;
   const unit = round.repeat(copies);
   track.innerHTML = unit + unit;
-  one = track.scrollWidth / 2;
+  one = Math.round(track.scrollWidth / 2);
   // first time: start just off the right edge, then loop seamlessly
   bk.anim = track.animate(
-    [{ transform: `translateX(${w}px)` }, { transform: `translateX(${-one}px)` }],
+    [{ transform: `translate3d(${w}px, 0, 0)` }, { transform: `translate3d(${-one}px, 0, 0)` }],
     { duration: ((w + one) / speed) * 1000, easing: 'linear' },
   );
   bk.anim.onfinish = () => {
-    bk.anim = track.animate([{ transform: 'translateX(0)' }, { transform: `translateX(${-one}px)` }], { duration: (one / speed) * 1000, iterations: Infinity, easing: 'linear' });
+    bk.anim = track.animate([{ transform: 'translate3d(0, 0, 0)' }, { transform: `translate3d(${-one}px, 0, 0)` }], { duration: (one / speed) * 1000, iterations: Infinity, easing: 'linear' });
   };
 }
 function breaking(c: LiveCfg) {

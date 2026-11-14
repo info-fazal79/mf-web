@@ -38,14 +38,16 @@ export function initLiveWinner() {
   let lastKey: string | null = null; // first load: no announcement
   let revealTimer: ReturnType<typeof setTimeout> | undefined;
   $('lw-qr').innerHTML = qrSvg('https://muhammadfazal.com/nusuk');
+  /** only touch the page when something really changed (keeps the stream smooth, animations don't restart) */
+  const setHtml = (el: HTMLElement, html: string) => { if (el.dataset.html !== html) { el.dataset.html = html; el.innerHTML = html; } };
 
   function renderLatest() {
     const box = $('lw-latest');
     if (!today) {
-      box.innerHTML = `<div class="text-3xl ls-muted">এখনো কোনো বিজয়ী যুক্ত করা হয়নি</div>`;
+      setHtml(box, `<div class="text-3xl ls-muted">এখনো কোনো বিজয়ী যুক্ত করা হয়নি</div>`);
       return;
     }
-    box.innerHTML = `
+    setHtml(box, `
       <div class="flex items-center gap-8">
         <img src="${flagUrl(today.country, 160)}" alt="" class="h-[120px] w-[180px] shrink-0 rounded-2xl object-cover shadow-lg ring-4 ring-white/40" />
         <div class="min-w-0">
@@ -59,36 +61,44 @@ export function initLiveWinner() {
             <span class="rounded-full px-4 py-1 font-bold ls-accent" style="background: color-mix(in srgb, var(--accent) 16%, transparent)">${esc(prizeText(today))}</span>
           </div>
         </div>
-      </div>`;
+      </div>`);
   }
 
   function renderList(raw: unknown[]) {
     const list = parseWinners({ winners: raw });
-    $('lw-total').textContent = bn(list.length);
-    $('lw-list').innerHTML = list.slice(0, 5).map((w, i) => `
+    const total = bn(list.length);
+    if ($('lw-total').textContent !== total) $('lw-total').textContent = total;
+    setHtml($('lw-list'), list.slice(0, 5).map((w, i) => `
       <li class="flex items-center gap-3 rounded-xl px-3 py-2 ${i === 0 ? 'ls-chip' : ''}">
         <span class="text-2xl" aria-hidden="true">${w.prize === 'umrah' ? '🕋' : w.prize === 'zamzam' ? '💧' : '🎁'}</span>
         <span class="min-w-0 flex-1 truncate text-2xl font-semibold">${esc(w.name)}</span>
         <span class="shrink-0 text-lg ls-muted">${esc(dateText(w.date))}</span>
-      </li>`).join('') || '<li class="text-xl ls-muted">তালিকা শীঘ্রই আসছে</li>';
+      </li>`).join('') || '<li class="text-xl ls-muted">তালিকা শীঘ্রই আসছে</li>');
   }
 
   function tick() {
     const box = $('lw-countbox');
     const end = today?.next_at ? Date.parse(today.next_at) : NaN;
     const nowMs = Date.now() + skew;
+    const show = (mode: string, html: string) => { if (box.dataset.mode !== mode) { box.dataset.mode = mode; box.innerHTML = html; } };
     if (Number.isNaN(end) || nowMs - end > 12 * 3600e3) {
-      box.innerHTML = `<div class="text-3xl ls-label-hero">পরবর্তী বিজয়ী ঘোষণার সময় শীঘ্রই জানানো হবে</div>
-        <div class="mt-2 text-xl ls-muted">লাইভে থাকুন, ঘোষণার সাথে সাথে এখানে দেখা যাবে</div>`;
+      show('none', `<div class="text-3xl ls-label-hero">পরবর্তী বিজয়ী ঘোষণার সময় শীঘ্রই জানানো হবে</div>
+        <div class="mt-2 text-xl ls-muted">লাইভে থাকুন, ঘোষণার সাথে সাথে এখানে দেখা যাবে</div>`);
       return;
     }
     const left = end - nowMs;
-    box.innerHTML = left > 0
-      ? `<div class="flex items-center justify-center gap-3 text-3xl ls-label-hero">${lucide('hourglass', 'h-8 w-8')}পরবর্তী বিজয়ী ঘোষণা</div>
-         <div class="ls-num mt-2 font-mono text-[120px] font-bold leading-none ls-accent ${left < 60_000 ? 'ls-live' : ''}">${countdownText(left)}</div>
-         <div class="mt-3 text-xl ls-muted">ঘোষণার সাথে সাথে এখানে দেখা যাবে · লাইভে থাকুন</div>`
-      : `<div class="flex items-center justify-center gap-3 text-[52px] font-bold ls-accent">${lucide('partyPopper', 'h-12 w-12')}যেকোনো মুহূর্তে ঘোষণা আসছে<span class="lw-dots"></span></div>
-         <div class="mt-3 text-2xl ls-muted">নুসুক কর্তৃপক্ষ ফলাফল ঘোষণা করলেই এখানে দেখাবে</div>`;
+    if (left > 0) {
+      show('count', `<div class="flex items-center justify-center gap-3 text-3xl ls-label-hero">${lucide('hourglass', 'h-8 w-8')}পরবর্তী বিজয়ী ঘোষণা</div>
+         <div id="lw-cd" class="ls-num mt-2 font-mono text-[120px] font-bold leading-none ls-accent"></div>
+         <div class="mt-3 text-xl ls-muted">ঘোষণার সাথে সাথে এখানে দেখা যাবে · লাইভে থাকুন</div>`);
+      const cd = $('lw-cd');
+      const txt = countdownText(left);
+      if (cd.textContent !== txt) cd.textContent = txt;
+      cd.classList.toggle('ls-live', left < 60_000);
+    } else {
+      show('soon', `<div class="flex items-center justify-center gap-3 text-[52px] font-bold ls-accent">${lucide('partyPopper', 'h-12 w-12')}যেকোনো মুহূর্তে ঘোষণা আসছে<span class="lw-dots"></span></div>
+         <div class="mt-3 text-2xl ls-muted">নুসুক কর্তৃপক্ষ ফলাফল ঘোষণা করলেই এখানে দেখাবে</div>`);
+    }
   }
   setInterval(tick, 1000);
 
