@@ -22,6 +22,19 @@ export type LiveCfg = {
   breaking: Breaking;
   /** Questions for the audience: the one being shown pops up at the top of the screen */
   questions: Questions;
+  /** Full-screen announcement over the whole live screen; hidden until "on" */
+  announce: Announce;
+};
+export type Announce = { on: boolean; tag: string; title: string; body: string; points: string[]; ask: string; choices: string[]; footer: string };
+export const DEFAULT_ANNOUNCE: Announce = {
+  on: false,
+  tag: '📣 বিশেষ ঘোষণা',
+  title: 'আসছে বাংলাদেশি ভাই-বোনদের জন্য বিশেষ প্রতিযোগিতা',
+  body: 'রিবাতুল উম্মাহর পক্ষ থেকে খুব শীঘ্রই বাংলাদেশি ভাই-বোনদের জন্য একটি বিশেষ প্রতিযোগিতার আয়োজন করা হচ্ছে, ইনশাআল্লাহ। বিস্তারিত নিয়মকানুন ও পুরস্কারের ঘোষণা খুব শীঘ্রই এই লাইভে ও আমাদের পেজে জানানো হবে।',
+  points: ['সবার জন্য সহজ অংশগ্রহণ', 'আকর্ষণীয় পুরস্কার', 'সম্পূর্ণ স্বচ্ছ লাইভ ড্র'],
+  ask: 'আপনার মতামত দিন: কোন ধরনের প্রতিযোগিতা হলে ভালো হয়? কমেন্টে নম্বর লিখুন 👇',
+  choices: ['ইসলামিক কুইজ প্রতিযোগিতা', 'নুসুক কোড শেয়ার প্রতিযোগিতা', 'ফটো কার্ড শেয়ার প্রতিযোগিতা'],
+  footer: 'muhammadfazal.com/nusuk',
 };
 /** show = index of the question on screen, or null (all hidden) */
 export type Questions = { items: string[]; show: number | null };
@@ -53,6 +66,7 @@ export const defaultLiveCfg = (): LiveCfg => ({
   title: '',
   breaking: { on: false, label: '', items: [{ text: '', on: true }], speed: 'normal' },
   questions: { items: [...SAMPLE_QUESTIONS], show: null },
+  announce: { ...DEFAULT_ANNOUNCE, points: [...DEFAULT_ANNOUNCE.points], choices: [...DEFAULT_ANNOUNCE.choices] },
 });
 
 const isTheme = (t: unknown): t is Theme => t === 'green' || t === 'mint' || t === 'cream' || t === 'navy';
@@ -76,6 +90,20 @@ export function parseLiveCfg(raw: unknown): LiveCfg {
     title: typeof r.title === 'string' ? r.title.slice(0, 80) : '',
     breaking: parseBreaking(r.breaking),
     questions: parseQuestions(r.questions),
+    announce: parseAnnounce(r.announce),
+  };
+}
+
+function parseAnnounce(raw: unknown): Announce {
+  const d = DEFAULT_ANNOUNCE;
+  if (!raw || typeof raw !== 'object') return { ...d, points: [...d.points], choices: [...d.choices] };
+  const a = raw as Record<string, unknown>;
+  const str = (v: unknown, n: number, f: string) => (typeof v === 'string' ? v.slice(0, n) : f);
+  const list = (v: unknown, f: string[]) => (Array.isArray(v) ? (v as unknown[]).filter((x): x is string => typeof x === 'string').map((x) => x.slice(0, 120)).slice(0, 6) : [...f]);
+  return {
+    on: a.on === true,
+    tag: str(a.tag, 60, d.tag), title: str(a.title, 160, d.title), body: str(a.body, 600, d.body),
+    points: list(a.points, d.points), ask: str(a.ask, 200, d.ask), choices: list(a.choices, d.choices), footer: str(a.footer, 80, d.footer),
   };
 }
 

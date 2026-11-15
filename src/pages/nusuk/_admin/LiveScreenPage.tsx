@@ -91,6 +91,14 @@ export default function LiveScreenPage({ toast }: { toast: ToastFn }) {
     const show = c.questions.show == null || c.questions.show === i ? null : c.questions.show > i ? c.questions.show - 1 : c.questions.show;
     setQ({ items, show });
   };
+  // ---- Full-screen announcement ----
+  const setAn = (p: Partial<LiveCfg['announce']>) => set({ announce: { ...c.announce, ...p } });
+  async function showAn(on: boolean) {
+    if (on && !c.announce.title.trim()) return toast('Write the heading first', false);
+    const next = { ...c, announce: { ...c.announce, on } };
+    setC(next);
+    await save(next);
+  }
   /** Show / hide is saved at once (with any other edits), so it reaches the stream within 5 s */
   async function showQ(i: number | null) {
     if (i != null && !c.questions.items[i]?.trim()) return toast('Write the question first', false);
@@ -263,6 +271,32 @@ export default function LiveScreenPage({ toast }: { toast: ToastFn }) {
           </div>
           <p className="text-xs text-emerald-900/60">{bkCount} on the stream{bkHidden ? ` · ${bkHidden} hidden` : ''} · Enter in a box adds a new line · press Save, the stream changes within 10 seconds.</p>
         </div>
+      </section>
+
+      <section className={`nk-card grid gap-3 p-4 sm:p-5 ${c.announce.on ? 'ring-2 ring-red-500' : ''}`}>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="flex items-center gap-2 text-base font-bold text-emerald-950">📣 Full-screen announcement {c.announce.on ? <span className="rounded-full bg-red-600 px-2 py-0.5 text-[11px] text-white">ON SCREEN</span> : <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] text-emerald-900">Hidden</span>}</h2>
+            <p className="mt-0.5 text-sm text-emerald-900/70">Covers the whole live screen. Edit and <b>Save</b> while hidden; press <b>Show on screen</b> when ready (it appears within 5 seconds), <b>Hide</b> to go back. Empty fields are left out.</p>
+          </div>
+          <div className="flex items-center gap-2">
+            {c.announce.on
+              ? <button type="button" className="nk-btn bg-red-600 px-4 py-2 text-sm text-white" disabled={busy} onClick={() => showAn(false)}>Hide announcement</button>
+              : <button type="button" className="nk-btn nk-green px-4 py-2 text-sm" disabled={busy} onClick={() => showAn(true)}>Show on screen</button>}
+            <button type="button" className="nk-btn nk-ghost px-4 py-2 text-sm" disabled={busy || !dirty} onClick={() => save()}>{busy ? 'Saving…' : dirty ? 'Save' : 'Saved'}</button>
+          </div>
+        </div>
+        <div className="grid gap-3 lg:grid-cols-2">
+          <label className="grid gap-1 text-sm font-semibold">Tag<input className="nk-input font-normal" maxLength={60} value={c.announce.tag} onChange={(e) => setAn({ tag: e.target.value })} /></label>
+          <label className="grid gap-1 text-sm font-semibold">Bottom line<input className="nk-input font-normal" maxLength={80} value={c.announce.footer} onChange={(e) => setAn({ footer: e.target.value })} /></label>
+        </div>
+        <label className="grid gap-1 text-sm font-semibold">Heading<textarea className="nk-input font-normal" rows={2} maxLength={160} value={c.announce.title} onChange={(e) => setAn({ title: e.target.value })} /></label>
+        <label className="grid gap-1 text-sm font-semibold">Text<textarea className="nk-input font-normal" rows={4} maxLength={600} value={c.announce.body} onChange={(e) => setAn({ body: e.target.value })} /></label>
+        <label className="grid gap-1 text-sm font-semibold">Highlights <span className="text-xs font-normal text-emerald-900/60">one per line, up to 6</span>
+          <textarea className="nk-input font-normal" rows={3} value={c.announce.points.join('\n')} onChange={(e) => setAn({ points: e.target.value.split('\n').slice(0, 6) })} /></label>
+        <label className="grid gap-1 text-sm font-semibold">Ask for opinion<input className="nk-input font-normal" maxLength={200} value={c.announce.ask} onChange={(e) => setAn({ ask: e.target.value })} /></label>
+        <label className="grid gap-1 text-sm font-semibold">Choices people answer with a number <span className="text-xs font-normal text-emerald-900/60">one per line, up to 6; empty = no choices</span>
+          <textarea className="nk-input font-normal" rows={3} value={c.announce.choices.join('\n')} onChange={(e) => setAn({ choices: e.target.value.split('\n').slice(0, 6) })} /></label>
       </section>
 
       <section className="nk-card grid gap-3 p-4 sm:p-5">

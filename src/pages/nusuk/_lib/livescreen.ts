@@ -114,6 +114,37 @@ export function initLiveScreen() {
     $('ls-title').textContent = (urlTitle ?? cfg.title).trim().slice(0, 80) || defaultTitle;
     breaking(cfg);
     question(cfg);
+    announce(cfg);
+  }
+  // Full-screen announcement (Nusuk Manager → Live screen → Announcement)
+  let anShown = '';
+  function announce(c: LiveCfg) {
+    const box = document.getElementById('ls-an');
+    if (!box) return;
+    const a = c.announce;
+    const key = a.on ? JSON.stringify(a) : '';
+    if (key === anShown) return;
+    const wasOn = !!anShown;
+    anShown = key;
+    if (!a.on) { box.classList.remove('lsan-in'); box.classList.add('lsan-out'); return; }
+    const set = (id: string, t: string) => { const el = document.getElementById(id)!; el.textContent = t.trim(); el.toggleAttribute('data-hidden', !t.trim()); };
+    set('ls-an-tag', a.tag); set('ls-an-title', a.title); set('ls-an-body', a.body); set('ls-an-ask', a.ask); set('ls-an-foot', a.footer);
+    const pts = a.points.map((p) => p.trim()).filter(Boolean);
+    const pl = document.getElementById('ls-an-points')!;
+    pl.innerHTML = pts.map((p) => `<li><span>✓</span>${p.replace(/[&<>"']/g, (ch) => `&#${ch.charCodeAt(0)};`)}</li>`).join('');
+    pl.toggleAttribute('data-hidden', !pts.length);
+    const ch = a.choices.map((p) => p.trim()).filter(Boolean);
+    const cl = document.getElementById('ls-an-choices')!;
+    cl.innerHTML = ch.map((p, i) => `<li><b>${'১২৩৪৫৬'[i]}</b>${p.replace(/[&<>"']/g, (x) => `&#${x.charCodeAt(0)};`)}</li>`).join('');
+    cl.toggleAttribute('data-hidden', !ch.length);
+    document.getElementById('ls-an-opinion')!.toggleAttribute('data-hidden', !ch.length && !a.ask.trim());
+    box.removeAttribute('data-hidden');
+    if (!wasOn) { box.classList.remove('lsan-out', 'lsan-in'); void box.offsetWidth; box.classList.add('lsan-in'); }
+    // long text: shrink the whole announcement until it fits the frame
+    const inner = document.getElementById('ls-an-inner')!, frame = inner.parentElement!;
+    inner.style.transform = '';
+    const k = Math.min(1, (frame.clientHeight - 150) / inner.scrollHeight, (frame.clientWidth - 120) / inner.scrollWidth);
+    if (k < 1) inner.style.transform = `scale(${k})`;
   }
   // Audience question (Nusuk Manager → Live screen → Questions): pops up at the top while one is shown
   let qShown = '';
