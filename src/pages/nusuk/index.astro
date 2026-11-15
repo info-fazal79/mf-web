@@ -819,6 +819,15 @@ const cm0 = defaultCommunity();
       </form>
     </dialog>
 
+    <!-- Phone only: bottom bar with the 5 main places; the middle one (submit a code) is big -->
+    <nav id="nk-tabbar" class="nk-tabbar md:hidden" aria-label="প্রধান মেনু">
+      <a href="#copy" data-tab="copy" class="nk-tab"><span class="nk-tab-ico"><Fragment set:html={lucide('copy', 'h-[22px] w-[22px]', 2)} /></span><span>কোড</span></a>
+      <a href="#nk-today" data-tab="nk-today" class="nk-tab"><span class="nk-tab-ico"><Fragment set:html={lucide('trophy', 'h-[22px] w-[22px]', 2)} /></span><span>বিজয়ী</span></a>
+      <a href="#submit" data-tab="submit" class="nk-tab nk-tab-main" aria-label="কোড জমা দিন"><span class="nk-tab-fab"><Fragment set:html={lucide('send', 'h-7 w-7', 2.2)} /></span><span>কোড জমা</span></a>
+      <a href="#nk-dm" data-tab="nk-dm" class="nk-tab"><span class="nk-tab-ico"><Fragment set:html={lucide('mapPin', 'h-[22px] w-[22px]', 2)} /></span><span>জেলা</span></a>
+      <a href="/nusuk/account" id="nk-tab-acct" class="nk-tab"><span id="nk-tab-acct-ico" class="nk-tab-ico"><Fragment set:html={lucide('logIn', 'h-[22px] w-[22px]', 2)} /></span><span id="nk-tab-acct-text">লগইন</span></a>
+    </nav>
+
     <div id="nk-toast" class="pointer-events-none fixed inset-x-0 bottom-6 z-50 flex justify-center px-4 opacity-0 transition-opacity duration-200" aria-hidden="true">
       <span class="rounded-full bg-emerald-950 px-5 py-2.5 text-sm font-semibold text-gold-100 shadow-xl">✓ কোড কপি হয়েছে</span>
     </div>
@@ -2012,6 +2021,42 @@ const cm0 = defaultCommunity();
         $('nk-login-ico').innerHTML = lucide('userCheck', 'h-4 w-4', 2.2);
         $('nk-login').setAttribute('aria-label', 'আমার অ্যাকাউন্ট');
         $('nk-menu-login-text').textContent = 'আমার অ্যাকাউন্ট';
+        $('nk-tab-acct-text').textContent = 'ড্যাশবোর্ড';
+        $('nk-tab-acct-ico').innerHTML = lucide('layoutDashboard', 'h-[22px] w-[22px]', 2);
+      }
+      // ---- Phone bottom bar ----
+      {
+        const bar = $('nk-tabbar');
+        document.body.classList.add('nk-has-tabbar');
+        const tabs = [...bar.querySelectorAll<HTMLAnchorElement>('[data-tab]')];
+        // a hidden section (e.g. no winner yet) sends the button to the next best place
+        const fallback: Record<string, string> = { 'nk-today': 'nk-winners', 'nk-dm': 'nk-ins' };
+        const target = (id: string) => {
+          const el = document.getElementById(id);
+          if (el && !el.classList.contains('hidden')) return el;
+          const f = fallback[id] && document.getElementById(fallback[id]);
+          return f && !f.classList.contains('hidden') ? f : el;
+        };
+        tabs.forEach((a) => a.addEventListener('click', (e) => {
+          const el = target(a.dataset.tab!);
+          if (!el) return;
+          e.preventDefault();
+          const head = document.getElementById('nk-headbar')?.getBoundingClientRect().height ?? 72;
+          window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - head - 12, behavior: 'smooth' });
+          history.replaceState(null, '', `#${el.id}`);
+        }));
+        // light up the button of the part being read
+        const seen = new Map<string, number>();
+        const io = new IntersectionObserver((es) => {
+          es.forEach((x) => seen.set((x.target as HTMLElement).id, x.isIntersecting ? x.intersectionRatio : 0));
+          let best = '', r = 0;
+          seen.forEach((v, k) => { if (v > r) { r = v; best = k; } });
+          tabs.forEach((a) => a.classList.toggle('nk-tab-on', !!best && (a.dataset.tab === best || fallback[a.dataset.tab!] === best)));
+        }, { threshold: [0, 0.15, 0.4, 0.7], rootMargin: '-15% 0px -35% 0px' });
+        ['copy', 'nk-today', 'nk-winners', 'submit', 'nk-dm', 'nk-ins'].forEach((id) => { const el = document.getElementById(id); if (el) io.observe(el); });
+        // out of the way while typing (the phone keyboard pushes it up)
+        document.addEventListener('focusin', (e) => { if ((e.target as HTMLElement).matches('input, textarea, select')) bar.classList.add('nk-tabbar-off'); });
+        document.addEventListener('focusout', () => setTimeout(() => { if (!document.activeElement?.matches('input, textarea, select')) bar.classList.remove('nk-tabbar-off'); }, 100));
       }
       const menu = $('nk-menu');
       const menuOpen = () => {

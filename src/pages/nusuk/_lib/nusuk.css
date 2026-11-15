@@ -298,3 +298,24 @@ button.nk-qz-opt:disabled { cursor: default; }
 .nk-sel { width: 100%; min-width: 0; border: 1px solid #d9d2bd; background: #fff; border-radius: 0.6rem; padding: 0.4rem 0.55rem; font-size: 0.8rem; line-height: 1.35; outline: none; }
 .nk-sel:focus { border-color: var(--color-emerald-600); box-shadow: 0 0 0 3px rgba(14, 148, 104, 0.18); }
 select.nk-sel { padding-right: 1.6rem; text-overflow: ellipsis; }
+
+/* ---------- Phone bottom bar (index.astro #nk-tabbar) ---------- */
+.nk-tabbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; display: grid; grid-template-columns: repeat(5, 1fr); align-items: end;
+  padding: 6px 6px calc(6px + env(safe-area-inset-bottom)); background: rgba(255, 255, 255, 0.97); border-top: 1px solid #e7e1cf;
+  box-shadow: 0 -10px 30px -12px rgba(3, 43, 32, 0.35); backdrop-filter: blur(10px); transition: transform 0.25s ease; }
+.nk-tabbar-off { transform: translateY(110%); }
+.nk-tab { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 0 2px; font-size: 11px; font-weight: 700; color: rgb(6 78 59 / 0.62); -webkit-tap-highlight-color: transparent; }
+.nk-tab-ico { display: grid; place-items: center; width: 44px; height: 30px; border-radius: 9999px; transition: background-color 0.2s, color 0.2s; }
+.nk-tab-on { color: #064e3b; }
+.nk-tab-on .nk-tab-ico { background: #dff3e8; color: #0b5a43; }
+.nk-tab:active .nk-tab-ico { transform: scale(0.92); }
+.nk-tab-main { color: #064e3b; }
+.nk-tab-fab { display: grid; place-items: center; width: 62px; height: 62px; margin-top: -30px; border-radius: 9999px; color: #2b1f00;
+  background: linear-gradient(145deg, #f7d76a, #e0b93a); border: 4px solid #fff; box-shadow: 0 10px 22px -8px rgba(183, 121, 31, 0.75), 0 0 0 1px #e7e1cf; }
+.nk-tab-main:active .nk-tab-fab { transform: scale(0.94); }
+.nk-tab-main.nk-tab-on .nk-tab-fab { background: linear-gradient(145deg, #0b7a59, #053d2d); color: #fff; }
+@media (max-width: 767px) {
+  body.nk-has-tabbar { padding-bottom: calc(78px + env(safe-area-inset-bottom)); }
+  body.nk-has-tabbar #nk-toast { bottom: calc(96px + env(safe-area-inset-bottom)); }
+}
+@media (min-width: 768px) { .nk-tabbar { display: none; } } /* phones only */
