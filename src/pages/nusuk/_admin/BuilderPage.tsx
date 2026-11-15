@@ -7,7 +7,8 @@ import { supabase as sb } from '@/lib/supabase';
 import { loadImage } from '../_lib/clubcard';
 import { BD_DISTRICTS } from '../_lib/bdmap';
 import { countDistricts } from '../_lib/distmap';
-import { BSIZES, SWATCHES, WIDGETS, makeWidget, renderDoc, template, uid, type BSize, type Bg, type Doc, type El, type WidgetKey } from '../_lib/builder';
+import { TEMPLATES, blankDoc, firstTemplate } from '../_lib/btemplates';
+import { BSIZES, SWATCHES, WIDGETS, makeWidget, renderDoc, uid, type BSize, type Bg, type Doc, type El, type WidgetKey } from '../_lib/builder';
 
 type ToastFn = (t: string, ok?: boolean) => void;
 type Box = { x: number; y: number; w: number; h: number };
@@ -49,7 +50,7 @@ function ColorIn({ v, set }: { v: string; set: (c: string) => void }) {
     <div className="grid gap-1">
       <div className="flex items-center gap-1.5">
         <input type="color" className="h-8 w-10 cursor-pointer rounded border border-[#e7e1cf] bg-white p-0.5" value={/^#[0-9a-f]{6}$/i.test(v) ? v : '#ffffff'} onChange={(e) => set(e.target.value)} />
-        <input className="nk-input h-8 flex-1 px-2 py-1 font-mono text-xs" value={v} onChange={(e) => set(e.target.value)} />
+        <input className="nk-sel flex-1 font-mono text-xs" value={v} onChange={(e) => set(e.target.value)} />
       </div>
       <div className="flex flex-wrap gap-1">
         {SWATCHES.map((c) => <button key={c} type="button" title={c} onClick={() => set(c)} className="h-5 w-5 rounded-full border border-black/15" style={{ background: c }} />)}
@@ -61,7 +62,7 @@ function Num({ v, set, min = 0, max = 400, step = 1 }: { v: number; set: (n: num
   return (
     <div className="flex items-center gap-2">
       <input type="range" className="flex-1 accent-emerald-800" min={min} max={max} step={step} value={v} onChange={(e) => set(Number(e.target.value))} />
-      <input type="number" className="nk-input h-8 w-16 px-1.5 py-1 text-xs" min={min} max={max} step={step} value={Math.round(v * 100) / 100} onChange={(e) => set(Number(e.target.value))} />
+      <input type="number" className="nk-sel w-16 text-xs" min={min} max={max} step={step} value={Math.round(v * 100) / 100} onChange={(e) => set(Number(e.target.value))} />
     </div>
   );
 }
@@ -77,13 +78,14 @@ const Panel = ({ t, children, right }: { t: string; children: ReactNode; right?:
 
 // ------------------------------------------------------------------ page
 export default function BuilderPage({ toast }: { toast: ToastFn }) {
-  const [doc, setDocRaw] = useState<Doc>(() => load<Doc>(DOC_KEY, template('announce', 'fb_portrait')));
+  const [doc, setDocRaw] = useState<Doc>(() => load<Doc>(DOC_KEY, firstTemplate('fb_portrait')));
   const [sel, setSel] = useState<string | null>(null);
   const [boxes, setBoxes] = useState<Record<string, Box>>({});
   const [counts, setCounts] = useState<number[] | null>(null);
   const [saved, setSaved] = useState<{ name: string; doc: Doc }[]>(() => load(SAVED_KEY, []));
   const [guides, setGuides] = useState<{ v: boolean; h: boolean }>({ v: false, h: false });
   const [dispW, setDispW] = useState(560);
+  const [gallery, setGallery] = useState(false);
   const past = useRef<Doc[]>([]);
   const future = useRef<Doc[]>([]);
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -279,7 +281,7 @@ export default function BuilderPage({ toast }: { toast: ToastFn }) {
         <div className="grid grid-cols-4 gap-1.5 text-[11px]">
           {(['x', 'y', 'w', 'h'] as const).map((k) => (
             <label key={k} className="grid gap-0.5"><span className="font-semibold uppercase text-emerald-900/60">{k}</span>
-              <input type="number" className="nk-input h-7 px-1 py-0.5 text-xs" value={Math.round(e[k])} onChange={(ev) => p({ [k]: Number(ev.target.value) } as Partial<El>)} /></label>
+              <input type="number" className="nk-sel text-xs" value={Math.round(e[k])} onChange={(ev) => p({ [k]: Number(ev.target.value) } as Partial<El>)} /></label>
           ))}
         </div>
         <div className="flex flex-wrap gap-1.5">
@@ -297,13 +299,13 @@ export default function BuilderPage({ toast }: { toast: ToastFn }) {
         <Row t="Text"><textarea className="nk-input text-sm" rows={3} value={e.text} onChange={(ev) => p({ text: ev.target.value })} /></Row>
         <div className="grid gap-2">
           <Row t="Size"><Num v={e.size} set={(v) => p({ size: v })} min={10} max={220} /></Row>
-          <Row t="Weight"><select className="nk-input h-8 px-2 py-1 text-xs" value={e.weight} onChange={(ev) => p({ weight: Number(ev.target.value) })}>{[400, 500, 600, 700].map((w) => <option key={w} value={w}>{w === 700 ? 'Bold' : w === 600 ? 'Semi bold' : w === 500 ? 'Medium' : 'Regular'}</option>)}</select></Row>
+          <Row t="Weight"><select className="nk-sel text-xs" value={e.weight} onChange={(ev) => p({ weight: Number(ev.target.value) })}>{[400, 500, 600, 700].map((w) => <option key={w} value={w}>{w === 700 ? 'Bold' : w === 600 ? 'Semi bold' : w === 500 ? 'Medium' : 'Regular'}</option>)}</select></Row>
         </div>
         <div className="flex gap-1">{(['left', 'center', 'right'] as const).map((a) => <button key={a} type="button" onClick={() => p({ align: a })} className={`nk-btn flex-1 px-2 py-1 text-xs ${e.align === a ? 'nk-green' : 'nk-ghost'}`}>{a}</button>)}</div>
         <Row t="Colour"><ColorIn v={e.color} set={(c) => p({ color: c })} /></Row>
         <div className="grid gap-2">
           <Row t="Line height"><Num v={e.lh} set={(v) => p({ lh: v })} min={0.9} max={2.2} step={0.05} /></Row>
-          <Row t="Font"><select className="nk-input h-8 px-2 py-1 text-xs" value={e.font} onChange={(ev) => p({ font: ev.target.value as 'bn' | 'mono' })}><option value="bn">Bangla (Hind Siliguri)</option><option value="mono">Code (mono)</option></select></Row>
+          <Row t="Font"><select className="nk-sel text-xs" value={e.font} onChange={(ev) => p({ font: ev.target.value as 'bn' | 'mono' })}><option value="bn">Bangla (Hind Siliguri)</option><option value="mono">Code (mono)</option></select></Row>
         </div>
         <Check v={e.shadow} set={(b) => p({ shadow: b })} t="Shadow" />
         <Check v={e.bgOn} set={(b) => p({ bgOn: b })} t="Background box (tag / button)" />
@@ -340,7 +342,7 @@ export default function BuilderPage({ toast }: { toast: ToastFn }) {
         <Row t="Options (one per line, up to 6)"><textarea className="nk-input text-sm" rows={4} value={e.items} onChange={(ev) => p({ items: ev.target.value.split('\n').slice(0, 6).join('\n') })} /></Row>
         <div className="grid gap-2">
           <Row t="Size"><Num v={e.size} set={(v) => p({ size: v })} min={14} max={80} /></Row>
-          <Row t="Columns"><select className="nk-input h-8 px-2 py-1 text-xs" value={e.cols} onChange={(ev) => p({ cols: Number(ev.target.value) as 1 | 2 })}><option value={2}>2</option><option value={1}>1</option></select></Row>
+          <Row t="Columns"><select className="nk-sel text-xs" value={e.cols} onChange={(ev) => p({ cols: Number(ev.target.value) as 1 | 2 })}><option value={2}>2</option><option value={1}>1</option></select></Row>
         </div>
         <div className="grid grid-cols-2 gap-2">
           <Row t="Text"><ColorIn v={e.color} set={(c) => p({ color: c })} /></Row>
@@ -357,7 +359,7 @@ export default function BuilderPage({ toast }: { toast: ToastFn }) {
           {e.src && <button type="button" className="nk-btn nk-ghost px-3 py-1.5 text-xs" onClick={() => p({ src: '' })}>{e.logo ? 'Back to Ribat logo' : 'Remove picture'}</button>}
         </div>
         <div className="grid grid-cols-2 gap-2">
-          <Row t="Fit"><select className="nk-input h-8 px-2 py-1 text-xs" value={e.fit} onChange={(ev) => p({ fit: ev.target.value as 'cover' | 'contain' })}><option value="cover">Fill the box</option><option value="contain">Show whole picture</option></select></Row>
+          <Row t="Fit"><select className="nk-sel text-xs" value={e.fit} onChange={(ev) => p({ fit: ev.target.value as 'cover' | 'contain' })}><option value="cover">Fill the box</option><option value="contain">Show whole picture</option></select></Row>
           <Row t="Round corners"><Num v={e.radius} set={(v) => p({ radius: v })} max={300} /></Row>
         </div>
         <Check v={e.circle} set={(b) => p({ circle: b })} t="Circle" />
@@ -386,8 +388,8 @@ export default function BuilderPage({ toast }: { toast: ToastFn }) {
     if (e.type === 'stat') return (
       <>
         <div className="grid grid-cols-2 gap-2">
-          <Row t="Number"><input className="nk-input h-8 px-2 py-1 text-sm" value={e.value} onChange={(ev) => p({ value: ev.target.value })} /></Row>
-          <Row t="Label"><input className="nk-input h-8 px-2 py-1 text-sm" value={e.label} onChange={(ev) => p({ label: ev.target.value })} /></Row>
+          <Row t="Number"><input className="nk-sel text-sm" value={e.value} onChange={(ev) => p({ value: ev.target.value })} /></Row>
+          <Row t="Label"><input className="nk-sel text-sm" value={e.label} onChange={(ev) => p({ label: ev.target.value })} /></Row>
         </div>
         <div className="grid grid-cols-2 gap-2">
           <Row t="Number colour"><ColorIn v={e.color} set={(c) => p({ color: c })} /></Row>
@@ -399,7 +401,7 @@ export default function BuilderPage({ toast }: { toast: ToastFn }) {
     );
     if (e.type === 'qr') return (
       <>
-        <Row t="Link"><input className="nk-input h-8 px-2 py-1 text-sm" value={e.text} onChange={(ev) => p({ text: ev.target.value })} /></Row>
+        <Row t="Link"><input className="nk-sel text-sm" value={e.text} onChange={(ev) => p({ text: ev.target.value })} /></Row>
         <div className="grid grid-cols-2 gap-2">
           <Row t="Dots"><ColorIn v={e.color} set={(c) => p({ color: c })} /></Row>
           <Row t="Background"><ColorIn v={e.bg} set={(c) => p({ bg: c })} /></Row>
@@ -439,12 +441,9 @@ export default function BuilderPage({ toast }: { toast: ToastFn }) {
           ))}
         </Panel>
         <Panel t="Start from">
-          <div className="grid grid-cols-2 gap-1">
-            {([['announce', 'Announcement'], ['feature', 'Feature + screenshot'], ['quiz', 'Quiz'], ['thumb', 'Thumbnail'], ['blank', 'Blank']] as const).map(([k, l]) => (
-              <button key={k} type="button" className="rounded-lg border border-[#e7e1cf] bg-white px-2 py-1.5 text-left text-xs font-semibold hover:bg-emerald-50"
-                onClick={() => { if (doc.els.length && !confirm('Replace the current design?')) return; commit(template(k, doc.size)); setSel(null); }}>{l}</button>
-            ))}
-          </div>
+          <button type="button" className="nk-btn nk-green w-full py-2.5 text-sm" onClick={() => setGallery(true)}>🎨 Templates</button>
+          <button type="button" className="w-full rounded-lg border border-[#e7e1cf] bg-white px-2 py-1.5 text-xs font-semibold hover:bg-emerald-50"
+            onClick={() => { if (doc.els.length && !confirm('Start a blank design? (the current one is replaced)')) return; commit(blankDoc(doc.size)); setSel(null); }}>Blank design</button>
           {saved.length > 0 && (
             <div className="grid gap-1">
               <span className="text-[11px] font-bold uppercase tracking-wide text-emerald-900/50">Saved designs</span>
@@ -462,7 +461,7 @@ export default function BuilderPage({ toast }: { toast: ToastFn }) {
       {/* ---------- stage ---------- */}
       <section className="nk-card grid gap-2 p-3">
         <div className="flex flex-wrap items-center gap-2">
-          <select className="nk-input h-9 max-w-full flex-1 px-2 py-1 text-sm" value={doc.size} onChange={(e) => setSize(e.target.value as BSize)}>
+          <select className="nk-sel max-w-full flex-1 text-sm" value={doc.size} onChange={(e) => setSize(e.target.value as BSize)}>
             {(Object.keys(BSIZES) as BSize[]).map((k) => <option key={k} value={k}>{BSIZES[k].label} · {BSIZES[k].w}×{BSIZES[k].h}</option>)}
           </select>
           <button type="button" className="nk-btn nk-ghost px-2 py-1.5" title="Undo (Ctrl+Z)" onClick={undo}><Undo2 className="h-4 w-4" /></button>
@@ -515,7 +514,7 @@ export default function BuilderPage({ toast }: { toast: ToastFn }) {
               <>
                 <div className="flex flex-wrap gap-1.5">
                   <button type="button" className="nk-btn nk-green px-3 py-1.5 text-xs" onClick={async () => { const u = await pickImage(); if (u) setBg({ image: u }); }}><ImagePlus className="h-3.5 w-3.5" /> {b.image ? 'Change picture' : 'Upload picture'}</button>
-                  <select className="nk-input h-8 px-2 py-1 text-xs" value={b.fit} onChange={(e) => setBg({ fit: e.target.value as 'cover' | 'contain' })}><option value="cover">Fill</option><option value="contain">Whole picture</option></select>
+                  <select className="nk-sel text-xs" value={b.fit} onChange={(e) => setBg({ fit: e.target.value as 'cover' | 'contain' })}><option value="cover">Fill</option><option value="contain">Whole picture</option></select>
                 </div>
                 <Row t="Overlay colour"><ColorIn v={b.overlay} set={(c) => setBg({ overlay: c })} /></Row>
                 <Row t="Overlay strength"><Num v={b.overlayOp} set={(v) => setBg({ overlayOp: v })} max={1} step={0.05} /></Row>
@@ -557,6 +556,46 @@ export default function BuilderPage({ toast }: { toast: ToastFn }) {
           </div>
         </Panel>
       </aside>
+      {gallery && <Gallery size={doc.size} close={() => setGallery(false)} pick={(d) => { if (doc.els.length && !confirm('Replace the current design with this template?')) return; commit(d); setSel(null); setGallery(false); }} />}
     </div>
+  );
+}
+
+/** Template picker: a kind on the left, its layouts (with a real preview at the current size) on the right */
+function Gallery({ size, close, pick }: { size: BSize; close: () => void; pick: (d: Doc) => void }) {
+  const [cat, setCat] = useState(TEMPLATES[0].key);
+  const c = TEMPLATES.find((t) => t.key === cat)!;
+  useEffect(() => { const k = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); }; window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k); }, [close]);
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-3" onClick={close}>
+      <div className="grid max-h-[92vh] w-full max-w-5xl grid-rows-[auto_1fr] overflow-hidden rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between gap-3 border-b border-[#e7e1cf] px-4 py-3">
+          <div><h2 className="font-bold text-emerald-950">Templates</h2><p className="text-xs text-emerald-900/60">Pick a kind, then a layout. Everything stays editable. Size: {BSIZES[size].label}</p></div>
+          <button type="button" className="nk-btn nk-ghost px-3 py-1.5 text-sm" onClick={close}>Close</button>
+        </div>
+        <div className="grid min-h-0 sm:grid-cols-[12rem_1fr]">
+          <nav className="flex gap-1 overflow-x-auto border-b border-[#e7e1cf] p-2 sm:flex-col sm:overflow-y-auto sm:border-r sm:border-b-0">
+            {TEMPLATES.map((t) => (
+              <button key={t.key} type="button" onClick={() => setCat(t.key)}
+                className={`shrink-0 rounded-lg px-3 py-2 text-left text-sm font-semibold ${cat === t.key ? 'bg-emerald-900 text-white' : 'text-emerald-950 hover:bg-emerald-50'}`}>{t.emoji} {t.label}</button>
+            ))}
+          </nav>
+          <div className="grid min-h-0 grid-cols-2 content-start gap-3 overflow-y-auto p-3 md:grid-cols-3">
+            {c.variants.map((v) => <Thumb key={`${cat}-${v.key}-${size}`} label={v.label} make={() => v.make(size)} pick={pick} />)}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+function Thumb({ label, make, pick }: { label: string; make: () => Doc; pick: (d: Doc) => void }) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  const [d] = useState(make);
+  useEffect(() => { if (ref.current) renderDoc(ref.current, d, null); }, [d]);
+  return (
+    <button type="button" onClick={() => pick(make())} className="group grid gap-1.5 rounded-xl border border-[#e7e1cf] bg-[#faf7ee] p-2 text-left hover:border-emerald-700 hover:shadow-md">
+      <canvas ref={ref} className="w-full rounded-lg shadow-sm" />
+      <span className="text-xs font-bold text-emerald-950 group-hover:text-emerald-700">{label}</span>
+    </button>
   );
 }

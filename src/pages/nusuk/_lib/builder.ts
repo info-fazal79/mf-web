@@ -8,13 +8,13 @@ import { drawQR, FONT, loadImage, MONO, rr } from './clubcard';
 import { drawMap } from './social';
 
 export const BSIZES = {
-  fb_square: { w: 1080, h: 1080, label: 'Facebook post · Square 1:1' },
-  fb_portrait: { w: 1080, h: 1350, label: 'Facebook / Instagram · Portrait 4:5' },
-  fb_landscape: { w: 1200, h: 630, label: 'Facebook link / landscape 1.91:1' },
-  thumb: { w: 1280, h: 720, label: 'YouTube / Facebook video thumbnail 16:9' },
+  fb_square: { w: 1080, h: 1080, label: 'FB post · Square' },
+  fb_portrait: { w: 1080, h: 1350, label: 'FB / Insta · Portrait 4:5' },
+  fb_landscape: { w: 1200, h: 630, label: 'FB link · Landscape' },
+  thumb: { w: 1280, h: 720, label: 'Video thumbnail 16:9' },
   story: { w: 1080, h: 1920, label: 'Story / Reel 9:16' },
-  fb_cover: { w: 1640, h: 624, label: 'Facebook page cover' },
-  fb_event: { w: 1920, h: 1005, label: 'Facebook event cover' },
+  fb_cover: { w: 1640, h: 624, label: 'FB page cover' },
+  fb_event: { w: 1920, h: 1005, label: 'FB event cover' },
 } as const;
 export type BSize = keyof typeof BSIZES;
 
@@ -320,7 +320,7 @@ export const WIDGETS: { key: WidgetKey; label: string; group: 'Text' | 'Pictures
 ];
 
 const T0 = { opacity: 1, rot: 0 };
-const text = (p: Partial<TextEl>): TextEl => ({
+export const text = (p: Partial<TextEl>): TextEl => ({
   id: uid(), type: 'text', x: 0, y: 0, w: 800, h: 100, ...T0, text: 'লেখা', size: 40, weight: 600, color: '#ffffff', align: 'center', lh: 1.3, font: 'bn',
   bg: '#f2c94c', bgOn: false, pad: 24, radius: 20, shadow: false, borderW: 0, borderC: '#f2c94c', ...p,
 });
@@ -354,35 +354,3 @@ export function makeWidget(k: WidgetKey, W: number, cx: number, cy: number): El 
   return e;
 }
 
-/** Starter layouts */
-export function template(k: 'blank' | 'announce' | 'quiz' | 'thumb' | 'feature', size: BSize): Doc {
-  const { w: W, h: H } = BSIZES[size];
-  const S = W / 1080, cx = W / 2;
-  const at = (e: El, y: number, x?: number) => { e.y = Math.round(y); if (x != null) e.x = Math.round(x); return e; };
-  const logo = makeWidget('logo', W, 0, 0); logo.w = logo.h = 120 * S; logo.x = 60 * S; logo.y = 56 * S;
-  const brand = text({ text: 'Ribatul Ummah', size: 42 * S, weight: 700, align: 'left', w: 600 * S, x: 200 * S, y: 70 * S, name: 'Brand' });
-  const web = makeWidget('web', W, cx, 0);
-  const base = { size, bg: defaultBg() };
-  if (k === 'blank') return { ...base, els: [] };
-  if (k === 'announce') return { ...base, els: [logo, brand,
-    at(makeWidget('tag', W, cx, 0), H * 0.26), at(makeWidget('heading', W, cx, 0), H * 0.33), at(makeWidget('sub', W, cx, 0), H * 0.47),
-    at(makeWidget('para', W, cx, 0), H * 0.55), at(makeWidget('button', W, cx, 0), H * 0.74), at(web, H - 130 * S)] };
-  if (k === 'quiz') {
-    const q = makeWidget('heading', W, cx, 0) as TextEl; q.text = 'আজ কোন দেশ থেকে বিজয়ী হওয়ার সম্ভাবনা বেশি?'; q.size = 64 * S;
-    const tag = makeWidget('tag', W, cx, 0) as TextEl; tag.text = '❓ আজকের প্রশ্ন'; tag.w = 330 * S; tag.x = Math.round(cx - tag.w / 2);
-    const b = makeWidget('button', W, cx, 0) as TextEl; b.text = 'কমেন্টে উত্তর দিন 👇';
-    return { ...base, els: [logo, brand, at(tag, H * 0.24), at(q, H * 0.31), at(makeWidget('options', W, cx, 0), H * 0.5), at(b, H * 0.75), at(web, H - 130 * S)] };
-  }
-  if (k === 'feature') {
-    const pic = makeWidget('image', W, 0, 0) as ImageEl; pic.w = 420 * S; pic.h = H * 0.56; pic.x = W - pic.w - 80 * S; pic.y = Math.round(H * 0.22); pic.fit = 'contain';
-    const head = text({ text: 'নতুন ফিচার এসেছে', size: 70 * S, weight: 700, align: 'left', w: 480 * S, x: 80 * S, y: H * 0.3, lh: 1.2 });
-    const tag = makeWidget('tag', W, 0, 0) as TextEl; tag.text = '🆕 নতুন ফিচার'; tag.w = 300 * S; tag.x = 80 * S; tag.y = Math.round(H * 0.22);
-    const list = makeWidget('list', W, 0, 0) as ListEl; list.w = 480 * S; list.x = 80 * S; list.y = Math.round(H * 0.5);
-    return { ...base, els: [logo, brand, tag, head, list, pic, at(web, H - 130 * S)] };
-  }
-  // thumbnail: big words left, picture right
-  const big = text({ text: 'আজকের বিজয়ী কে?', size: 110 * S, weight: 700, align: 'left', w: W * 0.52, x: 60 * S, y: H * 0.22, lh: 1.1, shadow: true, color: '#ffffff' });
-  const sub = text({ text: 'লাইভ ড্র · আজ রাত ৯টা', size: 48 * S, weight: 700, align: 'left', w: W * 0.5, x: 60 * S, y: H * 0.66, bgOn: true, bg: '#f2c94c', color: '#2b1f00', pad: 18 * S, radius: 18 * S });
-  const pic = makeWidget('image', W, 0, 0) as ImageEl; pic.w = W * 0.38; pic.h = H * 0.78; pic.x = W - pic.w - 50 * S; pic.y = (H - pic.h) / 2;
-  return { ...base, bg: { ...defaultBg(), frame: false }, els: [big, sub, pic] };
-}

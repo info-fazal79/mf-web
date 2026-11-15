@@ -42,7 +42,7 @@ export const settingsPages: SettingsPage[] = [
       { key: 'description', label: 'SEO description', type: 'textarea', help: 'Shown on Google and when the site is shared. Keep it near 155 characters.' },
       { key: 'email', label: 'Email', type: 'email' },
       { key: 'phone', label: 'Phone', type: 'text' },
-      { key: 'whatsapp', label: 'WhatsApp number', type: 'text', help: 'Digits only with country code, e.g. 8801317947048' },
+      { key: 'whatsapp', label: 'WhatsApp number', type: 'text', help: 'Digits only with country code, e.g. 8801936943977' },
       { key: 'location', label: 'Location', type: 'text' },
       { key: 'faviconUrl', label: 'Favicon', type: 'image', help: 'Square image, 64×64 or larger.' },
       { key: 'cvUrl', label: 'Public CV (PDF)', type: 'file', help: 'Powers the "Download CV" button. Upload a version without private details.' },

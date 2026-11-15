@@ -293,3 +293,8 @@ button.nk-qz-opt:disabled { cursor: default; }
 .nk-dm-all .nk-dm-n { min-width: 2rem; padding: 1px 8px; border-radius: 9999px; background: #0b5a43; color: #fff; font-size: 0.75rem; font-weight: 700; text-align: center; }
 .nk-dm-all .nk-dm-zero .nk-dm-n { background: #e3efe8; color: #5b8a74; }
 .nk-dm-all .nk-dm-me { background: #fff7dc; }
+
+/* compact fields (Design Builder): small padding so the text is never cut off */
+.nk-sel { width: 100%; min-width: 0; border: 1px solid #d9d2bd; background: #fff; border-radius: 0.6rem; padding: 0.4rem 0.55rem; font-size: 0.8rem; line-height: 1.35; outline: none; }
+.nk-sel:focus { border-color: var(--color-emerald-600); box-shadow: 0 0 0 3px rgba(14, 148, 104, 0.18); }
+select.nk-sel { padding-right: 1.6rem; text-overflow: ellipsis; }

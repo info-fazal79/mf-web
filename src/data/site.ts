@@ -55,8 +55,8 @@ export const site = {
   description:
     'Muhammad Fazal: office automation specialist, data analyst, WordPress developer and MS Office lead instructor. Google Sheets and Apps Script systems, dashboards, websites and training.',
   email: 'fazal.assdi39@gmail.com',
-  phone: '+880 1317-947048',
-  whatsapp: '8801317947048',
+  phone: '+880 1936-943977',
+  whatsapp: '8801936943977',
   location: 'Magura, Bangladesh',
   cvUrl: '', // set from admin → upload a public CV (without private details)
 };
@@ -74,7 +74,7 @@ export const nav: NavItem[] = [
 export const socials: Social[] = [
   { name: 'Facebook', href: 'https://www.facebook.com/info.fazal17', icon: 'facebook' },
   { name: 'LinkedIn', href: 'https://linkedin.com/in/fazal79', icon: 'linkedin' },
-  { name: 'WhatsApp', href: 'https://wa.me/8801317947048', icon: 'whatsapp' },
+  { name: 'WhatsApp', href: 'https://wa.me/8801936943977', icon: 'whatsapp' },
   { name: 'Email', href: 'mailto:fazal.assdi39@gmail.com', icon: 'mail' },
   // Add YouTube / GitHub links from admin
 ];
