@@ -83,7 +83,7 @@ const cm0 = defaultCommunity();
           </a>
           <div class="flex shrink-0 items-center gap-1.5">
             <a id="nk-login" href="/nusuk/account" class="flex items-center gap-1.5 whitespace-nowrap rounded-full border border-gold-400/50 px-2.5 py-1.5 text-[13px] font-semibold text-gold-100 hover:bg-white/10 sm:px-3.5 sm:text-sm" aria-label="লগইন / রেজিস্টার">
-              <span id="nk-login-ico"><Fragment set:html={lucide('logIn', 'h-4 w-4', 2.2)} /></span>
+              <span id="nk-login-ico"><Fragment set:html={lucide('userCircle', 'h-4 w-4', 2.2)} /></span>
               <span id="nk-login-text" class="hidden min-[400px]:inline">লগইন / রেজিস্টার</span>
             </a>
             <button id="nk-menu-open" type="button" class="grid h-9 w-9 place-items-center rounded-full border border-gold-400/50 text-gold-100 hover:bg-white/10" aria-label="মেনু" aria-haspopup="dialog" aria-controls="nk-menu">
@@ -118,7 +118,7 @@ const cm0 = defaultCommunity();
           <button id="nk-menu-close" type="button" class="grid h-9 w-9 place-items-center rounded-full text-emerald-900 hover:bg-emerald-50" aria-label="মেনু বন্ধ করুন"><Fragment set:html={lucide('x', 'h-5 w-5')} /></button>
         </div>
         <a id="nk-menu-login" href="/nusuk/account" class="mx-3 mt-3 flex items-center gap-3 rounded-xl bg-emerald-900 px-3 py-3 font-bold text-white hover:bg-emerald-800">
-          <span class="text-gold-400"><Fragment set:html={lucide('logIn', 'h-5 w-5')} /></span><span id="nk-menu-login-text">লগইন / রেজিস্টার</span>
+          <span class="text-gold-400"><Fragment set:html={lucide('userCircle', 'h-5 w-5')} /></span><span id="nk-menu-login-text">লগইন / রেজিস্টার</span>
         </a>
         <ul class="grid gap-0.5 p-3 text-[15px]">
             <li><a href="#copy" data-menu="copy" class="flex items-center gap-3 rounded-xl px-3 py-2.5 font-semibold text-emerald-950 hover:bg-emerald-50"><span class="text-emerald-700"><Fragment set:html={lucide('copy', 'h-5 w-5')} /></span>কোড কপি করুন</a></li>
@@ -825,7 +825,7 @@ const cm0 = defaultCommunity();
       <a href="#nk-today" data-tab="nk-today" class="nk-tab"><span class="nk-tab-ico"><Fragment set:html={lucide('trophy', 'h-[22px] w-[22px]', 2)} /></span><span>বিজয়ী</span></a>
       <a href="#submit" data-tab="submit" class="nk-tab nk-tab-main" aria-label="কোড জমা দিন"><span class="nk-tab-fab"><Fragment set:html={lucide('send', 'h-7 w-7', 2.2)} /></span><span>কোড জমা</span></a>
       <a href="#nk-dm" data-tab="nk-dm" class="nk-tab"><span class="nk-tab-ico"><Fragment set:html={lucide('mapPin', 'h-[22px] w-[22px]', 2)} /></span><span>জেলা</span></a>
-      <a href="/nusuk/account" id="nk-tab-acct" class="nk-tab"><span id="nk-tab-acct-ico" class="nk-tab-ico"><Fragment set:html={lucide('logIn', 'h-[22px] w-[22px]', 2)} /></span><span id="nk-tab-acct-text">লগইন</span></a>
+      <a href="/nusuk/account" id="nk-tab-acct" class="nk-tab"><span id="nk-tab-acct-ico" class="nk-tab-ico"><Fragment set:html={lucide('userCircle', 'h-[22px] w-[22px]', 2)} /></span><span id="nk-tab-acct-text">লগইন</span></a>
     </nav>
 
     <div id="nk-toast" class="pointer-events-none fixed inset-x-0 bottom-6 z-50 flex justify-center px-4 opacity-0 transition-opacity duration-200" aria-hidden="true">

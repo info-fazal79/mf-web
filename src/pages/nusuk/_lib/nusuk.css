@@ -315,7 +315,8 @@ select.nk-sel { padding-right: 1.6rem; text-overflow: ellipsis; }
 .nk-tab-main:active .nk-tab-fab { transform: scale(0.94); }
 .nk-tab-main.nk-tab-on .nk-tab-fab { background: linear-gradient(145deg, #0b7a59, #053d2d); color: #fff; }
 @media (max-width: 767px) {
-  body.nk-has-tabbar { padding-bottom: calc(78px + env(safe-area-inset-bottom)); }
+  /* room for the bar inside the green footer, so no light strip shows under it */
+  body.nk-has-tabbar .nk-footer { padding-bottom: calc(78px + env(safe-area-inset-bottom)); }
   body.nk-has-tabbar #nk-toast { bottom: calc(96px + env(safe-area-inset-bottom)); }
 }
 @media (min-width: 768px) { .nk-tabbar { display: none; } } /* phones only */

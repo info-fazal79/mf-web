@@ -2,7 +2,7 @@
  * Lucide icons (https://lucide.dev, ISC licence) as inline SVG strings, from the lucide-static package.
  * Works in .astro markup (set:html) and in client scripts that build HTML strings.
  */
-import { Activity, ExternalLink, Gift, Ticket, Menu, X, LogIn, UserCheck, CircleHelp, ChartLine, Flag, Send, MessageSquareWarning, Quote, UsersRound, Crown, ArrowRight, ChevronDown, CircleCheck, CircleDot, Copy, Handshake, Hourglass, Inbox, Megaphone, MessageCircle, MessageSquare, PartyPopper, Play, Search, Smartphone, Sparkles, Star, Target, Trophy, Users, Zap, ImageDown, Download, Share2, MapPin, UserPlus, LayoutDashboard } from 'lucide-static';
+import { Activity, ExternalLink, Gift, Ticket, Menu, X, LogIn, UserCheck, CircleHelp, ChartLine, Flag, Send, MessageSquareWarning, Quote, UsersRound, Crown, ArrowRight, ChevronDown, CircleCheck, CircleDot, Copy, Handshake, Hourglass, Inbox, Megaphone, MessageCircle, MessageSquare, PartyPopper, Play, Search, Smartphone, Sparkles, Star, Target, Trophy, Users, Zap, ImageDown, Download, Share2, MapPin, UserPlus, LayoutDashboard, CircleUserRound } from 'lucide-static';
 
 /** inner markup of a lucide-static svg string */
 const inner = (svg: string) => svg.replace(/^[\s\S]*?<svg[^>]*>/, '').replace(/<\/svg>\s*$/, '').trim();
@@ -38,6 +38,7 @@ const P = {
   menu: inner(Menu),
   x: inner(X),
   logIn: inner(LogIn),
+  userCircle: inner(CircleUserRound),
   userCheck: inner(UserCheck),
   circleHelp: inner(CircleHelp),
   chartLine: inner(ChartLine),
