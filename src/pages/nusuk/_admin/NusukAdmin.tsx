@@ -13,6 +13,7 @@ import { GiveawayCard, PollCard } from './LiveCards';
 import RafflePage from './RafflePage';
 import PhotoCardsPage from './PhotoCardsPage';
 import SocialPage from './SocialPage';
+import BuilderPage from './BuilderPage';
 import ShareCardDialog from './ShareCard';
 import { extractCodes } from '../_lib/extract';
 import { bonusFor, parseBonus } from '../_lib/bonus';
@@ -1559,7 +1560,7 @@ function WinnersPage({ toast, settings, reload }: { toast: ToastFn; settings: Se
 }
 
 /* ---------------- Shell ---------------- */
-type Route = 'dashboard' | 'live' | 'codes' | 'review' | 'features' | 'bonus' | 'campaign' | 'quiz' | 'popup' | 'raffle' | 'upload' | 'notice' | 'video' | 'ads' | 'today' | 'winners' | 'feedback' | 'club' | 'photocards' | 'social' | 'socialgive' | 'socialgen' | 'settings';
+type Route = 'dashboard' | 'live' | 'codes' | 'review' | 'features' | 'bonus' | 'campaign' | 'quiz' | 'popup' | 'raffle' | 'upload' | 'notice' | 'video' | 'ads' | 'today' | 'winners' | 'feedback' | 'club' | 'photocards' | 'social' | 'socialgive' | 'socialgen' | 'socialbuild' | 'settings';
 type NavItem = { r: Route; label: string; Icon: LucideIcon };
 const nav: NavItem[] = [
   { r: 'dashboard', label: 'Dashboard', Icon: LayoutDashboard },
@@ -1586,7 +1587,7 @@ const GROUPS: Partial<Record<Route, { r: Route; label: string; Icon: LucideIcon 
   codes: [{ r: 'codes', label: 'All codes', Icon: ListChecks }, { r: 'upload', label: 'Paste codes', Icon: ClipboardPaste }],
   notice: [{ r: 'notice', label: 'Top notice', Icon: PanelTop }, { r: 'popup', label: 'Popup notice', Icon: MessageSquare }],
   winners: [{ r: 'winners', label: 'All winners', Icon: Trophy }, { r: 'today', label: "Today's winner", Icon: Crown }],
-  social: [{ r: 'social', label: 'Feature update', Icon: Sparkles }, { r: 'socialgive', label: 'Giveaway', Icon: Gift }, { r: 'socialgen', label: 'General', Icon: PenLine }],
+  social: [{ r: 'social', label: 'Feature update', Icon: Sparkles }, { r: 'socialgive', label: 'Giveaway', Icon: Gift }, { r: 'socialgen', label: 'General', Icon: PenLine }, { r: 'socialbuild', label: 'Design Builder', Icon: LayoutDashboard }],
 };
 /** The menu item a page belongs to */
 const menuOf = (r: Route): Route => (Object.keys(GROUPS) as Route[]).find((g) => GROUPS[g]!.some((t) => t.r === r)) ?? r;
@@ -1715,6 +1716,7 @@ export default function NusukAdmin() {
         {route === 'club' && <ClubPage toast={toast} />}
         {route === 'photocards' && <PhotoCardsPage toast={toast} />}
         {(route === 'social' || route === 'socialgive' || route === 'socialgen') && <SocialPage toast={toast} mode={route} />}
+        {route === 'socialbuild' && <BuilderPage toast={toast} />}
         {route === 'codes' && <CodesPage key="codes" toast={toast} settings={settings} />}
         {route === 'review' && <CodesPage key="review" toast={toast} reviewMode settings={settings} />}
         {route === 'upload' && <Upload toast={toast} defaultMax={settings?.default_max_uses ?? 1} />}

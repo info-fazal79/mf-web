@@ -328,15 +328,17 @@ function mapShade(n: number, max: number) {
   return `rgb(${a.map((v, j) => Math.round(v + (b[j] - v) * t)).join(',')})`;
 }
 /** Bangladesh district map in a light panel: dark green where there are accounts, with the count */
-function drawMap(ctx: CanvasRenderingContext2D, counts: number[], x: number, y: number, w: number, h: number, T: Theme) {
-  ctx.save();
-  ctx.shadowColor = 'rgba(0,0,0,0.3)'; ctx.shadowBlur = 36; ctx.shadowOffsetY = 14;
-  const g = ctx.createRadialGradient(x + w / 2, y + h * 0.35, 10, x + w / 2, y + h / 2, Math.max(w, h));
-  g.addColorStop(0, '#f6fcf8'); g.addColorStop(1, '#e1f2e8');
-  ctx.fillStyle = g; rr(ctx, x, y, w, h, 30); ctx.fill();
-  ctx.restore();
-  ctx.strokeStyle = T.accent; ctx.lineWidth = 3; rr(ctx, x, y, w, h, 30); ctx.stroke();
-  const pad = 22;
+export function drawMap(ctx: CanvasRenderingContext2D, counts: number[], x: number, y: number, w: number, h: number, T: { accent: string }, panel = true) {
+  if (panel) {
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,0.3)'; ctx.shadowBlur = 36; ctx.shadowOffsetY = 14;
+    const g = ctx.createRadialGradient(x + w / 2, y + h * 0.35, 10, x + w / 2, y + h / 2, Math.max(w, h));
+    g.addColorStop(0, '#f6fcf8'); g.addColorStop(1, '#e1f2e8');
+    ctx.fillStyle = g; rr(ctx, x, y, w, h, 30); ctx.fill();
+    ctx.restore();
+    ctx.strokeStyle = T.accent; ctx.lineWidth = 3; rr(ctx, x, y, w, h, 30); ctx.stroke();
+  }
+  const pad = panel ? 22 : 0;
   const k = Math.min((w - pad * 2) / BD_W, (h - pad * 2) / BD_H);
   const ox = x + (w - BD_W * k) / 2, oy = y + (h - BD_H * k) / 2;
   const max = Math.max(0, ...counts);
@@ -352,8 +354,8 @@ function drawMap(ctx: CanvasRenderingContext2D, counts: number[], x: number, y: 
   ctx.restore();
   // counts on the districts that have accounts (biggest first, so the small ones stay on top)
   const order = BD_DISTRICTS.map((_, i) => i).filter((i) => counts[i] > 0).sort((a, b) => counts[b] - counts[a]);
-  const top = new Set(order.slice(0, 4));
-  const fs = Math.max(13, 20 * (k / 0.75));
+  const top = new Set(order.slice(0, 3));
+  const fs = Math.max(8, 11 * (k / 0.75)); // small badges, so the map itself shows
   for (const i of order.reverse()) {
     const [bn, , , lx, ly] = BD_DISTRICTS[i];
     const cx = ox + lx * k, cy = oy + ly * k;
@@ -361,8 +363,8 @@ function drawMap(ctx: CanvasRenderingContext2D, counts: number[], x: number, y: 
     font(ctx, 800, fs);
     const bw = ctx.measureText(t).width + fs * 0.9, bh = fs * 1.35;
     if (top.has(i)) {
-      font(ctx, 700, fs * 0.95);
-      ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(3,40,30,0.7)'; ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+      font(ctx, 700, fs * 1.05);
+      ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(3,40,30,0.7)'; ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
       ctx.strokeText(bn, cx, cy - bh / 2 - 2); ctx.fillText(bn, cx, cy - bh / 2 - 2);
     }
     ctx.fillStyle = '#f2c94c'; rr(ctx, cx - bw / 2, cy - bh / 2, bw, bh, bh / 2); ctx.fill();
