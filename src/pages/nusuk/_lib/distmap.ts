@@ -384,3 +384,26 @@ export function initDistrictMap() {
   io.observe(sec);
   void timer;
 }
+
+/** Accounts per district (same matching as the map), for Nusuk Manager → Social media designs.
+ *  counts[i] belongs to rows[i] (BD_DISTRICTS). */
+export function countDistricts(rows: [string, string, string, number, number, [number, number, number, number], string][], d: Record<string, number>) {
+  let alias: [string, number][] = [];
+  rows.forEach(([b, e, , , , , alt], i) => {
+    alias.push([clean(b), i], [clean(e), i]);
+    alt.split('|').forEach((a) => alias.push([clean(a), i]));
+  });
+  Object.entries(BN_ALT).forEach(([a, to]) => { const i = rows.findIndex((r) => r[0] === to); if (i >= 0) alias.push([clean(a), i]); });
+  alias = alias.filter(([a]) => a.length >= 3);
+  const counts = rows.map(() => 0);
+  let abroad = 0;
+  for (const [raw, n] of Object.entries(d ?? {})) {
+    const k = clean(raw);
+    if (!k) continue;
+    if (ABROAD.some((a) => k.includes(a))) { abroad += Number(n) || 0; continue; }
+    let best = -1, bestLen = 0;
+    for (const [a, i] of alias) if ((k === a || k.includes(a)) && a.length > bestLen) { best = i; bestLen = a.length; }
+    if (best >= 0) counts[best] += Number(n) || 0;
+  }
+  return { counts, abroad };
+}
