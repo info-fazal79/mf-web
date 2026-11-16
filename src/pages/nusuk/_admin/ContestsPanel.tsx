@@ -34,6 +34,7 @@ const PRESET: Record<ContestKind, Partial<Contest>> = {
   lucky: { t_join: 1, t_enter: 0, t_ref_bonus: 1, t_referral: 1, t_copy: 1 },
   window: { t_join: 1, t_enter: 0, t_ref_bonus: 1, t_referral: 2, t_copy: 0 },
   top: { t_join: 0, t_enter: 0, t_ref_bonus: 0, t_referral: 1, t_copy: 0 },
+  quiz: { t_join: 0, t_enter: 0, t_ref_bonus: 0, t_referral: 0, t_copy: 0 },
 };
 
 export default function ContestsPanel({ toast, onChange }: { toast: ToastFn; onChange: (list: Contest[]) => void }) {
@@ -101,7 +102,8 @@ export default function ContestsPanel({ toast, onChange }: { toast: ToastFn; onC
       </p>
       {!list && <p className="text-sm text-emerald-900/60">Loading…</p>}
       <div className="grid gap-2">
-        {list?.map((c) => {
+        {list?.some((c) => c.kind === 'quiz') && <p className="text-xs text-emerald-900/60">Quiz campaigns are set up in Reward Club → <b>Quiz competition</b>.</p>}
+        {list?.filter((c) => c.kind !== 'quiz').map((c) => {
           const st = status(c, now);
           const k = CONTEST_KINDS.find((x) => x.key === c.kind);
           return (
@@ -169,7 +171,7 @@ function Editor({ value: c, onChange, onSave, onCancel, busy }: {
           <input className="nk-input" value={c.title} maxLength={80} onChange={(e) => set({ title: e.target.value })} placeholder="যেমন: সীমিত সময়ের রেফারেল অফার" /></label>
         <label><span className={label}>Type</span>
           <select className="nk-input" value={c.kind} onChange={(e) => { const k = e.target.value as ContestKind; set({ kind: k, ...(c.id ? {} : PRESET[k]) }); }}>
-            {CONTEST_KINDS.map((k) => <option key={k.key} value={k.key}>{k.name}</option>)}
+            {CONTEST_KINDS.filter((k) => k.key !== 'quiz').map((k) => <option key={k.key} value={k.key}>{k.name}</option>)}
           </select>
           <span className="mt-0.5 block text-[11px] text-emerald-900/55">{CONTEST_KINDS.find((k) => k.key === c.kind)?.hint}</span></label>
       </div>

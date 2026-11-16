@@ -14,6 +14,7 @@ import RafflePage from './RafflePage';
 import PhotoCardsPage from './PhotoCardsPage';
 import SocialPage from './SocialPage';
 import BuilderPage from './BuilderPage';
+import QuizCompPage from './QuizCompPage';
 import ShareCardDialog from './ShareCard';
 import { extractCodes } from '../_lib/extract';
 import { bonusFor, parseBonus } from '../_lib/bonus';
@@ -1560,7 +1561,7 @@ function WinnersPage({ toast, settings, reload }: { toast: ToastFn; settings: Se
 }
 
 /* ---------------- Shell ---------------- */
-type Route = 'dashboard' | 'live' | 'codes' | 'review' | 'features' | 'bonus' | 'campaign' | 'quiz' | 'popup' | 'raffle' | 'upload' | 'notice' | 'video' | 'ads' | 'today' | 'winners' | 'feedback' | 'club' | 'photocards' | 'social' | 'socialgive' | 'socialgen' | 'socialbuild' | 'settings';
+type Route = 'dashboard' | 'live' | 'codes' | 'review' | 'features' | 'bonus' | 'campaign' | 'quiz' | 'popup' | 'raffle' | 'upload' | 'notice' | 'video' | 'ads' | 'today' | 'winners' | 'feedback' | 'club' | 'clubquiz' | 'photocards' | 'social' | 'socialgive' | 'socialgen' | 'socialbuild' | 'settings';
 type NavItem = { r: Route; label: string; Icon: LucideIcon };
 const nav: NavItem[] = [
   { r: 'dashboard', label: 'Dashboard', Icon: LayoutDashboard },
@@ -1587,6 +1588,7 @@ const GROUPS: Partial<Record<Route, { r: Route; label: string; Icon: LucideIcon 
   codes: [{ r: 'codes', label: 'All codes', Icon: ListChecks }, { r: 'upload', label: 'Paste codes', Icon: ClipboardPaste }],
   notice: [{ r: 'notice', label: 'Top notice', Icon: PanelTop }, { r: 'popup', label: 'Popup notice', Icon: MessageSquare }],
   winners: [{ r: 'winners', label: 'All winners', Icon: Trophy }, { r: 'today', label: "Today's winner", Icon: Crown }],
+  club: [{ r: 'club', label: 'Reward Club', Icon: Ticket }, { r: 'clubquiz', label: 'Quiz competition', Icon: CircleHelp }],
   social: [{ r: 'social', label: 'Feature update', Icon: Sparkles }, { r: 'socialgive', label: 'Giveaway', Icon: Gift }, { r: 'socialgen', label: 'General', Icon: PenLine }, { r: 'socialbuild', label: 'Design Builder', Icon: LayoutDashboard }],
 };
 /** The menu item a page belongs to */
@@ -1714,6 +1716,7 @@ export default function NusukAdmin() {
         {route === 'dashboard' && <Dashboard toast={toast} go={go} />}
         {route === 'live' && <LiveScreenPage toast={toast} />}
         {route === 'club' && <ClubPage toast={toast} />}
+        {route === 'clubquiz' && <QuizCompPage toast={toast} />}
         {route === 'photocards' && <PhotoCardsPage toast={toast} />}
         {(route === 'social' || route === 'socialgive' || route === 'socialgen') && <SocialPage toast={toast} mode={route} />}
         {route === 'socialbuild' && <BuilderPage toast={toast} />}

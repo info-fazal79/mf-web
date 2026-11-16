@@ -39,6 +39,17 @@ export const showOf = (cfg: { show?: Partial<ClubShow> } | null | undefined): Cl
 export const DEFAULT_TITLE = 'রিবাত রিওয়ার্ড ক্লাব';
 export const DEFAULT_NOTICE = 'অ্যাকাউন্টে লগইন করে প্রোফাইল সম্পূর্ণ করলেই ফ্রিতে পাবেন ৫০টি Nusuk Key!';
 export const DEFAULT_NOTICE_BTN = 'লগইন করুন';
+/** Rules shown for quiz campaigns when the admin has not written their own */
+export const QUIZ_RULES = [
+  'অংশ নিতে অ্যাকাউন্ট থাকতে হবে। একজন ব্যক্তি একটি অ্যাকাউন্ট (একটি নুসুক কোড, একটি মোবাইল নম্বর, একটি ডিভাইস)।',
+  'প্রতিদিন ৫টি চাবি: প্রতিটি চাবি দিয়ে নির্দিষ্ট সময়ের মধ্যে একটি প্রশ্নের উত্তর দেওয়া যায়। সময় পেরিয়ে গেলে সেই চাবি নষ্ট হয়।',
+  'প্রশ্ন খোলার পর নির্দিষ্ট সেকেন্ডের মধ্যে উত্তর দিতে হবে। এই সময়ে পেজ থেকে বের হলে প্রশ্নটি বাতিল হবে।',
+  'প্রতিটি সঠিক উত্তরে লটারিতে ১টি টিকিট। ভুল উত্তরে টিকিট নেই।',
+  'আপনার রেফারেল লিংক দিয়ে কেউ অ্যাকাউন্ট খুললে আপনি ও তিনি দুজনেই ১টি করে বাড়তি চাবি পাবেন। বাড়তি চাবি নষ্ট হয় না, তবে দিনে নির্দিষ্ট সংখ্যক ব্যবহার করা যায়।',
+  'বিজয়ী নির্ধারণ হবে লাইভ লটারিতে। যত বেশি টিকিট, তত বেশি সুযোগ। পুরস্কার দেওয়ার আগে বিজয়ীর তথ্য যাচাই করা হবে।',
+  'অসৎ উপায় বা একাধিক অ্যাকাউন্ট পাওয়া গেলে অংশগ্রহণ ও পুরস্কার বাতিল হবে। অংশগ্রহণ সম্পূর্ণ ফ্রি।',
+].join('\n');
+export const DEFAULT_PLEDGE = 'আমি আল্লাহকে সাক্ষী রেখে অঙ্গীকার করছি যে, এই কুইজে গুগল, অন্য কারো সাহায্য বা কোনো অসৎ উপায় অবলম্বন করব না এবং একাধিক অ্যাকাউন্ট ব্যবহার করব না।';
 export const DEFAULT_CARD_LINE = 'এই কোড দিয়ে যুক্ত হলে আপনিও পাবেন ১টি বাড়তি টিকিট';
 export const DEFAULT_RULES = [
   'Google দিয়ে লগইন করে প্রোফাইল পূরণ করলেই ১টি টিকিট।',
@@ -94,11 +105,12 @@ export type TicketKind = 'join' | 'enter' | 'ref_bonus' | 'referral' | 'copy';
 export type TicketRow = { kind: TicketKind; qty: number; day: string; at: string; from: string | null; contest: string };
 
 // ---------- competitions (table nusuk_club_contests, update_33) ----------
-export type ContestKind = 'lucky' | 'window' | 'top';
+export type ContestKind = 'lucky' | 'window' | 'top' | 'quiz';
 export const CONTEST_KINDS: { key: ContestKind; name: string; hint: string }[] = [
   { key: 'lucky', name: 'Lucky draw', hint: 'Tickets → lucky draw. More tickets, more chance.' },
   { key: 'window', name: 'Limited-time offer', hint: 'Only what happens between the start and end time counts.' },
   { key: 'top', name: 'Top referrers', hint: 'Leaderboard by people brought in; the top members win (no lottery).' },
+  { key: 'quiz', name: 'Quiz campaign', hint: 'Islamic quiz: daily keys + referral keys, a ticket per correct answer. Set up in Reward Club → Quiz competition.' },
 ];
 export type ContestCard = { theme?: 'green' | 'gold' | 'night'; headline?: string; sub?: string; line?: string };
 export type Contest = {
@@ -170,6 +182,7 @@ export function contestRules(c: Pick<Contest, 'kind' | 't_join' | 't_enter' | 't
     ? 'সময় শেষে লিডারবোর্ডের শীর্ষ সদস্যরা পুরস্কার পাবেন।'
     : 'যত বেশি টিকিট, লাকি ড্রতে তত বেশি সুযোগ। বিজয়ী নির্ধারণ হবে লটারিতে।');
   out.push('অংশগ্রহণ সম্পূর্ণ ফ্রি। একই মোবাইল নম্বর বা একই ডিভাইস দিয়ে একাধিক অ্যাকাউন্টে রেফারেল গোনা হবে না।');
+  if (c.kind === 'quiz') return QUIZ_RULES.split('\n');
   return out;
 }
 
@@ -210,6 +223,19 @@ export const CONTEST_CAPTIONS: Record<ContestKind, string> = {
     '',
     '#Nusuk #NusukUmrah #উমরাহ #RibatulUmmah',
   ].join('\n'),
+  quiz: [
+    '🕋 রিবাত ইসলামিক কুইজ প্রতিযোগিতা · প্রতিদিন পুরস্কার জেতার সুযোগ',
+    '',
+    '✅ প্রতিদিন ৫টি প্রশ্ন, প্রতিটি সঠিক উত্তরে লটারির ১টি টিকিট।',
+    '🎁 আমার লিংক দিয়ে অ্যাকাউন্ট খুললে আপনি পাবেন ১টি বাড়তি চাবি (একটি বাড়তি প্রশ্ন)!',
+    '',
+    '🔗 {ref_link}',
+    '🔑 আমার রেফারেল কোড: {code}',
+    '',
+    'সাথে পাবেন হাজারো নুসুক কোড। অংশগ্রহণ সম্পূর্ণ ফ্রি!',
+    '',
+    '#Nusuk #NusukUmrah #উমরাহ #RibatulUmmah #IslamicQuiz',
+  ].join('\n'),
   top: [
     '🏆 সেরা রেফারার প্রতিযোগিতা · রিবাত উপহার',
     '',
@@ -231,6 +257,7 @@ export function fillCaption(tpl: string, m: Pick<Member, 'nusuk_code' | 'name' |
     .replaceAll('{code}', m.nusuk_code)
     .replaceAll('{name}', m.name)
     .replaceAll('{sl}', String(m.sl))
+    .replaceAll('{ref_link}', refLink(m.nusuk_code))
     .replaceAll('{link}', SITE_LINK)
     .replaceAll('{ends}', contest?.ends_at ? `⏳ শেষ: ${bnDate(contest.ends_at)}` : '')
     .replace(/\n{3,}/g, '\n\n');

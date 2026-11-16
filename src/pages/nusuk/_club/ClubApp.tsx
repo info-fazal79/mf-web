@@ -9,6 +9,8 @@ import {
 import { drawCard, cardBlob } from '../_lib/clubcard';
 import { bnPlace } from '../_lib/clubdraw';
 import { rememberMyCode } from '../_lib/photocard';
+import { browserFp } from '../_lib/cq';
+import QuizPanel from './QuizPanel';
 
 const DISTRICTS = 'ঢাকা,গাজীপুর,নারায়ণগঞ্জ,নরসিংদী,মুন্সিগঞ্জ,মানিকগঞ্জ,টাঙ্গাইল,কিশোরগঞ্জ,ফরিদপুর,গোপালগঞ্জ,মাদারীপুর,শরীয়তপুর,রাজবাড়ী,চট্টগ্রাম,কক্সবাজার,কুমিল্লা,ফেনী,নোয়াখালী,লক্ষ্মীপুর,চাঁদপুর,ব্রাহ্মণবাড়িয়া,খাগড়াছড়ি,রাঙ্গামাটি,বান্দরবান,রাজশাহী,নাটোর,নওগাঁ,চাঁপাইনবাবগঞ্জ,পাবনা,সিরাজগঞ্জ,বগুড়া,জয়পুরহাট,খুলনা,যশোর,সাতক্ষীরা,বাগেরহাট,ঝিনাইদহ,মাগুরা,নড়াইল,কুষ্টিয়া,চুয়াডাঙ্গা,মেহেরপুর,বরিশাল,পটুয়াখালী,ভোলা,পিরোজপুর,ঝালকাঠি,বরগুনা,সিলেট,মৌলভীবাজার,হবিগঞ্জ,সুনামগঞ্জ,রংপুর,দিনাজপুর,ঠাকুরগাঁও,পঞ্চগড়,নীলফামারী,লালমনিরহাট,কুড়িগ্রাম,গাইবান্ধা,ময়মনসিংহ,জামালপুর,শেরপুর,নেত্রকোনা,দেশের বাইরে'.split(',');
 
@@ -58,6 +60,8 @@ export default function ClubApp() {
     markJoined(Boolean((data as ClubMe).member));
     if ((data as ClubMe).member) setMyDistrict((data as ClubMe).member!.district ?? ''); // pin on the /nusuk district map
     if ((data as ClubMe).member?.nusuk_code) rememberMyCode((data as ClubMe).member!.nusuk_code); // photo card on /nusuk // the /nusuk top bar (50 Keys offer) is hidden for members
+    // remember which browser the member uses (one account per device; look-alike list for the admin)
+    if ((data as ClubMe).member) browserFp().then((fp) => c.rpc('nusuk_cq_seen', { p_device: deviceId(), p_fp: fp })).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -91,9 +95,9 @@ export default function ClubApp() {
       )}
       {!me.signed_in && <SignIn sb={sb} cfg={me.cfg} />}
       {me.signed_in && !me.member && (me.cfg.on
-        ? <ProfileForm sb={sb} email={me.email} onDone={reload} tickets={showOf(me.cfg).tickets} />
+        ? <DeviceGate sb={sb}><ProfileForm sb={sb} email={me.email} onDone={reload} tickets={showOf(me.cfg).tickets} /></DeviceGate>
         : <section className="nk-card p-5 text-[15px]">নতুন অ্যাকাউন্ট খোলা শীঘ্রই চালু হবে, ইনশাআল্লাহ। একটু পরে আবার দেখুন।{me.email && <span className="mt-1 block text-xs text-emerald-900/60">লগইন: {me.email}</span>}</section>)}
-      {me.member && !editing && <Dashboard me={me} onEdit={() => setEditing(true)} refBox={showOf(me.cfg).invite && !me.member.referred_by ? <RefLater sb={sb} myCode={me.member.nusuk_code} onDone={reload} /> : null} />}
+      {me.member && !editing && <Dashboard sb={sb} me={me} onEdit={() => setEditing(true)} refBox={showOf(me.cfg).invite && !me.member.referred_by ? <RefLater sb={sb} myCode={me.member.nusuk_code} onDone={reload} /> : null} />}
       {me.member && editing && <ProfileForm sb={sb} member={me.member} email={me.member.email ?? undefined} onDone={async () => { setEditing(false); await reload(); }} onCancel={() => setEditing(false)} />}
 
       <p className="text-center text-xs text-emerald-900/60">লগইন করে আপনি আমাদের <a href="/nusuk/privacy" className="font-semibold underline">গোপনীয়তা নীতি</a> মেনে নিচ্ছেন।</p>
@@ -103,6 +107,24 @@ export default function ClubApp() {
         </button>
       )}
     </Shell>
+  );
+}
+
+/** One account per device: a second Google account on this browser is asked to use the first one */
+function DeviceGate({ sb, children }: { sb: SupabaseClient; children: ReactNode }) {
+  const [owner, setOwner] = useState<{ taken: boolean; email?: string } | null>(null);
+  useEffect(() => {
+    sb.rpc('nusuk_club_device_owner', { p_device: deviceId() }).then(({ data, error }) => setOwner(error ? { taken: false } : (data as { taken: boolean; email?: string })));
+  }, [sb]);
+  if (!owner) return <section className="nk-card p-5 text-sm text-emerald-900/60">একটু অপেক্ষা করুন…</section>;
+  if (!owner.taken) return <>{children}</>;
+  return (
+    <section className="nk-card grid gap-3 border-gold-500/70 p-5 text-[15px]">
+      <h2 className="text-lg font-bold">এই ফোনে আগেই একটি অ্যাকাউন্ট আছে</h2>
+      <p>এই ফোন/ব্রাউজার থেকে আগেই {owner.email ? <b className="font-mono">{owner.email}</b> : 'অন্য একটি Google অ্যাকাউন্ট'} দিয়ে অ্যাকাউন্ট খোলা হয়েছে। একজন ব্যক্তি একটিই অ্যাকাউন্ট রাখতে পারেন।</p>
+      <p>দয়া করে লগআউট করে সেই Google অ্যাকাউন্ট দিয়েই লগইন করুন।</p>
+      <button type="button" onClick={() => sb.auth.signOut()} className="nk-btn nk-green w-fit px-5 py-2.5">লগআউট করে আগের অ্যাকাউন্টে যান</button>
+    </section>
   );
 }
 
@@ -179,7 +201,7 @@ function ProfileForm({ sb, member, email, onDone, onCancel, tickets = true }: { 
     // the code from a shared link did not work (wrong / own code): make the account without it
     if (!error && (data as SaveResult)?.reason && ['bad_ref', 'self_ref'].includes((data as SaveResult).reason!)) ({ data, error } = await save(false));
     setBusy(false);
-    if (error) return setMsg({ t: errText(error), ok: false });
+    if (error) return setMsg({ t: errText(error).includes('device_taken') ? 'এই ফোন থেকে আগেই একটি অ্যাকাউন্ট খোলা হয়েছে। সেই Google অ্যাকাউন্ট দিয়ে লগইন করুন।' : errText(error), ok: false });
     const r = data as SaveResult;
     if (!r.ok) return setMsg({ t: SAVE_ERR[r.reason ?? 'busy'], ok: false });
     if (r.created) try { localStorage.removeItem('nusuk:ref'); } catch {}
@@ -332,7 +354,7 @@ function KeysCard({ k }: { k: NonNullable<ClubMe['keys']> }) {
   );
 }
 
-function Dashboard({ me, onEdit, refBox }: { me: ClubMe; onEdit: () => void; refBox?: ReactNode }) {
+function Dashboard({ sb, me, onEdit, refBox }: { sb: SupabaseClient; me: ClubMe; onEdit: () => void; refBox?: ReactNode }) {
   const m = me.member!;
   const [sel, setSel] = useState(0);
   const [now, setNow] = useState(Date.now());
@@ -372,7 +394,9 @@ function Dashboard({ me, onEdit, refBox }: { me: ClubMe; onEdit: () => void; ref
         </div>
       )}
 
-      {c && (
+      {c && c.kind === 'quiz' && <QuizPanel sb={sb} />}
+
+      {c && c.kind !== 'quiz' && (
         <section className="nk-card grid gap-4 p-4 sm:p-5">
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div>
