@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNod
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { ArrowLeft, Check, Clock, UserRound, Copy, Download, Gift, History, LogOut, PenLine, Share2, Sparkles, Ticket, Trophy, UserPlus, Users } from 'lucide-react';
 import {
-  CODE_RE, KIND_LABEL, markJoined, setMyDistrict, showOf, SAVE_ERR, bn, bnDate, bnTime, contestRules, fillCaption, memberClient, refLink, rememberRef, savedRef,
+  CODE_RE, KIND_LABEL, SIMPLE_CARD_LINE, markJoined, setMyDistrict, showOf, SAVE_ERR, bn, bnDate, bnTime, contestRules, fillCaption, memberClient, refLink, rememberRef, savedRef,
   type ClubMe, type Contest, type Member, type SaveResult,
 } from '../_lib/club';
 import { drawCard, cardBlob } from '../_lib/clubcard';
@@ -366,7 +366,7 @@ function Dashboard({ sb, me, onEdit, refBox }: { sb: SupabaseClient; me: ClubMe;
   };
 
   if (view === 'comp' && cq.d?.campaign) {
-    return <CompetitionView sb={sb} cq={cq} onBack={() => go('home')} share={quiz ? <ShareCard key={quiz.id} me={me} c={{ ...quiz, caption: cq.d.campaign.caption, card: cq.d.campaign.card }} /> : null} />;
+    return <CompetitionView sb={sb} cq={cq} onBack={() => go('home')} share={quiz ? <ShareCard key={quiz.id} me={me} simple={cq.d.campaign.mode === 'simple'} c={{ ...quiz, caption: cq.d.campaign.caption, card: cq.d.campaign.card }} /> : null} />;
   }
 
   const my = cq.d?.my;
@@ -417,7 +417,8 @@ function Dashboard({ sb, me, onEdit, refBox }: { sb: SupabaseClient; me: ClubMe;
       {/* competition */}
       <CampaignBanner d={cq.d} onOpen={() => go('comp')} />
 
-      <RefLinkBox code={m.nusuk_code} refs={my?.refs ?? 0} keys={my?.ref_keys ?? 0} />
+      {/* a simple quiz has no referral keys, so the referral link would only confuse */}
+      {cq.d?.campaign?.mode !== 'simple' && <RefLinkBox code={m.nusuk_code} refs={my?.refs ?? 0} keys={my?.ref_keys ?? 0} />}
 
       {refBox}
     </>
@@ -457,12 +458,13 @@ function RefLinkBox({ code, refs, keys }: { code: string; refs: number; keys: nu
   );
 }
 
-function ShareCard({ me, c }: { me: ClubMe; c: Contest }) {
+function ShareCard({ me, c, simple = false }: { me: ClubMe; c: Contest; simple?: boolean }) {
   const m = me.member!;
   const canvas = useRef<HTMLCanvasElement>(null);
   const [ready, setReady] = useState(false);
   const [note, setNote] = useState('');
-  const original = fillCaption(c.caption, m, c);
+  // a simple quiz: caption from the simple template unless the admin wrote one with a referral link in mind
+  const original = fillCaption(simple && /\{ref_link\}|বাড়তি চাবি/.test(c.caption) ? '' : c.caption, m, c, simple);
   const [caption, setCaption] = useState(original);
   useEffect(() => setCaption(original), [original]);
   const canShareFile = typeof navigator !== 'undefined' && 'canShare' in navigator;
@@ -473,10 +475,11 @@ function ShareCard({ me, c }: { me: ClubMe; c: Contest }) {
     drawCard(canvas.current, {
       code: m.nusuk_code, sl: m.sl, name: m.name,
       theme: c.card.theme, headline: c.card.headline, sub: c.card.sub || c.title,
-      line: c.card.line || (c.kind === 'quiz' ? 'এই লিংকে যুক্ত হলে আপনিও পাবেন ১টি বাড়তি চাবি' : undefined),
+      line: c.card.line || (simple ? SIMPLE_CARD_LINE : c.kind === 'quiz' ? 'এই লিংকে যুক্ত হলে আপনিও পাবেন ১টি বাড়তি চাবি' : undefined),
+      site: simple,
       badge: c.ends_at ? `শেষ: ${bnDate(c.ends_at)}` : undefined,
     }).then(() => setReady(true));
-  }, [m.nusuk_code, m.sl, m.name, c]);
+  }, [m.nusuk_code, m.sl, m.name, c, simple]);
 
   const flash = (t: string) => { setNote(t); setTimeout(() => setNote(''), 2200); };
   async function copyCaption() {

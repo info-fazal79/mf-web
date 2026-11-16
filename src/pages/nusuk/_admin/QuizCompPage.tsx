@@ -5,7 +5,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Download, Pencil, Plus, Power, RefreshCw, Trash2, Upload } from 'lucide-react';
 import { supabase as sb } from '@/lib/supabase';
-import { CONTEST_CAPTIONS, DEFAULT_PLEDGE, QUIZ_RULES, type Contest } from '../_lib/club';
+import { CONTEST_CAPTIONS, DEFAULT_PLEDGE, QUIZ_RULES, SIMPLE_QUIZ_CAPTION, SIMPLE_QUIZ_RULES, type Contest } from '../_lib/club';
 import { DEFAULT_SLOTS, parseCqCfg, type CqCfg, type CqPrize } from '../_lib/cq';
 import { MEDAL, placeName } from '../_lib/prizes';
 import { uploadMedia } from '@/admin/media';
@@ -155,14 +155,14 @@ export default function QuizCompPage({ toast }: { toast: ToastFn }) {
                   <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${running ? 'bg-emerald-100 text-emerald-900' : 'bg-[#f1ede1] text-emerald-900/60'}`}>{running ? 'Running' : c.active ? 'On (not in time)' : 'Off'}</span>
                 </div>
                 <div className="mt-0.5 text-xs text-emerald-900/65">
-                  {q.slots.length} slots · {q.secs}s per question · extra keys {q.ref_per_day}/day ({q.ref_from}–{q.ref_to}) ·
+                  <b>{q.mode === 'simple' ? 'Simple quiz' : 'Quiz + referral keys'}</b> · {q.slots.length} slots · {q.secs}s per question{q.mode !== 'simple' && <> · extra keys {q.ref_per_day}/day ({q.ref_from}–{q.ref_to})</>} ·
                   draw: {q.rule === 'date' ? (c.ends_at ? `on ${new Date(c.ends_at).toLocaleString('en-GB', { timeZone: 'Asia/Dhaka', dateStyle: 'medium', timeStyle: 'short' })}` : 'no end set') : `at ${q.target} ${q.rule}`}
                   {q.bonus_done && <> · bonus {q.bonus_keys} keys → {q.bonus_people} members</>}
                 </div>
               </div>
               <div className="flex shrink-0 flex-wrap gap-1.5">
                 <button type="button" className={`nk-btn flex items-center gap-1 px-3 py-1.5 text-sm ${c.active ? 'nk-green' : 'nk-ghost'}`} onClick={() => toggle(c)}><Power className="h-4 w-4" aria-hidden />{c.active ? 'On' : 'Off'}</button>
-                {!q.bonus_done && <button type="button" className="nk-btn nk-ghost px-3 py-1.5 text-sm" onClick={() => bonus(c)}>Give bonus</button>}
+                {!q.bonus_done && q.mode !== 'simple' && <button type="button" className="nk-btn nk-ghost px-3 py-1.5 text-sm" onClick={() => bonus(c)}>Give bonus</button>}
                 <button type="button" className="nk-btn nk-ghost px-2.5 py-1.5" onClick={() => setEdit({ c: { ...c, caption: c.caption?.trim() || defs.caption }, q: { ...q, rules: q.rules.trim() || defs.rules, pledge: q.pledge.trim() || defs.pledge } })} aria-label="Edit"><Pencil className="h-4 w-4" aria-hidden /></button>
                 <button type="button" className="nk-btn nk-ghost px-2.5 py-1.5 text-red-700" onClick={() => remove(c)} aria-label="Delete"><Trash2 className="h-4 w-4" aria-hidden /></button>
               </div>
@@ -365,9 +365,33 @@ function CampaignForm({ edit, setEdit, busy, onSave, onDefault }: { edit: { c: P
   const setC = (p: Partial<Camp>) => setEdit({ c: { ...c, ...p }, q });
   const setQ = (p: Partial<CqCfg>) => setEdit({ c, q: { ...q, ...p } });
   const label = 'mb-1 block text-sm font-semibold';
+  // switching type also swaps the rules / caption if they are still the built-in text of the other type
+  const switchMode = (mode: CqCfg['mode']) => {
+    if (mode === q.mode) return;
+    const simple = mode === 'simple';
+    const rules = [QUIZ_RULES, SIMPLE_QUIZ_RULES, ''].includes(q.rules.trim()) ? (simple ? SIMPLE_QUIZ_RULES : QUIZ_RULES) : q.rules;
+    const cap = (c.caption ?? '').trim();
+    const caption = simple ? (!cap || /\{ref_link\}|বাড়তি চাবি/.test(cap) ? SIMPLE_QUIZ_CAPTION : cap) : (!cap || cap === SIMPLE_QUIZ_CAPTION ? CONTEST_CAPTIONS.quiz : cap);
+    setEdit({ c: { ...c, caption }, q: { ...q, mode, rules } });
+  };
   return (
     <div className="grid gap-4 rounded-xl border-2 border-emerald-700/40 bg-[#fbfaf5] p-4">
       <h3 className="font-bold">{c.id ? 'Edit campaign' : 'New campaign'}</h3>
+      <div className="grid gap-2">
+        <span className={label}>Type</span>
+        <div className="grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label="Campaign type">
+          {([
+            ['referral', 'Quiz + referral keys', 'Daily keys, plus extra keys when someone joins with a member\'s link. Referral link, extra-key section and a personal QR on the photo card.'],
+            ['simple', 'Simple quiz', 'Daily keys only, e.g. 5 questions today and a draw for 3 winners. No referral link or extra keys anywhere; the photo card QR goes to muhammadfazal.com/nusuk.'],
+          ] as const).map(([k, t, h]) => (
+            <button key={k} type="button" role="radio" aria-checked={q.mode === k} onClick={() => switchMode(k)}
+              className={`rounded-xl border p-3 text-left transition ${q.mode === k ? 'border-emerald-600 bg-emerald-50 ring-2 ring-emerald-600/20' : 'border-[#e7e1cf] bg-white hover:border-emerald-600/40'}`}>
+              <div className="font-bold">{t}{q.mode === k ? ' ✓' : ''}</div>
+              <div className="mt-0.5 text-xs text-emerald-900/65">{h}</div>
+            </button>
+          ))}
+        </div>
+      </div>
       <div className="grid gap-3 sm:grid-cols-2">
         <label><span className={label}>Name (members see this)</span><input className="nk-input" maxLength={80} value={c.title ?? ''} onChange={(e) => setC({ title: e.target.value })} /></label>
         <label className="flex items-center gap-2.5 self-end text-sm font-semibold"><input type="checkbox" checked={!!c.active} onChange={(e) => setC({ active: e.target.checked })} /> On (inside the start / end time)</label>
@@ -407,13 +431,15 @@ function CampaignForm({ edit, setEdit, busy, onSave, onDefault }: { edit: { c: P
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-4">
+      <div className={`grid gap-3 ${q.mode === 'simple' ? 'max-w-xs' : 'sm:grid-cols-4'}`}>
         <label><span className="mb-1 block text-xs font-semibold">Seconds to answer</span><input type="number" min={10} max={300} className="nk-input" value={q.secs} onChange={(e) => setQ({ secs: Number(e.target.value) })} /></label>
+        {q.mode !== 'simple' && <>
         <label><span className="mb-1 block text-xs font-semibold">Extra keys usable per day</span><input type="number" min={0} max={100} className="nk-input" value={q.ref_per_day} onChange={(e) => setQ({ ref_per_day: Number(e.target.value) })} /></label>
         <label><span className="mb-1 block text-xs font-semibold">Extra keys from</span><input type="time" className="nk-input" value={q.ref_from} onChange={(e) => setQ({ ref_from: e.target.value })} /></label>
         <label><span className="mb-1 block text-xs font-semibold">until</span><input type="time" className="nk-input" value={q.ref_to} onChange={(e) => setQ({ ref_to: e.target.value })} /></label>
+        </>}
       </div>
-      <p className="-mt-2 text-xs text-emerald-900/60">Extra keys (referrals, bonus) never expire; members can use this many per day, inside this daily time. 00:00–23:59 = all day.</p>
+      {q.mode !== 'simple' && <p className="-mt-2 text-xs text-emerald-900/60">Extra keys (referrals, bonus) never expire; members can use this many per day, inside this daily time. 00:00–23:59 = all day.</p>}
 
       <PrizesEdit prizes={(c.prizes ?? []) as CqPrize[]} set={(prizes) => setC({ prizes } as Partial<Camp>)} />
 

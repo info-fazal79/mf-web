@@ -84,6 +84,8 @@ export type CardData = {
   theme?: CardTheme; headline?: string; sub?: string; line?: string;
   /** e.g. "শেষ: ২০ নভেম্বর" for competitions with an end date */
   badge?: string;
+  /** true: the QR code and link go to muhammadfazal.com/nusuk (no personal referral link) */
+  site?: boolean;
 };
 
 export async function drawCard(canvas: HTMLCanvasElement, d: CardData) {
@@ -191,7 +193,7 @@ export async function drawCard(canvas: HTMLCanvasElement, d: CardData) {
   rr(ctx, 80, py, CARD_W - 160, 300, 30); ctx.fill();
   ctx.fillStyle = '#ffffff';
   rr(ctx, 115, py + 30, 240, 240, 20); ctx.fill();
-  drawQR(ctx, refLink(d.code), 133, py + 48, 204, L.qrDark);
+  drawQR(ctx, d.site ? 'https://muhammadfazal.com/nusuk' : refLink(d.code), 133, py + 48, 204, L.qrDark);
 
   ctx.textAlign = 'left';
   ctx.fillStyle = L.head;
@@ -199,7 +201,7 @@ export async function drawCard(canvas: HTMLCanvasElement, d: CardData) {
   ctx.fillText('স্ক্যান করুন অথবা ভিজিট করুন', 395, py + 75);
   ctx.fillStyle = L.text;
   // the member's own referral link (same as the QR code), so a new member is counted for them
-  fitText(ctx, `muhammadfazal.com/nusuk?ref=${d.code}`, 395, py + 135, 590, 40, 700, MONO);
+  fitText(ctx, d.site ? 'muhammadfazal.com/nusuk' : `muhammadfazal.com/nusuk?ref=${d.code}`, 395, py + 135, 590, d.site ? 46 : 40, 700, MONO);
   ctx.fillStyle = L.soft;
   ctx.font = `500 29px ${FONT}`;
   ctx.fillText('হাজারো নুসুক কোড, একদম ফ্রি', 395, py + 195);

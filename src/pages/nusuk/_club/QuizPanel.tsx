@@ -5,7 +5,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { ArrowLeft, ArrowRight, CalendarClock, CheckCircle2, Clock, Gift, Hourglass, KeyRound, Lock, ScrollText, Sparkles, Ticket, Trophy, Users, XCircle } from 'lucide-react';
-import { DEFAULT_PLEDGE, QUIZ_RULES, bn, bnDate, bnTime } from '../_lib/club';
+import { DEFAULT_PLEDGE, QUIZ_RULES, SIMPLE_QUIZ_RULES, bn, bnDate, bnTime } from '../_lib/club';
 import { MEDAL, placeName, shownPrizes } from '../_lib/prizes';
 import { OPEN_ERR, leaveBeacon, timeBn, type CqAnswer, type CqMe, type CqOpen, type CqSlot } from '../_lib/cq';
 
@@ -118,11 +118,12 @@ export function CompetitionView({ sb, cq, onBack, share }: { sb: SupabaseClient;
   const next = slots.find((s) => s.status === 'upcoming');
   const readyCount = slots.filter((s) => s.status === 'ready').length;
   const ref = d.ref!;
+  const simple = c.mode === 'simple'; // a one-off quiz: daily keys only, nothing about referrals
   const refLeftToday = Math.max(0, ref.per_day - ref.used_today);
   const canRef = ref.keys > 0 && ref.in_window && refLeftToday > 0 && !c.full;
   const target = c.rule !== 'date' && c.target > 0 ? c.target : 0;
   const progress = target ? (c.rule === 'people' ? c.totals.people : c.totals.tickets) : 0;
-  const rules = (d.rules?.trim() || QUIZ_RULES).split('\n').filter((l) => l.trim());
+  const rules = (d.rules?.trim() || (c.mode === 'simple' ? SIMPLE_QUIZ_RULES : QUIZ_RULES)).split('\n').filter((l) => l.trim());
 
   return (
     <>
@@ -167,11 +168,15 @@ export function CompetitionView({ sb, cq, onBack, share }: { sb: SupabaseClient;
         <div className="grid grid-cols-2 gap-2.5">
           <Tile tone="gold" icon={<Ticket className="h-4 w-4" aria-hidden />} label="মোট টিকিট" value={my.tickets ?? 0} hint="যত বেশি টিকিট, তত বেশি সুযোগ" />
           <Tile tone="gold" icon={<CalendarClock className="h-4 w-4" aria-hidden />} label="আজকের টিকিট" value={my.tickets_today ?? 0}
-            hint={<>দৈনিক প্রশ্নে {bn(my.today_slot ?? 0)} · বাড়তি চাবিতে {bn(my.today_ref ?? 0)}</>} />
+            hint={simple ? `আজকের ${bn(slots.length)}টি প্রশ্ন থেকে` : <>দৈনিক প্রশ্নে {bn(my.today_slot ?? 0)} · বাড়তি চাবিতে {bn(my.today_ref ?? 0)}</>} />
           <Tile icon={<CheckCircle2 className="h-4 w-4" aria-hidden />} label="সঠিক উত্তর" value={my.correct} hint={`মোট উত্তর ${bn(my.answered)}টি · আজ ${bn(my.answered_today ?? 0)}টি`} />
-          <Tile icon={<Users className="h-4 w-4" aria-hidden />} label="আমার লিংকে যুক্ত" value={my.refs} hint="নতুন সদস্য" />
-          <Tile icon={<KeyRound className="h-4 w-4" aria-hidden />} label="বাড়তি চাবি হাতে" value={ref.keys} hint={`এ পর্যন্ত পেয়েছেন ${bn(my.ref_earned)}টি`} />
-          <Tile icon={<Gift className="h-4 w-4" aria-hidden />} label="আজ বাড়তি চাবি বাকি" value={Math.min(ref.keys, refLeftToday)} hint={`দিনে সর্বোচ্চ ${bn(ref.per_day)}টি`} />
+          {simple
+            ? <Tile icon={<KeyRound className="h-4 w-4" aria-hidden />} label="আজ প্রশ্ন বাকি" value={slots.filter((s) => s.status === 'upcoming' || s.status === 'ready').length} hint={`মোট ${bn(slots.length)}টি প্রশ্ন`} />
+            : <>
+              <Tile icon={<Users className="h-4 w-4" aria-hidden />} label="আমার লিংকে যুক্ত" value={my.refs} hint="নতুন সদস্য" />
+              <Tile icon={<KeyRound className="h-4 w-4" aria-hidden />} label="বাড়তি চাবি হাতে" value={ref.keys} hint={`এ পর্যন্ত পেয়েছেন ${bn(my.ref_earned)}টি`} />
+              <Tile icon={<Gift className="h-4 w-4" aria-hidden />} label="আজ বাড়তি চাবি বাকি" value={Math.min(ref.keys, refLeftToday)} hint={`দিনে সর্বোচ্চ ${bn(ref.per_day)}টি`} />
+            </>}
         </div>
       </section>
 
@@ -186,7 +191,7 @@ export function CompetitionView({ sb, cq, onBack, share }: { sb: SupabaseClient;
       {/* 3. today's keys */}
       <section className="nk-card grid gap-3 p-4 sm:p-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="flex items-center gap-2 text-lg font-bold"><KeyRound className="h-5 w-5 text-emerald-700" aria-hidden /> আজকের {bn(slots.length)}টি চাবি</h2>
+          <h2 className="flex items-center gap-2 text-lg font-bold"><KeyRound className="h-5 w-5 text-emerald-700" aria-hidden /> আজকের {bn(slots.length)}টি {simple ? 'প্রশ্ন' : 'চাবি'}</h2>
           {next && <span className="text-sm text-emerald-900/70">পরের প্রশ্ন খুলবে <b>{timeBn(next.from)}</b>-এ</span>}
         </div>
         <ol className="grid gap-2">
@@ -209,8 +214,8 @@ export function CompetitionView({ sb, cq, onBack, share }: { sb: SupabaseClient;
         {readyCount === 0 && !next && <p className="text-sm text-emerald-900/65">আজকের সব প্রশ্নের সময় শেষ। কাল আবার নতুন চাবি পাবেন, ইনশাআল্লাহ।</p>}
       </section>
 
-      {/* 4. extra keys */}
-      <section className={`nk-card grid gap-3 p-4 sm:p-5 ${canRef ? 'border-gold-500/70' : ''}`}>
+      {/* 4. extra keys (not in a simple quiz) */}
+      {!simple && <section className={`nk-card grid gap-3 p-4 sm:p-5 ${canRef ? 'border-gold-500/70' : ''}`}>
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
             <h2 className="flex items-center gap-2 text-lg font-bold"><Gift className="h-5 w-5 text-emerald-700" aria-hidden /> বাড়তি চাবি</h2>
@@ -228,7 +233,7 @@ export function CompetitionView({ sb, cq, onBack, share }: { sb: SupabaseClient;
         <button type="button" disabled={!canRef} onClick={() => setFlow({ kind: 'ref' })} className="nk-btn nk-green w-full py-3 text-base disabled:opacity-50">
           {ref.keys <= 0 ? 'কোনো বাড়তি চাবি নেই' : !ref.in_window ? 'এখন ব্যবহারের সময় নয়' : refLeftToday <= 0 ? 'আজকের সীমা শেষ' : 'বাড়তি চাবি দিয়ে প্রশ্নের উত্তর দিন'}
         </button>
-      </section>
+      </section>}
 
 
 

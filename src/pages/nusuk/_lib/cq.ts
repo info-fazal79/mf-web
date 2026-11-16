@@ -12,6 +12,8 @@ export type CqMe = {
   now: string;
   campaign: null | {
     id: number; title: string; info: string; starts_at: string | null; ends_at: string | null;
+    /** referral = daily keys + extra keys from referrals; simple = daily keys only (update_47) */
+    mode?: CqMode;
     rule: 'date' | 'people' | 'tickets'; target: number; totals: { people: number; tickets: number }; full: boolean;
     prizes: CqPrize[]; caption: string; card: { theme?: 'green' | 'gold' | 'night'; headline?: string; sub?: string; line?: string };
   };
@@ -35,7 +37,9 @@ export type CqAnswer = { ok: boolean; reason?: string; status?: 'right' | 'wrong
 
 /** Campaign settings stored in nusuk_club_contests.quiz */
 export type CqSlotCfg = { at: string; mins: number };
+export type CqMode = 'referral' | 'simple';
 export type CqCfg = {
+  mode: CqMode;
   slots: CqSlotCfg[]; secs: number; ref_per_day: number; ref_from: string; ref_to: string;
   rule: 'date' | 'people' | 'tickets'; target: number; pledge: string; rules: string;
   bonus_done?: boolean; bonus_keys?: number; bonus_people?: number; bonus_at?: string;
@@ -51,6 +55,7 @@ export function parseCqCfg(q: unknown): CqCfg {
     ? (r.slots as unknown[]).flatMap((x) => (x && typeof x === 'object' ? [{ at: time((x as CqSlotCfg).at, '09:00'), mins: num((x as CqSlotCfg).mins, 120, 5, 1440) }] : [])).slice(0, 10)
     : [];
   return {
+    mode: r.mode === 'simple' ? 'simple' : 'referral',
     slots: slots.length ? slots : DEFAULT_SLOTS.map((s) => ({ ...s })),
     secs: num(r.secs, 30, 10, 300),
     ref_per_day: num(r.ref_per_day, 10, 0, 100),

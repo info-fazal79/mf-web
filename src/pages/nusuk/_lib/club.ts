@@ -51,6 +51,26 @@ export const QUIZ_RULES = [
   'বিজয়ী নির্ধারণ হবে লাইভ ড্রয়ের মাধ্যমে। যত বেশি টিকিট, তত বেশি সুযোগ। পুরস্কার দেওয়ার আগে বিজয়ীর তথ্য যাচাই করা হবে।',
   'অসৎ উপায় বা একাধিক অ্যাকাউন্ট পাওয়া গেলে অংশগ্রহণ ও পুরস্কার বাতিল হবে। অংশগ্রহণ সম্পূর্ণ ফ্রি।',
 ].join('\n');
+/** Rules for a "simple quiz" campaign: daily keys only, no referral keys */
+export const SIMPLE_QUIZ_RULES = [
+  'অংশ নিতে অ্যাকাউন্ট থাকতে হবে। একজন ব্যক্তি একটি অ্যাকাউন্ট (একটি নুসুক কোড, একটি মোবাইল নম্বর, একটি ডিভাইস)।',
+  'নির্দিষ্ট সময়ে একটি করে প্রশ্ন খুলবে। প্রতিটি প্রশ্নের উত্তর সেই সময়ের মধ্যেই দিতে হবে, সময় পেরিয়ে গেলে প্রশ্নটি আর পাওয়া যাবে না।',
+  'প্রশ্ন খোলার পর নির্দিষ্ট সেকেন্ডের মধ্যে উত্তর দিতে হবে। এই সময়ে পেজ থেকে বের হলে প্রশ্নটি বাতিল হবে।',
+  'প্রতিটি সঠিক উত্তরে ড্রয়ে ১টি টিকিট। ভুল উত্তরে টিকিট নেই।',
+  'বিজয়ী নির্ধারণ হবে লাইভ ড্রয়ের মাধ্যমে। যত বেশি টিকিট, তত বেশি সুযোগ। পুরস্কার দেওয়ার আগে বিজয়ীর তথ্য যাচাই করা হবে।',
+  'অসৎ উপায় বা একাধিক অ্যাকাউন্ট পাওয়া গেলে অংশগ্রহণ ও পুরস্কার বাতিল হবে। অংশগ্রহণ সম্পূর্ণ ফ্রি।',
+].join('\n');
+export const SIMPLE_QUIZ_CAPTION = [
+  '🕋 রিবাত ইসলামিক কুইজ · আজকের পুরস্কার জেতার সুযোগ',
+  '',
+  '✅ নির্দিষ্ট সময়ে প্রশ্ন খুলবে, প্রতিটি সঠিক উত্তরে ড্রয়ের ১টি টিকিট।',
+  '🎁 লাইভ ড্রয়ে বিজয়ী ঘোষণা। অংশগ্রহণ সম্পূর্ণ ফ্রি!',
+  '',
+  '👉 অংশ নিতে: {link}',
+  '',
+  '#Nusuk #NusukUmrah #উমরাহ #RibatulUmmah #IslamicQuiz',
+].join('\n');
+export const SIMPLE_CARD_LINE = 'আপনিও অংশ নিন, প্রতিটি সঠিক উত্তরে ১টি টিকিট';
 export const DEFAULT_PLEDGE = 'আমি আল্লাহকে সাক্ষী রেখে অঙ্গীকার করছি যে, এই কুইজে গুগল, অন্য কারো সাহায্য বা কোনো অসৎ উপায় অবলম্বন করব না এবং একাধিক অ্যাকাউন্ট ব্যবহার করব না।';
 export const DEFAULT_CARD_LINE = 'এই কোড দিয়ে যুক্ত হলে আপনিও পাবেন ১টি বাড়তি টিকিট';
 export const DEFAULT_RULES = [
@@ -254,13 +274,13 @@ export const CONTEST_CAPTIONS: Record<ContestKind, string> = {
 };
 
 /** Fill the caption template: {code} {name} {sl} {link} {ends} */
-export function fillCaption(tpl: string, m: Pick<Member, 'nusuk_code' | 'name' | 'sl'>, contest?: Pick<Contest, 'kind' | 'ends_at'>) {
-  const base = tpl.trim() || (contest ? CONTEST_CAPTIONS[contest.kind] : DEFAULT_CAPTION);
+export function fillCaption(tpl: string, m: Pick<Member, 'nusuk_code' | 'name' | 'sl'>, contest?: Pick<Contest, 'kind' | 'ends_at'>, simple = false) {
+  const base = tpl.trim() || (simple ? SIMPLE_QUIZ_CAPTION : contest ? CONTEST_CAPTIONS[contest.kind] : DEFAULT_CAPTION);
   return base
     .replaceAll('{code}', m.nusuk_code)
     .replaceAll('{name}', m.name)
     .replaceAll('{sl}', String(m.sl))
-    .replaceAll('{ref_link}', refLink(m.nusuk_code))
+    .replaceAll('{ref_link}', simple ? SITE_LINK : refLink(m.nusuk_code)) // a simple quiz has no referral link
     .replaceAll('{link}', SITE_LINK)
     .replaceAll('{ends}', contest?.ends_at ? `⏳ শেষ: ${bnDate(contest.ends_at)}` : '')
     .replace(/\n{3,}/g, '\n\n');
