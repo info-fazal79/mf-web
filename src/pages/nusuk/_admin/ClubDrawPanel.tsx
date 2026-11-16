@@ -85,7 +85,7 @@ export default function ClubDrawPanel({ contests, toast }: { contests: Contest[]
   }
   async function savePrizes() {
     if (!c) return;
-    const clean = prizes.slice(0, count).map((p, i) => ({ place: i + 1, prize: p.prize.trim() }));
+    const clean = prizes.slice(0, count).map((p, i) => ({ ...p, place: i + 1, prize: p.prize.trim() })); // keeps the prize pictures
     const { error } = await sb!.from('nusuk_club_contests').update({ prizes: clean }).eq('id', c.id);
     if (error) return toast(errText(error), false);
     c.prizes = clean;

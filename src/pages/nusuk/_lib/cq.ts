@@ -5,7 +5,9 @@
 import { bnTime } from './club';
 export type SlotStatus = 'upcoming' | 'ready' | 'open' | 'right' | 'wrong' | 'late' | 'left' | 'missed';
 export type CqSlot = { i: number; from: string; to: string; status: SlotStatus };
-export type CqPrize = { place: number; prize: string };
+export type CqPrize = { place: number; prize: string; img?: string };
+/** A campaign as the /nusuk home page card shows it (nusuk_cq_public, update_46) */
+export type CqPublic = { show: boolean; id?: number; title?: string; info?: string; starts_at?: string | null; ends_at?: string | null; prizes?: CqPrize[]; rules?: string; slots?: number; rule?: 'date' | 'people' | 'tickets'; target?: number; totals?: { people: number; tickets: number } };
 export type CqMe = {
   now: string;
   campaign: null | {
@@ -70,7 +72,7 @@ export const OPEN_ERR: Record<string, string> = {
   member: 'আগে প্রোফাইল পূরণ করে অ্যাকাউন্ট সম্পূর্ণ করুন।',
   closed: 'প্রতিযোগিতা এখন বন্ধ আছে।',
   no_campaign: 'এই মুহূর্তে কোনো প্রতিযোগিতা চলছে না।',
-  full: 'এই প্রতিযোগিতার লক্ষ্য পূর্ণ হয়েছে। লটারির অপেক্ষায় থাকুন!',
+  full: 'এই প্রতিযোগিতার লক্ষ্য পূর্ণ হয়েছে। ড্রয়ের অপেক্ষায় থাকুন!',
   no_questions: 'এখনো প্রশ্ন যোগ করা হয়নি। একটু পরে আবার দেখুন।',
   window: 'এই প্রশ্নের সময় এখন নয়।',
   used: 'এই প্রশ্নটি আগেই খোলা হয়েছে।',

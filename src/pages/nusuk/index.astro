@@ -236,6 +236,33 @@ const cm0 = defaultCommunity();
         </div>
       </section>
 
+      <!-- ===== Running quiz competition (Reward Club → "Show the competition card on the home page", update 46) ===== -->
+      <section id="nk-cq" class="nk-card mt-8 hidden scroll-mt-20 overflow-hidden p-0" aria-labelledby="nk-cq-h">
+        <div class="nk-quiz-head px-5 pt-5 pb-4 text-white sm:px-6">
+          <div class="flex items-start gap-3">
+            <span class="nk-quiz-icon grid h-12 w-12 shrink-0 place-items-center rounded-2xl text-gold-100" aria-hidden="true"><Fragment set:html={lucide('trophy', 'h-6 w-6', 2.2)} /></span>
+            <div class="min-w-0 flex-1">
+              <span class="inline-block rounded-full bg-gold-400 px-2.5 py-0.5 text-xs font-bold text-emerald-950">চলমান প্রতিযোগিতা</span>
+              <h2 id="nk-cq-h" class="mt-1.5 text-xl font-bold leading-snug"></h2>
+              <p id="nk-cq-info" class="mt-1 text-sm text-emerald-50/85"></p>
+            </div>
+          </div>
+          <div id="nk-cq-meta" class="mt-3 flex flex-wrap gap-2 text-sm"></div>
+        </div>
+        <div class="grid gap-4 px-5 pt-4 pb-5 sm:px-6">
+          <div id="nk-cq-prizes-wrap" class="hidden">
+            <h3 class="mb-2 font-bold text-emerald-950">🎁 পুরস্কার</h3>
+            <div id="nk-cq-prizes"></div>
+          </div>
+          <div>
+            <h3 class="mb-2 font-bold text-emerald-950">📜 প্রতিযোগিতার নিয়ম</h3>
+            <ol id="nk-cq-rules" class="grid gap-1.5 text-[15px] leading-relaxed"></ol>
+          </div>
+          <a href="/nusuk/account#competition" class="nk-btn nk-green flex w-full items-center justify-center gap-2 py-3.5 text-base">প্রতিযোগিতায় অংশ নিন →</a>
+          <p class="-mt-2 text-center text-xs text-emerald-900/60">অংশ নিতে Google দিয়ে অ্যাকাউন্ট খুলতে হবে। সম্পূর্ণ ফ্রি।</p>
+        </div>
+      </section>
+
       <!-- ===== District map: how many accounts from each district (update 43) ===== -->
       <section id="nk-dm" class="nk-card nk-dm mt-8 scroll-mt-20 overflow-hidden p-0" aria-labelledby="nk-dm-h">
         <div class="nk-dm-head px-5 pt-5 pb-4 text-white sm:px-6">
@@ -836,7 +863,7 @@ const cm0 = defaultCommunity();
       import { rpc, rpcReady, type Boot, type Claim, type CodeCheck, type CodeRef, type FeatureReq, type FeaturedItem, type FeaturedList, type SliderItem, type Submit } from './_lib/rpc';
       import { initQuiz } from './_lib/quiz';
       import { lucide } from './_lib/lucide';
-      import { clubOf, hasMemberSession, isJoinedMember, memberToken, rememberRef, DEFAULT_NOTICE, DEFAULT_NOTICE_BTN } from './_lib/club';
+      import { clubOf, hasMemberSession, isJoinedMember, memberToken, rememberRef, DEFAULT_NOTICE, DEFAULT_NOTICE_BTN, QUIZ_RULES } from './_lib/club';
       import { initInsights, insightsOn } from './_lib/insights';
       import { adHtml, defaultAds, liveAds, parseAds, sampleDuaAd } from './_lib/ads';
       import { bonusReady, parseBonus, parseCommunity } from './_lib/bonus';
@@ -845,8 +872,31 @@ const cm0 = defaultCommunity();
       import { initLive } from './_lib/live';
       import { initPhotoCard, setPhotoCardLinks } from './_lib/photocard';
       import { initDistrictMap } from './_lib/distmap';
+      import { prizeCardsHtml } from './_lib/prizes';
+      import type { CqPublic } from './_lib/cq';
       initPhotoCard();
       initDistrictMap();
+      // the running quiz competition, when the admin shows it on the home page (cached 60 s on the server)
+      if (rpcReady) rpc<CqPublic>('nusuk_cq_public').then((q) => {
+        if (!q?.show) return;
+        const box = document.getElementById('nk-cq')!;
+        const txt = (id: string, t: string) => { document.getElementById(id)!.textContent = t; };
+        txt('nk-cq-h', q.title ?? '');
+        txt('nk-cq-info', q.info ?? '');
+        const chip = (t: string) => `<span class="nk-quiz-icon rounded-full px-3 py-1">${t}</span>`;
+        const meta: string[] = [];
+        if (q.ends_at) meta.push(chip(`⏳ শেষ: ${new Date(q.ends_at).toLocaleString('bn-BD', { day: 'numeric', month: 'long', hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Dhaka' })}`));
+        if (q.slots) meta.push(chip(`🔑 প্রতিদিন ${bn(q.slots)}টি প্রশ্ন`));
+        if (q.rule && q.rule !== 'date' && q.target && q.totals) meta.push(chip(`${q.rule === 'people' ? '👥 অংশগ্রহণকারী' : '🎟️ টিকিট'} ${bn(q.rule === 'people' ? q.totals.people : q.totals.tickets)} / ${bn(q.target)}`));
+        document.getElementById('nk-cq-meta')!.innerHTML = meta.join('');
+        const prizes = prizeCardsHtml(q.prizes);
+        document.getElementById('nk-cq-prizes')!.innerHTML = prizes;
+        document.getElementById('nk-cq-prizes-wrap')!.classList.toggle('hidden', !prizes);
+        const rules = (q.rules?.trim() || QUIZ_RULES).split('\n').filter((l) => l.trim());
+        const esc = (t: string) => t.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+        document.getElementById('nk-cq-rules')!.innerHTML = rules.map((l, i) => `<li class="flex gap-2.5"><span class="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-emerald-800 text-xs font-bold text-white">${bn(i + 1)}</span><span>${esc(l)}</span></li>`).join('');
+        box.classList.remove('hidden');
+      }).catch(() => { /* update 46 not run yet */ });
       import { CODE_RE, countdownText, countryName, defaultVideoLabel, flagUrl, parseToday, parseTopBar, parseVideo, subscribeUrl, parseWinners, prizeLabel, type Winner } from './_lib/content';
 
       // Bangladesh flag (green field, red disc set toward the hoist). Inline SVG so it renders on every OS.

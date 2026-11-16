@@ -218,6 +218,10 @@ export default function ClubPage({ toast }: { toast: ToastFn }) {
           <h2 className="text-base font-bold text-emerald-950">Settings</h2>
           <button type="button" className="nk-btn nk-green px-4 py-2 text-sm" disabled={busy || !dirty} onClick={() => save()}>{busy ? 'Saving…' : dirty ? 'Save' : 'Saved'}</button>
         </div>
+        <label className="flex items-start gap-2.5 rounded-xl border border-emerald-700/30 bg-emerald-50 p-3 text-sm font-semibold">
+          <input type="checkbox" className="mt-0.5 h-4 w-4 accent-emerald-700" checked={c.home_card} onChange={(e) => set({ home_card: e.target.checked })} />
+          <span>Show the competition card on the /nusuk home page<span className="block text-xs font-normal text-emerald-900/65">The running quiz campaign with its prizes, rules and a "take part" button. Everyone sees it (also in test mode), so turn it on when you are ready. Changes show within a minute.</span></span>
+        </label>
         <div className="grid gap-3 rounded-xl border border-gold-500/40 bg-gold-400/10 p-3">
           <label className="flex items-center gap-2.5 text-sm font-semibold">
             <input type="checkbox" className="h-4 w-4 accent-emerald-700" checked={c.notice_on} onChange={(e) => set({ notice_on: e.target.checked })} />

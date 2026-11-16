@@ -56,7 +56,7 @@ export function initDistrictMap() {
     loading = true;
     try {
       const [{ BD_DISTRICTS, BD_W, BD_H }, data] = await Promise.all([import('./bdmap'), rpc<MapData>('nusuk_district_map')]);
-      if (!data?.public) { sec!.classList.add('hidden'); return; }
+      // shown in every club mode (it only counts accounts per district)
       if (!dists.length) {
         W = BD_W; H = BD_H; vb = [0, 0, W, H];
         dists = BD_DISTRICTS.map(([b, e, path, lx, ly, box]) => ({ bn: b, en: e, path, lx, ly, box, n: 0 }));

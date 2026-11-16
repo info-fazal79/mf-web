@@ -190,7 +190,7 @@ export function GiveawayCard({ toast, content }: { toast: ToastFn; content: unkn
   async function create() {
     const { data, error } = await sb!.from('nusuk_giveaways').insert({
       title: 'গিভঅ্যাওয়ে', prize: '৫০টি Key', page_url: bonus.page_url, group_url: bonus.group_url,
-      details: 'নিচের কাজগুলো করে আপনার নুসুক কোড দিয়ে অংশ নিন। সময় শেষে লটারির মাধ্যমে একজন বিজয়ী বাছাই করা হবে।',
+      details: 'নিচের কাজগুলো করে আপনার নুসুক কোড দিয়ে অংশ নিন। সময় শেষে ড্রয়ের মাধ্যমে একজন বিজয়ী বাছাই করা হবে।',
     }).select('id').single();
     if (error) return toast(errText(error), false);
     setSel((data as { id: number }).id);

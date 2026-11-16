@@ -6,7 +6,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { ArrowLeft, ArrowRight, CalendarClock, CheckCircle2, Clock, Gift, Hourglass, KeyRound, Lock, ScrollText, Sparkles, Ticket, Trophy, Users, XCircle } from 'lucide-react';
 import { DEFAULT_PLEDGE, QUIZ_RULES, bn, bnDate, bnTime } from '../_lib/club';
-import { bnPlace } from '../_lib/clubdraw';
+import { MEDAL, placeName, shownPrizes } from '../_lib/prizes';
 import { OPEN_ERR, leaveBeacon, timeBn, type CqAnswer, type CqMe, type CqOpen, type CqSlot } from '../_lib/cq';
 
 const errText = (e: unknown) => (e && typeof e === 'object' && 'message' in e ? String((e as { message: string }).message) : String(e));
@@ -138,13 +138,28 @@ export function CompetitionView({ sb, cq, onBack, share }: { sb: SupabaseClient;
           <div className="mt-3">
             <div className="mb-1 flex justify-between text-xs text-emerald-50/85">
               <span>{c.rule === 'people' ? 'অংশগ্রহণকারী' : 'মোট টিকিট'}: {bn(progress)} / {bn(target)}</span>
-              <span>লক্ষ্য পূর্ণ হলেই লটারি</span>
+              <span>লক্ষ্য পূর্ণ হলেই ড্র</span>
             </div>
             <div className="h-2.5 overflow-hidden rounded-full bg-white/15"><div className="h-full rounded-full bg-gold-400" style={{ width: `${Math.min(100, (progress / target) * 100)}%` }} /></div>
           </div>
         )}
-        {c.full && <p className="mt-3 rounded-xl bg-gold-400 px-3 py-2 text-sm font-bold text-emerald-950">🎉 লক্ষ্য পূর্ণ হয়েছে! লাইভ লটারির অপেক্ষায় থাকুন।</p>}
+        {c.full && <p className="mt-3 rounded-xl bg-gold-400 px-3 py-2 text-sm font-bold text-emerald-950">🎉 লক্ষ্য পূর্ণ হয়েছে! লাইভ ড্রয়ের অপেক্ষায় থাকুন।</p>}
       </section>
+
+      {shownPrizes(c.prizes).length > 0 && (
+        <section className="nk-card grid gap-3 p-4 sm:p-5">
+          <h2 className="flex items-center gap-2 text-lg font-bold"><Gift className="h-5 w-5 text-emerald-700" aria-hidden /> পুরস্কার</h2>
+          <div className={`grid gap-3 ${shownPrizes(c.prizes).length === 1 ? '' : shownPrizes(c.prizes).length === 2 ? 'grid-cols-2' : 'grid-cols-2 sm:grid-cols-3'}`}>
+            {shownPrizes(c.prizes).map((p) => (
+              <div key={p.place} className={`nk-prize ${p.place === 1 ? 'nk-prize-first' : ''}`}>
+                <span className="nk-prize-place">{MEDAL(p.place)} {placeName(p.place)}</span>
+                <div className="nk-prize-img">{p.img ? <img src={p.img} alt="" loading="lazy" /> : <span aria-hidden>🎁</span>}</div>
+                <div className="nk-prize-name">{p.prize}</div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* 1. my numbers in this competition */}
       <section className="nk-card grid gap-3 p-4 sm:p-5">
@@ -215,14 +230,7 @@ export function CompetitionView({ sb, cq, onBack, share }: { sb: SupabaseClient;
         </button>
       </section>
 
-      {c.prizes && c.prizes.some((p) => p.prize.trim()) && (
-        <section className="nk-card p-4 sm:p-5">
-          <h2 className="mb-2 flex items-center gap-2 text-lg font-bold"><Gift className="h-5 w-5 text-emerald-700" aria-hidden /> পুরস্কার</h2>
-          <ul className="grid gap-1 text-[15px]">
-            {c.prizes.filter((p) => p.prize.trim()).slice(0, 20).map((p) => <li key={p.place}><b>{bnPlace(p.place)}:</b> {p.prize}</li>)}
-          </ul>
-        </section>
-      )}
+
 
       {/* 5. photo card + caption */}
       {share}
@@ -358,7 +366,7 @@ function QuestionFlow({ sb, flow, secs, pledge, skew, onClose }: { sb: SupabaseC
 
         {step === 'done' && res && (
           <div className="nk-card grid gap-4 p-6 text-center">
-            {res.status === 'right' && <><div className="text-5xl">🎉</div><h2 className="text-2xl font-bold text-emerald-800">মাশাআল্লাহ, সঠিক উত্তর!</h2><p className="text-[15px]">আপনার লটারিতে ১টি টিকিট যোগ হয়েছে। এই প্রতিযোগিতায় এখন আপনার টিকিট <b>{bn(res.tickets ?? 0)}টি</b>।</p></>}
+            {res.status === 'right' && <><div className="text-5xl">🎉</div><h2 className="text-2xl font-bold text-emerald-800">মাশাআল্লাহ, সঠিক উত্তর!</h2><p className="text-[15px]">আপনার ড্রয়ে ১টি টিকিট যোগ হয়েছে। এই প্রতিযোগিতায় এখন আপনার টিকিট <b>{bn(res.tickets ?? 0)}টি</b>।</p></>}
             {res.status === 'wrong' && <><div className="text-5xl">😔</div><h2 className="text-2xl font-bold text-red-700">উত্তরটি সঠিক হয়নি</h2>{q?.options && res.right != null && <p className="text-[15px]">সঠিক উত্তর: <b>{MARKS[res.right]}. {q.options[res.right]}</b></p>}<p className="text-sm text-emerald-900/70">হতাশ হবেন না, পরের প্রশ্নে আবার চেষ্টা করুন।</p></>}
             {res.status === 'late' && <><div className="text-5xl">⏰</div><h2 className="text-xl font-bold">{res.msg ? 'প্রশ্ন খোলা যায়নি' : 'সময় শেষ হয়ে গেছে'}</h2><p className="text-[15px]">{res.msg ?? 'নির্ধারিত সময়ের মধ্যে উত্তর দেওয়া হয়নি, তাই এই চাবিটি ব্যবহার হয়ে গেছে।'}</p></>}
             {res.status === 'left' && <><div className="text-5xl">🚫</div><h2 className="text-xl font-bold text-red-700">প্রশ্নটি বাতিল হয়েছে</h2><p className="text-[15px]">প্রশ্ন খোলা অবস্থায় আপনি পেজ ছেড়েছিলেন (অন্য ট্যাব বা অ্যাপে গিয়েছিলেন), তাই এই চাবিটি ব্যবহার হয়ে গেছে।</p></>}

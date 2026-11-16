@@ -179,7 +179,7 @@ export function initLive(opts: { device: string }) {
       })()}
       ${g.open && g.ends_at ? `<p class="text-center text-sm font-semibold text-emerald-900">⏳ শেষ হতে বাকি <span data-cd2="${esc(g.ends_at)}" class="font-mono"></span></p>` : ''}
       ${g.details ? `<p class="nk-pre text-sm leading-relaxed text-emerald-950/85">${esc(g.details)}</p>` : ''}
-      <p class="text-center text-xs text-emerald-900/60">এখন পর্যন্ত ${bn(g.entries)} জন অংশ নিয়েছেন। সময় শেষে লটারির মাধ্যমে বিজয়ী বাছাই হবে।</p>
+      <p class="text-center text-xs text-emerald-900/60">এখন পর্যন্ত ${bn(g.entries)} জন অংশ নিয়েছেন। সময় শেষে ড্রয়ের মাধ্যমে বিজয়ী বাছাই হবে।</p>
       ${g.open && !(g.winners?.length || g.winner) ? `<form class="grid gap-3" novalidate>
         <h3 class="text-sm font-bold text-emerald-900">✅ অংশ নিতে যা করতে হবে</h3>
         ${task(g.need_page, g.page_url, '📘 আমাদের ফেসবুক পেজ ফলো করুন', 'আমি পেজ ফলো করেছি', 'page')}

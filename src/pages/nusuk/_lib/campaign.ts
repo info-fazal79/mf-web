@@ -84,7 +84,7 @@ export async function adminToken(): Promise<string | null> {
 }
 
 const DEFAULT_RULES =
-  '১. নিচে আপনার নুসুক রেফারেল কোড আর ফেসবুক প্রোফাইলের লিংক দিন।\n২. প্রতিটি পোস্টের জন্য আপনার নিজের একটি লিংক তৈরি হবে। লিংকটি কপি করে ফেসবুকে Public পোস্ট দিন।\n৩. ফেসবুক লিংকের প্রিভিউ দেখানোর সাথে সাথে আপনার শেয়ার গোনা হবে এবং পয়েন্ট যোগ হবে।\n৪. প্রতিটি পোস্ট নির্দিষ্ট সময় পরপর আবার শেয়ার করা যায় (যেমন দিনে একবার)। পোস্টের পাশে তা লেখা থাকবে।\n৫. পেজ ফলো ও গ্রুপে যুক্ত হওয়ার জন্য একবার করে বোনাস পয়েন্ট পাবেন।\n৬. বিজয়ী লটারির মাধ্যমে বাছাই করা হবে। পুরস্কার দেওয়ার আগে আপনার ফেসবুক প্রোফাইলে পোস্টগুলো যাচাই করা হবে এবং নুসুক অ্যাপে আপনার কোডের স্ক্রিনশট চাওয়া হবে।';
+  '১. নিচে আপনার নুসুক রেফারেল কোড আর ফেসবুক প্রোফাইলের লিংক দিন।\n২. প্রতিটি পোস্টের জন্য আপনার নিজের একটি লিংক তৈরি হবে। লিংকটি কপি করে ফেসবুকে Public পোস্ট দিন।\n৩. ফেসবুক লিংকের প্রিভিউ দেখানোর সাথে সাথে আপনার শেয়ার গোনা হবে এবং পয়েন্ট যোগ হবে।\n৪. প্রতিটি পোস্ট নির্দিষ্ট সময় পরপর আবার শেয়ার করা যায় (যেমন দিনে একবার)। পোস্টের পাশে তা লেখা থাকবে।\n৫. পেজ ফলো ও গ্রুপে যুক্ত হওয়ার জন্য একবার করে বোনাস পয়েন্ট পাবেন।\n৬. বিজয়ী ড্রয়ের মাধ্যমে বাছাই করা হবে। পুরস্কার দেওয়ার আগে আপনার ফেসবুক প্রোফাইলে পোস্টগুলো যাচাই করা হবে এবং নুসুক অ্যাপে আপনার কোডের স্ক্রিনশট চাওয়া হবে।';
 
 const everyText = (n: number) =>
   n === 0 ? 'পুরো প্রতিযোগিতায় একবার' : n === 1 ? 'প্রতিদিন একবার' : n === 7 ? 'সপ্তাহে একবার' : `প্রতি ${bn(n)} দিনে একবার`;
@@ -140,7 +140,7 @@ export function initCampaign(opts: { device: () => string; content: () => unknow
     const list = rows.length
       ? rows.map((r, i) => `<li class="flex items-center gap-2 rounded-lg ${i < 3 ? 'bg-gold-100/60' : 'bg-emerald-50/70'} px-3 py-1.5 text-sm"><b class="w-5 text-emerald-900/60">${bn(i + 1)}</b><span class="font-mono font-bold text-emerald-950">${esc(r.code)}</span><span class="ml-auto font-bold text-emerald-900">${bn(r.n)} পয়েন্ট</span></li>`).join('')
       : '<li class="rounded-lg bg-emerald-50 px-3 py-3 text-center text-sm text-emerald-900/60">এখনো কেউ নেই, প্রথম হোন!</li>';
-    return `<section class="grid gap-2"><div class="flex flex-wrap items-center justify-between gap-2"><h3 class="text-sm font-bold text-emerald-900">🏅 শীর্ষ অংশগ্রহণকারী</h3><div class="flex gap-1">${tabs}</div></div><ul class="grid gap-1">${list}</ul><p class="text-xs text-emerald-900/55">"সব মিলিয়ে" তালিকায় ফলো ও গ্রুপের বোনাস পয়েন্টও যোগ হয়। সমান পয়েন্ট হলে বিজয়ী লটারির মাধ্যমে বাছাই হবে। কোডের মাঝের অংশ লুকানো।</p></section>`;
+    return `<section class="grid gap-2"><div class="flex flex-wrap items-center justify-between gap-2"><h3 class="text-sm font-bold text-emerald-900">🏅 শীর্ষ অংশগ্রহণকারী</h3><div class="flex gap-1">${tabs}</div></div><ul class="grid gap-1">${list}</ul><p class="text-xs text-emerald-900/55">"সব মিলিয়ে" তালিকায় ফলো ও গ্রুপের বোনাস পয়েন্টও যোগ হয়। সমান পয়েন্ট হলে বিজয়ী ড্রয়ের মাধ্যমে বাছাই হবে। কোডের মাঝের অংশ লুকানো।</p></section>`;
   }
 
   function joinHtml() {

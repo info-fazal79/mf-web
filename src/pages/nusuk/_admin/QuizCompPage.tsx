@@ -6,7 +6,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Download, Pencil, Plus, Power, RefreshCw, Trash2, Upload } from 'lucide-react';
 import { supabase as sb } from '@/lib/supabase';
 import { CONTEST_CAPTIONS, DEFAULT_PLEDGE, QUIZ_RULES, type Contest } from '../_lib/club';
-import { DEFAULT_SLOTS, parseCqCfg, type CqCfg } from '../_lib/cq';
+import { DEFAULT_SLOTS, parseCqCfg, type CqCfg, type CqPrize } from '../_lib/cq';
+import { MEDAL, placeName } from '../_lib/prizes';
+import { uploadMedia } from '@/admin/media';
 
 type ToastFn = (t: string, ok?: boolean) => void;
 const errText = (e: unknown) => (e && typeof e === 'object' && 'message' in e ? String((e as { message: string }).message) : String(e));
@@ -73,7 +75,7 @@ export default function QuizCompPage({ toast }: { toast: ToastFn }) {
 
   function startNew() {
     setEdit({
-      c: { title: 'রিবাত ইসলামিক কুইজ প্রতিযোগিতা', kind: 'quiz', active: false, starts_at: null, ends_at: null, info: 'প্রতিদিন ৫টি প্রশ্ন, প্রতিটি সঠিক উত্তরে লটারির ১টি টিকিট।',
+      c: { title: 'রিবাত ইসলামিক কুইজ প্রতিযোগিতা', kind: 'quiz', active: false, starts_at: null, ends_at: null, info: 'প্রতিদিন ৫টি প্রশ্ন, প্রতিটি সঠিক উত্তরে ড্রয়ের ১টি টিকিট।',
         t_join: 0, t_enter: 0, t_ref_bonus: 0, t_referral: 0, t_copy: 0, copy_from: '09:00', copy_to: '17:00',
         card: { theme: 'green', headline: 'রিবাত ইসলামিক কুইজ', sub: 'প্রতিদিন পুরস্কার জেতার সুযোগ', line: 'আমার লিংকে যুক্ত হলে আপনিও পাবেন ১টি বাড়তি চাবি' },
         caption: defs.caption, sort: 0 },
@@ -218,8 +220,137 @@ export default function QuizCompPage({ toast }: { toast: ToastFn }) {
         </section>
       )}
 
+      {statFor && <People contest={statFor} title={camps?.find((c) => c.id === statFor)?.title ?? ''} toast={toast} />}
+
       <Questions toast={toast} />
     </div>
+  );
+}
+
+// ------------------------------------------------------------------ prizes
+function PrizesEdit({ prizes, set }: { prizes: CqPrize[]; set: (p: CqPrize[]) => void }) {
+  const [busy, setBusy] = useState<number | null>(null);
+  const [err, setErr] = useState('');
+  const list = prizes.length ? prizes : [];
+  const renumber = (l: CqPrize[]) => l.map((p, i) => ({ ...p, place: i + 1 }));
+  async function upload(i: number, f: File) {
+    setBusy(i); setErr('');
+    try {
+      const m = await uploadMedia(f, 'nusuk-prizes');
+      set(list.map((p, j) => (j === i ? { ...p, img: m.url } : p)));
+    } catch (e) { setErr(errText(e)); }
+    setBusy(null);
+  }
+  return (
+    <div className="grid gap-2 rounded-xl border border-gold-500/50 bg-gold-400/10 p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="text-sm font-semibold">Prizes (members see them as cards; can also be shown on the home page)</span>
+        <button type="button" className="nk-btn nk-ghost px-3 py-1.5 text-xs" onClick={() => set(renumber([{ place: 1, prize: '২০০টি Nusuk Key' }, { place: 2, prize: '১০০টি Nusuk Key' }, { place: 3, prize: '৫০টি Nusuk Key' }]))}>Fill: 200 / 100 / 50 Keys</button>
+      </div>
+      {list.length === 0 && <p className="text-xs text-emerald-900/60">No prizes yet.</p>}
+      {list.map((p, i) => (
+        <div key={i} className="flex flex-wrap items-center gap-2 rounded-lg bg-white p-2">
+          <b className="w-28 shrink-0 text-sm">{MEDAL(i + 1)} {placeName(i + 1)}</b>
+          <input className="nk-input min-w-0 flex-1 py-1.5" placeholder="পুরস্কারের নাম, যেমন: ২০০টি Nusuk Key" value={p.prize} onChange={(e) => set(list.map((x, j) => (j === i ? { ...x, prize: e.target.value } : x)))} />
+          {p.img ? <img src={p.img} alt="" className="h-12 w-12 rounded-lg border object-contain" /> : null}
+          <label className="nk-btn nk-ghost cursor-pointer px-3 py-1.5 text-xs">
+            {busy === i ? 'Uploading…' : p.img ? 'Change picture' : 'Picture'}
+            <input type="file" accept="image/*" hidden onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) upload(i, f); }} />
+          </label>
+          {p.img && <button type="button" className="nk-btn nk-ghost px-2 py-1.5 text-xs" onClick={() => set(list.map((x, j) => (j === i ? { place: x.place, prize: x.prize } : x)))}>No picture</button>}
+          <button type="button" className="nk-btn nk-ghost px-2 py-1.5 text-red-700" aria-label="Remove" onClick={() => set(renumber(list.filter((_, j) => j !== i)))}><Trash2 className="h-4 w-4" aria-hidden /></button>
+        </div>
+      ))}
+      {err && <p className="text-xs text-red-700">{err}</p>}
+      {list.length < 12 && <button type="button" className="nk-btn nk-ghost w-fit px-3 py-1.5 text-xs" onClick={() => set(renumber([...list, { place: list.length + 1, prize: '' }]))}><Plus className="h-3.5 w-3.5" /> Add prize</button>}
+      <p className="text-xs text-emerald-900/60">The draw (Reward Club → Raffle draw) uses the same places. Pictures are made smaller before upload.</p>
+    </div>
+  );
+}
+
+// ------------------------------------------------------------------ participants
+type Person = { sl: number; name: string; phone: string; email: string | null; code: string; district: string | null; joined: string;
+  tickets: number; answered: number; correct_all: number; refs: number; ref_keys: number; today: number; left_page: number };
+function People({ contest, title, toast }: { contest: number; title: string; toast: ToastFn }) {
+  const [rows, setRows] = useState<Person[] | null>(null);
+  const [total, setTotal] = useState(0);
+  const [q, setQ] = useState('');
+  const [page, setPage] = useState(0);
+  const PER = 50;
+  const load = useCallback(async (search: string, pg: number) => {
+    const { data, error } = await sb!.rpc('nusuk_admin_cq_people', { p_contest: contest, p_search: search, p_limit: PER, p_offset: pg * PER });
+    if (error) { toast(errText(error).includes('nusuk_admin_cq_people') ? 'Run update_46_quiz_prizes_people.sql in Supabase first' : errText(error), false); setRows([]); return; }
+    const r = data as { total: number; rows: Person[] };
+    setRows(r.rows); setTotal(r.total);
+  }, [contest, toast]);
+  useEffect(() => { setPage(0); load('', 0); setQ(''); }, [load]);
+  async function exportCsv() {
+    const { data, error } = await sb!.rpc('nusuk_admin_cq_people', { p_contest: contest, p_search: q, p_limit: 5000, p_offset: 0 });
+    if (error) return toast(errText(error), false);
+    const all = (data as { rows: Person[] }).rows;
+    const head = ['SL', 'Name', 'Mobile', 'Email', 'Nusuk code', 'District', 'Tickets', 'Answered', 'Right today', 'Left the page', 'Referrals', 'Extra keys', 'Joined'];
+    const cell = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const csv = '\uFEFF' + [head, ...all.map((r) => [r.sl, r.name, r.phone, r.email, r.code, r.district, r.tickets, r.answered, r.today, r.left_page, r.refs, r.ref_keys,
+      new Date(r.joined).toLocaleString('en-GB', { timeZone: 'Asia/Dhaka' })])].map((l) => l.map(cell).join(',')).join('\n');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    a.download = `quiz-participants-${contest}.csv`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+  }
+  const pages = Math.max(1, Math.ceil(total / PER));
+  return (
+    <section className="nk-card grid gap-3 p-4 sm:p-5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h2 className="text-base font-bold text-emerald-950">Participants <span className="text-sm font-normal text-emerald-900/60">({total})</span></h2>
+          <p className="text-xs text-emerald-900/65">Everyone who answered at least one question in "{title}" (pick another campaign in Numbers above). Admin only.</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <form onSubmit={(e) => { e.preventDefault(); setPage(0); load(q, 0); }} className="flex gap-2">
+            <input className="nk-input py-1.5 text-sm" style={{ width: 220 }} placeholder="Name, mobile, code, email, SL" value={q} onChange={(e) => setQ(e.target.value)} />
+            <button type="submit" className="nk-btn nk-ghost px-3 py-1.5 text-sm">Search</button>
+          </form>
+          <button type="button" className="nk-btn nk-ghost px-3 py-1.5" onClick={() => load(q, page)} aria-label="Refresh"><RefreshCw className="h-4 w-4" aria-hidden /></button>
+          <button type="button" className="nk-btn nk-ghost flex items-center gap-1.5 px-3 py-1.5 text-sm" onClick={exportCsv}><Download className="h-4 w-4" aria-hidden /> CSV</button>
+        </div>
+      </div>
+      {!rows && <p className="text-sm text-emerald-900/60">Loading…</p>}
+      {rows && rows.length === 0 && <p className="text-sm text-emerald-900/60">Nobody has answered yet.</p>}
+      {rows && rows.length > 0 && (
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[760px] text-left text-sm">
+            <thead className="text-xs text-emerald-900/60">
+              <tr>{['SL', 'Name', 'Mobile', 'Code', 'District', 'Tickets', 'Today ✓', 'Answered', 'Left page', 'Referrals', 'Extra keys'].map((h) => <th key={h} className="px-2 py-1.5 font-semibold">{h}</th>)}</tr>
+            </thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr key={r.sl} className="border-t border-[#eee7d3]">
+                  <td className="px-2 py-1.5 font-bold">{r.sl}</td>
+                  <td className="px-2 py-1.5">{r.name}<span className="block text-xs text-emerald-900/55">{r.email}</span></td>
+                  <td className="px-2 py-1.5">{r.phone}</td>
+                  <td className="px-2 py-1.5 font-mono text-xs">{r.code}</td>
+                  <td className="px-2 py-1.5">{r.district ?? ''}</td>
+                  <td className="px-2 py-1.5 font-bold text-emerald-800">{r.tickets}</td>
+                  <td className="px-2 py-1.5">{r.today}</td>
+                  <td className="px-2 py-1.5">{r.answered}</td>
+                  <td className={`px-2 py-1.5 ${r.left_page ? 'text-red-700' : ''}`}>{r.left_page}</td>
+                  <td className="px-2 py-1.5">{r.refs}</td>
+                  <td className="px-2 py-1.5">{r.ref_keys}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {pages > 1 && (
+        <div className="flex items-center justify-center gap-2 text-sm">
+          <button type="button" className="nk-btn nk-ghost px-3 py-1" disabled={page === 0} onClick={() => { setPage(page - 1); load(q, page - 1); }}>‹</button>
+          <span>{page + 1} / {pages}</span>
+          <button type="button" className="nk-btn nk-ghost px-3 py-1" disabled={page >= pages - 1} onClick={() => { setPage(page + 1); load(q, page + 1); }}>›</button>
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -283,6 +414,8 @@ function CampaignForm({ edit, setEdit, busy, onSave, onDefault }: { edit: { c: P
         <label><span className="mb-1 block text-xs font-semibold">until</span><input type="time" className="nk-input" value={q.ref_to} onChange={(e) => setQ({ ref_to: e.target.value })} /></label>
       </div>
       <p className="-mt-2 text-xs text-emerald-900/60">Extra keys (referrals, bonus) never expire; members can use this many per day, inside this daily time. 00:00–23:59 = all day.</p>
+
+      <PrizesEdit prizes={(c.prizes ?? []) as CqPrize[]} set={(prizes) => setC({ prizes } as Partial<Camp>)} />
 
       <label><span className={label}>Pledge before every question (members must tick it)</span>
         <textarea className="nk-input text-sm" rows={2} value={q.pledge} placeholder={DEFAULT_PLEDGE} onChange={(e) => setQ({ pledge: e.target.value })} /></label>
