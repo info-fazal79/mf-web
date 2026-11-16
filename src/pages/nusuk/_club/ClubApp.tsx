@@ -14,6 +14,9 @@ import { CampaignBanner, CompetitionView, useCq } from './QuizPanel';
 
 const DISTRICTS = 'ঢাকা,গাজীপুর,নারায়ণগঞ্জ,নরসিংদী,মুন্সিগঞ্জ,মানিকগঞ্জ,টাঙ্গাইল,কিশোরগঞ্জ,ফরিদপুর,গোপালগঞ্জ,মাদারীপুর,শরীয়তপুর,রাজবাড়ী,চট্টগ্রাম,কক্সবাজার,কুমিল্লা,ফেনী,নোয়াখালী,লক্ষ্মীপুর,চাঁদপুর,ব্রাহ্মণবাড়িয়া,খাগড়াছড়ি,রাঙ্গামাটি,বান্দরবান,রাজশাহী,নাটোর,নওগাঁ,চাঁপাইনবাবগঞ্জ,পাবনা,সিরাজগঞ্জ,বগুড়া,জয়পুরহাট,খুলনা,যশোর,সাতক্ষীরা,বাগেরহাট,ঝিনাইদহ,মাগুরা,নড়াইল,কুষ্টিয়া,চুয়াডাঙ্গা,মেহেরপুর,বরিশাল,পটুয়াখালী,ভোলা,পিরোজপুর,ঝালকাঠি,বরগুনা,সিলেট,মৌলভীবাজার,হবিগঞ্জ,সুনামগঞ্জ,রংপুর,দিনাজপুর,ঠাকুরগাঁও,পঞ্চগড়,নীলফামারী,লালমনিরহাট,কুড়িগ্রাম,গাইবান্ধা,ময়মনসিংহ,জামালপুর,শেরপুর,নেত্রকোনা,দেশের বাইরে'.split(',');
 
+/** the 64 districts in Bangla alphabetical order for the drop-down (দেশের বাইরে goes last) */
+const DISTRICTS_SORTED = DISTRICTS.filter((d) => d !== 'দেশের বাইরে').sort((x, y) => x.localeCompare(y, 'bn'));
+
 const DEV = 'nusuk:device:v1';
 function deviceId() {
   try {
@@ -190,7 +193,7 @@ function ProfileForm({ sb, member, email, onDone, onCancel, tickets = true }: { 
     e.preventDefault();
     const code = f.code.replace(/\s/g, '');
     const ref = f.ref.replace(/\s/g, '');
-    if (!f.district.trim()) return setMsg({ t: 'আপনার জেলা লিখুন বা তালিকা থেকে বেছে নিন।', ok: false });
+    if (!DISTRICTS.includes(f.district)) return setMsg({ t: 'তালিকা থেকে আপনার জেলা বেছে নিন।', ok: false });
     if (isNew && !CODE_RE.test(code)) return setMsg({ t: SAVE_ERR.code, ok: false });
     setBusy(true); setMsg(null);
     const save = (withRef: boolean) => sb.rpc('nusuk_club_save', {
@@ -226,8 +229,13 @@ function ProfileForm({ sb, member, email, onDone, onCancel, tickets = true }: { 
           <input className="nk-input font-mono" required={isNew} disabled={!isNew} placeholder="NG-xxxxxxxx" value={f.code} onChange={(e) => set({ code: e.target.value })} spellCheck={false} autoCapitalize="off" />
           <span className="mt-1 block text-xs text-emerald-900/60">{isNew ? 'নুসুক অ্যাপ থেকে হুবহু কপি করে দিন। পরে বদলানো যাবে না।' : 'রেফারেল কোড বদলানো যায় না (আপনার শেয়ার করা কার্ড যাতে কাজ করে)।'}</span></label>
         <label><span className={label}>জেলা *</span>
-          <input className="nk-input" required list="nk-districts" value={f.district} onChange={(e) => set({ district: e.target.value })} placeholder="যেমন: ঢাকা" />
-          <datalist id="nk-districts">{DISTRICTS.map((d) => <option key={d} value={d} />)}</datalist></label>
+          {/* only a district from the list (the database checks it too, update_49) */}
+          <select className="nk-input" required value={DISTRICTS.includes(f.district) ? f.district : ''} onChange={(e) => set({ district: e.target.value })}>
+            <option value="" disabled>জেলা বেছে নিন</option>
+            {DISTRICTS_SORTED.map((d) => <option key={d} value={d}>{d}</option>)}
+            <option value="দেশের বাইরে">দেশের বাইরে</option>
+          </select>
+          {f.district && !DISTRICTS.includes(f.district) && <span className="mt-1 block text-xs text-red-700">আগে লেখা "{f.district}" তালিকায় নেই। তালিকা থেকে জেলা বেছে নিন।</span>}</label>
         <label><span className={label}>আগে উমরাহ করেছেন?</span>
           <select className="nk-input" value={f.umrah} onChange={(e) => set({ umrah: e.target.value as typeof f.umrah })}>
             <option value="">বেছে নিন</option>
