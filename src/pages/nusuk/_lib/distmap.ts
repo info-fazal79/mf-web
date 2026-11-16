@@ -9,7 +9,8 @@
 import { rpc } from './rpc';
 import { bn, getMyDistrict, hasMemberSession, isJoinedMember, memberClient, setMyDistrict } from './club';
 
-type MapData = { public: boolean; total: number; d: Record<string, number> };
+/** mode (update_48): members = accounts per district; quiz = tickets per district in the running quiz campaign */
+type MapData = { public: boolean; mode?: 'members' | 'quiz'; campaign?: string; people?: number; total: number; d: Record<string, number> };
 type Dist = { bn: string; en: string; path: string; lx: number; ly: number; box: [number, number, number, number]; n: number; el?: SVGGElement };
 
 const SVGNS = 'http://www.w3.org/2000/svg';
@@ -39,6 +40,9 @@ export function initDistrictMap() {
   let loading = false;
   let tries = 0;
   let timer: ReturnType<typeof setInterval> | undefined;
+  let quiz = false; // showing competition tickets instead of accounts
+  let unit = 'জন';
+  let headDone = '';
 
   // -------- which district a typed name belongs to --------
   let alias: [string, number][] = [];
@@ -74,6 +78,7 @@ export function initDistrictMap() {
         if (i >= 0) dists[i].n += Number(n) || 0; else if (i === -2) abroad += Number(n) || 0;
       }
       sec!.classList.remove('hidden');
+      head(data);
       await findMine();
       render(data.total || 0);
     } catch (e) {
@@ -81,6 +86,27 @@ export function initDistrictMap() {
       console.warn('district map', e);
       if (!svg && ++tries <= 5) setTimeout(() => { loading = false; load(); }, 4000 * tries);
     } finally { loading = false; }
+  }
+
+  /** header texts follow what the map shows (Nusuk Manager → Map) */
+  function head(data: MapData) {
+    quiz = data.mode === 'quiz';
+    unit = quiz ? 'টিকিট' : 'জন';
+    const key = `${quiz}|${data.campaign ?? ''}`;
+    if (key === headDone) return;
+    headDone = key;
+    const esc = (t: string) => t.replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]!);
+    if (quiz) {
+      $('nk-dm-h').textContent = 'কোন জেলা থেকে কত টিকিট?';
+      $('nk-dm-desc').innerHTML = `চলমান প্রতিযোগিতা <b class="text-gold-100">${esc(data.campaign ?? '')}</b>: প্রতিটি সঠিক উত্তরে ১টি টিকিট। যে জেলা থেকে যত টিকিট, ম্যাপে সেই জেলা তত গাঢ় সবুজ। নিজের জেলাকে এগিয়ে নিন!`;
+      $('nk-dm-l1').textContent = `মোট টিকিট${data.people ? ` · ${bn(data.people)} জন` : ''}`;
+      $('nk-dm-l2').textContent = 'অংশ নেওয়া জেলা';
+    } else {
+      $('nk-dm-h').textContent = 'আপনার জেলা কতটা এগিয়ে?';
+      $('nk-dm-desc').innerHTML = 'যারা এই পেজে <b class="text-gold-100">অ্যাকাউন্ট খুলেছেন</b>, তারা কোন জেলা থেকে। অ্যাকাউন্ট খুললেই আপনার জেলা ম্যাপে গাঢ় সবুজ হয়ে উঠবে, সংখ্যাও বাড়বে। নিজের জেলাকে এগিয়ে নিন!';
+      $('nk-dm-l1').textContent = 'মোট অ্যাকাউন্ট';
+      $('nk-dm-l2').textContent = 'যুক্ত হওয়া জেলা';
+    }
   }
 
   /** the signed-in member's district: remembered by the account page; asked once if missing */
@@ -148,8 +174,8 @@ export function initDistrictMap() {
       if (fill) p.style.fill = fill; else p.style.removeProperty('fill');
       g.classList.toggle('nk-dm-on', d.n > 0);
       g.classList.toggle('nk-dm-mine', d.bn === mine);
-      g.querySelector('title')!.textContent = `${d.bn}: ${bn(d.n)} জন`;
-      g.setAttribute('aria-label', `${d.bn}, ${bn(d.n)} জন`);
+      g.querySelector('title')!.textContent = `${d.bn}: ${bn(d.n)} ${unit}`;
+      g.setAttribute('aria-label', `${d.bn}, ${bn(d.n)} ${unit}`);
       if (prev && (prev.get(d.bn) ?? 0) < d.n) changed.add(d.bn);
       // label: name, and the number on a small badge
       const lg = svg!.querySelector<SVGGElement>(`.nk-dm-lab[data-i="${i}"]`)!;
@@ -196,15 +222,17 @@ export function initDistrictMap() {
         <span class="nk-dm-n">${bn(d.n)}</span></button></li>`).join('');
     $('nk-dm-top').innerHTML = top.length
       ? top.map((d, i) => `<li><button type="button" data-bn="${d.bn}" class="nk-dm-chip${d.bn === mine ? ' nk-dm-chip-mine' : ''}"><b>${bn(i + 1)}</b> ${d.bn} <span>${bn(d.n)}</span></button></li>`).join('')
-      : '<li class="text-sm text-emerald-900/60">এখনো কোনো জেলা যুক্ত হয়নি, প্রথম জেলাটি আপনার হোক!</li>';
-    $('nk-dm-abroad').textContent = abroad ? `দেশের বাইরে থেকে ${bn(abroad)} জন` : '';
+      : `<li class="text-sm text-emerald-900/60">${quiz ? 'এখনো কোনো টিকিট হয়নি, প্রথম টিকিটটি আপনার জেলার হোক!' : 'এখনো কোনো জেলা যুক্ত হয়নি, প্রথম জেলাটি আপনার হোক!'}</li>`;
+    $('nk-dm-abroad').textContent = abroad ? `দেশের বাইরে থেকে ${bn(abroad)} ${unit}` : '';
     $('nk-dm-abroad').classList.toggle('hidden', !abroad);
     const mineD = dists.find((d) => d.bn === mine);
     const cta = $('nk-dm-cta');
     const you = $('nk-dm-you');
     if (mineD) {
       const rank = ranked.indexOf(mineD) + 1;
-      you.innerHTML = `আপনার জেলা <b>${mineD.bn}</b>: ${bn(mineD.n)} জন · অবস্থান <b>${bn(rank)}</b> নম্বরে। পরিচিতদের অ্যাকাউন্ট খুলতে বলুন, জেলাকে এগিয়ে নিন!`;
+      you.innerHTML = quiz
+        ? `আপনার জেলা <b>${mineD.bn}</b>: ${bn(mineD.n)}টি টিকিট${mineD.n ? ` · অবস্থান <b>${bn(rank)}</b> নম্বরে` : ''}। প্রশ্নের সঠিক উত্তর দিয়ে জেলাকে এগিয়ে নিন!`
+        : `আপনার জেলা <b>${mineD.bn}</b>: ${bn(mineD.n)} জন · অবস্থান <b>${bn(rank)}</b> নম্বরে। পরিচিতদের অ্যাকাউন্ট খুলতে বলুন, জেলাকে এগিয়ে নিন!`;
       you.classList.remove('hidden');
       cta.classList.add('hidden');
     } else {
@@ -356,7 +384,9 @@ export function initDistrictMap() {
     const rank = d.n ? [...dists].sort((a, b) => b.n - a.n || a.bn.localeCompare(b.bn, 'bn')).indexOf(d) + 1 : 0;
     const box = $('nk-dm-info');
     box.innerHTML = `<b class="text-base">${d.bn}</b>${d.bn === mine ? ' <span class="nk-dm-you-tag">আপনার জেলা</span>' : ''}
-      <span>${d.n ? `${bn(d.n)} জন অ্যাকাউন্ট খুলেছেন · ${bn(rank)} নম্বরে` : 'এখনো কেউ অ্যাকাউন্ট খোলেননি, প্রথম জন হোন!'}</span>`;
+      <span>${quiz
+        ? (d.n ? `এই প্রতিযোগিতায় ${bn(d.n)}টি টিকিট · ${bn(rank)} নম্বরে` : 'এখনো কোনো টিকিট হয়নি, প্রথম টিকিটটি আপনার হোক!')
+        : (d.n ? `${bn(d.n)} জন অ্যাকাউন্ট খুলেছেন · ${bn(rank)} নম্বরে` : 'এখনো কেউ অ্যাকাউন্ট খোলেননি, প্রথম জন হোন!')}</span>`;
     box.classList.remove('hidden');
   }
   $('nk-dm-reset').addEventListener('click', () => zoomTo(null));

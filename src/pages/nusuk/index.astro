@@ -270,12 +270,12 @@ const cm0 = defaultCommunity();
             <span class="nk-dm-icon grid h-11 w-11 shrink-0 place-items-center rounded-2xl text-gold-100" aria-hidden="true"><Fragment set:html={lucide('mapPin', 'h-6 w-6', 2.2)} /></span>
             <div class="min-w-0 flex-1">
               <h2 id="nk-dm-h" class="text-lg font-bold leading-tight">আপনার জেলা কতটা এগিয়ে?</h2>
-              <p class="mt-1 text-sm text-emerald-50/85">যারা এই পেজে <b class="text-gold-100">অ্যাকাউন্ট খুলেছেন</b>, তারা কোন জেলা থেকে। অ্যাকাউন্ট খুললেই আপনার জেলা ম্যাপে গাঢ় সবুজ হয়ে উঠবে, সংখ্যাও বাড়বে। নিজের জেলাকে এগিয়ে নিন!</p>
+              <p id="nk-dm-desc" class="mt-1 text-sm text-emerald-50/85">যারা এই পেজে <b class="text-gold-100">অ্যাকাউন্ট খুলেছেন</b>, তারা কোন জেলা থেকে। অ্যাকাউন্ট খুললেই আপনার জেলা ম্যাপে গাঢ় সবুজ হয়ে উঠবে, সংখ্যাও বাড়বে। নিজের জেলাকে এগিয়ে নিন!</p>
             </div>
           </div>
           <div class="mt-4 grid grid-cols-2 gap-2 text-center">
-            <div class="nk-dm-stat rounded-xl px-2 py-2"><div class="text-xs text-emerald-50/80">মোট অ্যাকাউন্ট</div><div id="nk-dm-total" class="text-xl font-bold tabular-nums text-gold-100">…</div></div>
-            <div class="nk-dm-stat rounded-xl px-2 py-2"><div class="text-xs text-emerald-50/80">যুক্ত হওয়া জেলা</div><div id="nk-dm-dists" class="text-xl font-bold tabular-nums text-gold-100">…</div></div>
+            <div class="nk-dm-stat rounded-xl px-2 py-2"><div id="nk-dm-l1" class="text-xs text-emerald-50/80">মোট অ্যাকাউন্ট</div><div id="nk-dm-total" class="text-xl font-bold tabular-nums text-gold-100">…</div></div>
+            <div class="nk-dm-stat rounded-xl px-2 py-2"><div id="nk-dm-l2" class="text-xs text-emerald-50/80">যুক্ত হওয়া জেলা</div><div id="nk-dm-dists" class="text-xl font-bold tabular-nums text-gold-100">…</div></div>
           </div>
         </div>
         <div class="px-3 pt-3 pb-5 sm:px-6">

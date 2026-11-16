@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
-import { CircleHelp, ClipboardCheck, ClipboardPaste, Crown, Dices, ExternalLink, Gift, ImageDown, LayoutDashboard, ListChecks, LogOut, Megaphone, MessageSquare, MessageSquareMore, MonitorPlay, PanelTop, PenLine, Play, Rocket, Settings, Share2, Sparkles, Star, Tags, Ticket, Trophy, Video, type LucideIcon } from 'lucide-react';
+import { CircleHelp, ClipboardCheck, ClipboardPaste, Crown, Dices, ExternalLink, Gift, ImageDown, LayoutDashboard, MapPin, ListChecks, LogOut, Megaphone, MessageSquare, MessageSquareMore, MonitorPlay, PanelTop, PenLine, Play, Rocket, Settings, Share2, Sparkles, Star, Tags, Ticket, Trophy, Video, type LucideIcon } from 'lucide-react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import AdsPage from './AdsPage';
@@ -12,6 +12,7 @@ import PopupPage from './PopupPage';
 import { GiveawayCard, PollCard } from './LiveCards';
 import RafflePage from './RafflePage';
 import PhotoCardsPage from './PhotoCardsPage';
+import MapPage from './MapPage';
 import SocialPage from './SocialPage';
 import BuilderPage from './BuilderPage';
 import QuizCompPage from './QuizCompPage';
@@ -1561,7 +1562,7 @@ function WinnersPage({ toast, settings, reload }: { toast: ToastFn; settings: Se
 }
 
 /* ---------------- Shell ---------------- */
-type Route = 'dashboard' | 'live' | 'codes' | 'review' | 'features' | 'bonus' | 'campaign' | 'quiz' | 'popup' | 'raffle' | 'upload' | 'notice' | 'video' | 'ads' | 'today' | 'winners' | 'feedback' | 'club' | 'clubquiz' | 'photocards' | 'social' | 'socialgive' | 'socialgen' | 'socialbuild' | 'settings';
+type Route = 'dashboard' | 'live' | 'codes' | 'review' | 'features' | 'bonus' | 'campaign' | 'quiz' | 'popup' | 'raffle' | 'upload' | 'notice' | 'video' | 'ads' | 'today' | 'winners' | 'feedback' | 'club' | 'clubquiz' | 'photocards' | 'map' | 'social' | 'socialgive' | 'socialgen' | 'socialbuild' | 'settings';
 type NavItem = { r: Route; label: string; Icon: LucideIcon };
 const nav: NavItem[] = [
   { r: 'dashboard', label: 'Dashboard', Icon: LayoutDashboard },
@@ -1573,6 +1574,7 @@ const nav: NavItem[] = [
   { r: 'campaign', label: 'Campaign', Icon: Rocket },
   { r: 'club', label: 'Reward Club', Icon: Ticket },
   { r: 'photocards', label: 'Photo cards', Icon: ImageDown },
+  { r: 'map', label: 'Map', Icon: MapPin },
   { r: 'social', label: 'Social media', Icon: Share2 },
   { r: 'bonus', label: 'Community & bonus', Icon: Gift },
   { r: 'notice', label: 'Notice', Icon: Megaphone },
@@ -1718,6 +1720,7 @@ export default function NusukAdmin() {
         {route === 'club' && <ClubPage toast={toast} />}
         {route === 'clubquiz' && <QuizCompPage toast={toast} />}
         {route === 'photocards' && <PhotoCardsPage toast={toast} />}
+        {route === 'map' && <MapPage toast={toast} />}
         {(route === 'social' || route === 'socialgive' || route === 'socialgen') && <SocialPage toast={toast} mode={route} />}
         {route === 'socialbuild' && <BuilderPage toast={toast} />}
         {route === 'codes' && <CodesPage key="codes" toast={toast} settings={settings} />}
