@@ -1562,7 +1562,7 @@ function WinnersPage({ toast, settings, reload }: { toast: ToastFn; settings: Se
 }
 
 /* ---------------- Shell ---------------- */
-type Route = 'dashboard' | 'live' | 'codes' | 'review' | 'features' | 'bonus' | 'campaign' | 'quiz' | 'popup' | 'raffle' | 'upload' | 'notice' | 'video' | 'ads' | 'today' | 'winners' | 'feedback' | 'club' | 'clubquiz' | 'photocards' | 'map' | 'social' | 'socialgive' | 'socialgen' | 'socialbuild' | 'settings';
+type Route = 'dashboard' | 'live' | 'codes' | 'review' | 'features' | 'bonus' | 'campaign' | 'quiz' | 'popup' | 'raffle' | 'upload' | 'notice' | 'video' | 'ads' | 'today' | 'winners' | 'feedback' | 'club' | 'clubquiz' | 'photocards' | 'map' | 'social' | 'socialgive' | 'socialgen' | 'socialwin' | 'socialbuild' | 'settings';
 type NavItem = { r: Route; label: string; Icon: LucideIcon };
 const nav: NavItem[] = [
   { r: 'dashboard', label: 'Dashboard', Icon: LayoutDashboard },
@@ -1591,7 +1591,7 @@ const GROUPS: Partial<Record<Route, { r: Route; label: string; Icon: LucideIcon 
   notice: [{ r: 'notice', label: 'Top notice', Icon: PanelTop }, { r: 'popup', label: 'Popup notice', Icon: MessageSquare }],
   winners: [{ r: 'winners', label: 'All winners', Icon: Trophy }, { r: 'today', label: "Today's winner", Icon: Crown }],
   club: [{ r: 'club', label: 'Reward Club', Icon: Ticket }, { r: 'clubquiz', label: 'Quiz competition', Icon: CircleHelp }],
-  social: [{ r: 'social', label: 'Feature update', Icon: Sparkles }, { r: 'socialgive', label: 'Giveaway', Icon: Gift }, { r: 'socialgen', label: 'General', Icon: PenLine }, { r: 'socialbuild', label: 'Design Builder', Icon: LayoutDashboard }],
+  social: [{ r: 'social', label: 'Feature update', Icon: Sparkles }, { r: 'socialgive', label: 'Giveaway', Icon: Gift }, { r: 'socialgen', label: 'General', Icon: PenLine }, { r: 'socialwin', label: 'District winners', Icon: MapPin }, { r: 'socialbuild', label: 'Design Builder', Icon: LayoutDashboard }],
 };
 /** The menu item a page belongs to */
 const menuOf = (r: Route): Route => (Object.keys(GROUPS) as Route[]).find((g) => GROUPS[g]!.some((t) => t.r === r)) ?? r;
@@ -1721,7 +1721,7 @@ export default function NusukAdmin() {
         {route === 'clubquiz' && <QuizCompPage toast={toast} />}
         {route === 'photocards' && <PhotoCardsPage toast={toast} />}
         {route === 'map' && <MapPage toast={toast} />}
-        {(route === 'social' || route === 'socialgive' || route === 'socialgen') && <SocialPage toast={toast} mode={route} />}
+        {(route === 'social' || route === 'socialgive' || route === 'socialgen' || route === 'socialwin') && <SocialPage toast={toast} mode={route} />}
         {route === 'socialbuild' && <BuilderPage toast={toast} />}
         {route === 'codes' && <CodesPage key="codes" toast={toast} settings={settings} />}
         {route === 'review' && <CodesPage key="review" toast={toast} reviewMode settings={settings} />}

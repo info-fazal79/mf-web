@@ -30,6 +30,8 @@ export const THEMES: Record<ThemeKey, Theme & { name: string }> = {
 };
 
 export type Prize = { rank: string; name: string; img: HTMLImageElement | null };
+/** a winner row: place 1, 2, 3 … with the district it came from */
+export type WinRow = { place: number; name: string; district: string; prize: string };
 export type Block =
   | { k: 'tag'; text: string }
   | { k: 'title'; text: string }
@@ -42,8 +44,9 @@ export type Block =
   | { k: 'info'; items: { icon: string; text: string }[] }
   | { k: 'big'; text: string }
   | { k: 'prizes'; items: Prize[] }
+  | { k: 'winners'; items: WinRow[] }
   | { k: 'cta'; text: string };
-export type Visual = { kind: 'image'; img: HTMLImageElement } | { kind: 'map'; counts: number[] } | null;
+export type Visual = { kind: 'image'; img: HTMLImageElement } | { kind: 'map'; counts: number[] } | { kind: 'winmap'; wins: { i: number; place: number }[] } | null;
 export type Design = {
   size: SizeKey;
   theme: ThemeKey;
@@ -78,6 +81,7 @@ export function filled(b: Block) {
     case 'stats': return b.items.some((s) => s.v.trim());
     case 'info': return b.items.some((s) => s.text.trim());
     case 'prizes': return b.items.some((p) => p.name.trim() || p.img);
+    case 'winners': return b.items.some((w) => w.name.trim());
     default: return !!b.text.trim();
   }
 }
@@ -255,6 +259,40 @@ function prepBlock(c: Ctx, b: Block): Prepared {
         },
       };
     }
+    case 'winners': {
+      // one card per winner: medal circle, name, "district · prize"
+      const items = b.items.filter((w) => w.name.trim()).slice(0, 6);
+      const lw = c.center ? Math.min(c.w, 900 * s) : c.w;
+      const rowH = 104 * s, gap = 14 * s, med = 66 * s;
+      return {
+        h: items.length * rowH + (items.length - 1) * gap,
+        draw: (x, y) => {
+          const x0 = c.center ? x + (c.w - lw) / 2 : x;
+          items.forEach((w, i) => {
+            const yy = y + i * (rowH + gap);
+            const col = MEDAL_COLORS[w.place - 1] ?? MEDAL_COLORS[3];
+            ctx.save();
+            if (w.place === 1) { ctx.shadowColor = col.fill; ctx.shadowBlur = 26 * s; }
+            ctx.fillStyle = T.card; rr(ctx, x0, yy, lw, rowH, 24 * s); ctx.fill();
+            ctx.restore();
+            ctx.strokeStyle = w.place === 1 ? col.fill : T.cardEdge; ctx.lineWidth = (w.place === 1 ? 4 : 2) * s; rr(ctx, x0, yy, lw, rowH, 24 * s); ctx.stroke();
+            // medal
+            const mx = x0 + 22 * s + med / 2, my = yy + rowH / 2;
+            ctx.fillStyle = col.fill; ctx.beginPath(); ctx.arc(mx, my, med / 2, 0, Math.PI * 2); ctx.fill();
+            ctx.strokeStyle = col.edge; ctx.lineWidth = 3 * s; ctx.stroke();
+            font(ctx, 800, 30 * s); ctx.fillStyle = col.text; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText(BN_RANK[w.place - 1] ?? bnNum(w.place), mx, my + 1);
+            // name + district · prize
+            const tx = mx + med / 2 + 20 * s, tw = x0 + lw - 22 * s - tx;
+            ctx.textAlign = 'left';
+            font(ctx, 700, 36 * s); ctx.fillStyle = T.title;
+            ctx.fillText(w.name.trim(), tx, yy + rowH * 0.36, tw);
+            const meta = [w.district.trim() && `📍 ${w.district.trim()}`, w.prize.trim() && `🎁 ${w.prize.trim()}`].filter(Boolean).join('   ');
+            if (meta) { font(ctx, 600, 27 * s); ctx.fillStyle = T.accent; ctx.fillText(meta, tx, yy + rowH * 0.72, tw); }
+          });
+        },
+      };
+    }
     case 'prizes': {
       const items = b.items.filter((p) => p.name.trim() || p.img).slice(0, 6);
       const cols = items.length <= 3 ? items.length : 3;
@@ -322,6 +360,70 @@ function drawPicture(ctx: CanvasRenderingContext2D, img: HTMLImageElement, x: nu
 }
 
 const MAP_EMPTY = '#cdeedb';
+/** 1st gold, 2nd silver, 3rd bronze, then green */
+export const MEDAL_COLORS = [
+  { fill: '#f2c94c', edge: '#a5790f', text: '#3b2a00' },
+  { fill: '#d5dbe3', edge: '#7d8895', text: '#26303a' },
+  { fill: '#e0a06a', edge: '#8f4f1f', text: '#3a1a05' },
+  { fill: '#2fa47a', edge: '#0b5a43', text: '#ffffff' },
+];
+/** Bangladesh map with the winners' districts lit up in their medal colours, a pin and the place on each */
+export function drawWinMap(ctx: CanvasRenderingContext2D, wins: { i: number; place: number }[], x: number, y: number, w: number, h: number, T: { accent: string }) {
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.3)'; ctx.shadowBlur = 36; ctx.shadowOffsetY = 14;
+  const g = ctx.createRadialGradient(x + w / 2, y + h * 0.35, 10, x + w / 2, y + h / 2, Math.max(w, h));
+  g.addColorStop(0, '#f6fcf8'); g.addColorStop(1, '#e1f2e8');
+  ctx.fillStyle = g; rr(ctx, x, y, w, h, 30); ctx.fill();
+  ctx.restore();
+  ctx.strokeStyle = T.accent; ctx.lineWidth = 3; rr(ctx, x, y, w, h, 30); ctx.stroke();
+  const pad = 22;
+  const k = Math.min((w - pad * 2) / BD_W, (h - pad * 2) / BD_H);
+  const ox = x + (w - BD_W * k) / 2, oy = y + (h - BD_H * k) / 2;
+  // best place per district (a district with two winners shows the higher one)
+  const best = new Map<number, number>();
+  for (const v of wins) if (v.i >= 0 && (!best.has(v.i) || v.place < best.get(v.i)!)) best.set(v.i, v.place);
+  ctx.save();
+  ctx.translate(ox, oy); ctx.scale(k, k);
+  ctx.lineJoin = 'round';
+  BD_DISTRICTS.forEach(([, , path], i) => {
+    if (best.has(i)) return;
+    const p = new Path2D(path);
+    ctx.fillStyle = '#bfe3cf'; ctx.fill(p);
+    ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.1 / k; ctx.stroke(p);
+  });
+  // winners on top, with a glow (3rd first so 1st is drawn last)
+  [...best.entries()].sort((a, b) => b[1] - a[1]).forEach(([i, place]) => {
+    const p = new Path2D(BD_DISTRICTS[i][2]);
+    const col = MEDAL_COLORS[place - 1] ?? MEDAL_COLORS[3];
+    ctx.save();
+    ctx.shadowColor = col.fill; ctx.shadowBlur = 30;
+    ctx.fillStyle = col.fill; ctx.fill(p);
+    ctx.restore();
+    ctx.strokeStyle = col.edge; ctx.lineWidth = 2.6 / k; ctx.stroke(p);
+  });
+  ctx.restore();
+  // pin + "১ম · জেলা" label on each winner district
+  const fs = Math.max(16, 22 * (k / 0.75)); // big enough to read on a phone
+  [...best.entries()].sort((a, b) => b[1] - a[1]).forEach(([i, place]) => {
+    const [bn, , , lx, ly] = BD_DISTRICTS[i];
+    const cx = ox + lx * k, cy = oy + ly * k;
+    const col = MEDAL_COLORS[place - 1] ?? MEDAL_COLORS[3];
+    // pin
+    const pr = fs * 0.95;
+    ctx.fillStyle = '#e11d2e'; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(cx, cy - pr * 1.6, pr, Math.PI, 0); ctx.lineTo(cx, cy); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(cx, cy - pr * 1.6, pr * 0.38, 0, Math.PI * 2); ctx.fill();
+    // label
+    const t = `${BN_RANK[place - 1] ?? bnNum(place)} · ${bn}`;
+    font(ctx, 800, fs);
+    const bw = ctx.measureText(t).width + fs * 1.1, bh = fs * 1.6;
+    const by = cy - pr * 2.8 - bh;
+    ctx.fillStyle = col.fill; rr(ctx, cx - bw / 2, by, bw, bh, bh / 2); ctx.fill();
+    ctx.strokeStyle = col.edge; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.fillStyle = col.text; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(t, cx, by + bh / 2 + 1);
+  });
+}
 function mapShade(n: number, max: number) {
   const t = Math.log(1 + n) / Math.log(1 + Math.max(max, 2));
   const a = [79, 174, 134], b = [6, 70, 51];
@@ -438,7 +540,14 @@ export async function drawDesign(canvas: HTMLCanvasElement, d: Design) {
   const bottom = drawFooter(ctx, d, T, W, H);
   const blocks = d.blocks.filter(filled);
   const v = d.visual;
-  const split = !!v && d.size !== 'story' && (d.layout === 'split' || (d.layout === 'auto' && (v.kind === 'map' || v.img.height / v.img.width >= 0.95)));
+  const isMap = !!v && (v.kind === 'map' || v.kind === 'winmap');
+  const split = !!v && d.size !== 'story' && (d.layout === 'split' || (d.layout === 'auto' && (isMap || (v.kind === 'image' && v.img.height / v.img.width >= 0.95))));
+  const drawVisual = (vx: number, vy: number, vw: number, vh: number) => {
+    if (!v) return;
+    if (v.kind === 'map') drawMap(ctx, v.counts, vx, vy, vw, vh, T);
+    else if (v.kind === 'winmap') drawWinMap(ctx, v.wins, vx, vy, vw, vh, T);
+    else drawPicture(ctx, v.img, vx + 8, vy + 8, vw - 16, vh - 16, T);
+  };
   const X = 80, areaW = W - X * 2, areaH = bottom - top;
 
   const gapOf = (b: Block, s: number) => (b.k === 'tag' ? 26 : b.k === 'title' ? 24 : b.k === 'cta' ? 40 : 30) * s;
@@ -455,18 +564,18 @@ export async function drawDesign(canvas: HTMLCanvasElement, d: Design) {
   };
 
   if (split && v) {
-    const colGap = 44, vw = Math.round(areaW * (v.kind === 'map' ? 0.47 : 0.44)), tw = areaW - vw - colGap;
+    const colGap = 44, vw = Math.round(areaW * (isMap ? 0.47 : 0.44)), tw = areaW - vw - colGap;
     const { prepared, total, s } = column(tw, areaH, false);
     let y = top + Math.max(0, (areaH - total) / 2);
     prepared.forEach((p, i) => { if (i) y += gapOf(blocks[i], s); p.draw(X, y); y += p.h; });
     const vx = X + tw + colGap;
-    if (v.kind === 'map') {
+    if (isMap) {
       const mh = Math.min(areaH, vw * (BD_H / BD_W) + 44);
-      drawMap(ctx, v.counts, vx, top + (areaH - mh) / 2, vw, mh, T);
-    } else drawPicture(ctx, v.img, vx + 8, top + 8, vw - 16, areaH - 16, T);
+      drawVisual(vx, top + (areaH - mh) / 2, vw, mh);
+    } else drawVisual(vx, top, vw, areaH);
   } else {
     // one column; a picture / map goes right after the title lines
-    const ratio = v ? (v.kind === 'map' ? BD_H / BD_W : v.img.height / v.img.width) : 0;
+    const ratio = v ? (v.kind === 'image' ? v.img.height / v.img.width : BD_H / BD_W) : 0;
     const vH = (s: number) => (v ? Math.min(areaW * 0.9 * ratio, areaH * (blocks.length ? 0.5 : 0.9)) * Math.max(s, 0.7) : 0);
     const { prepared, total, s } = column(areaW, areaH, true, v ? { h: vH, at: 0 } : undefined);
     const after = Math.max(-1, ...blocks.map((b, i) => (['tag', 'title', 'sub', 'big'].includes(b.k) ? i : -1)));
@@ -474,8 +583,7 @@ export async function drawDesign(canvas: HTMLCanvasElement, d: Design) {
     const visual = () => {
       if (!v) return;
       const h = vH(s), w = Math.min(areaW, h / ratio);
-      if (v.kind === 'map') drawMap(ctx, v.counts, X + (areaW - w) / 2, y, w, h, T);
-      else drawPicture(ctx, v.img, X + (areaW - w) / 2 + 8, y + 8, w - 16, h - 16, T);
+      drawVisual(X + (areaW - w) / 2, y, w, h);
       y += h + 36 * s;
     };
     if (after < 0) visual();

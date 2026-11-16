@@ -11,7 +11,7 @@ import { countDistricts } from '../_lib/distmap';
 import { BN_RANK, OPTION_MARK, SIZES, THEMES, bnNum, downloadJpg, drawDesign, fileToImage, ribatLogo, type Block, type Design, type SizeKey, type ThemeKey, type Visual } from '../_lib/social';
 
 type ToastFn = (t: string, ok?: boolean) => void;
-export type SocialMode = 'social' | 'socialgive' | 'socialgen';
+export type SocialMode = 'social' | 'socialgive' | 'socialgen' | 'socialwin';
 
 const SITE = 'muhammadfazal.com/nusuk';
 const TAGS = '#Nusuk #নুসুক #উমরাহ #RibatulUmmah';
@@ -50,6 +50,19 @@ const GIVE: Give = {
   draw: '',
   cta: 'অংশ নিতে এখনই ভিজিট করুন',
 };
+
+// ------------------------------------------------------------------ district winners
+type WRow = { name: string; district: string; prize: string };
+type Win = { tag: string; title: string; sub: string; winners: WRow[]; body: string; cta: string };
+const WIN: Win = {
+  tag: '🏆 বিজয়ী ঘোষণা',
+  title: 'রিবাত ইসলামিক কুইজ: আজকের বিজয়ী',
+  sub: 'কোন জেলা থেকে কে জিতলেন, দেখুন ম্যাপে',
+  winners: [{ name: '', district: '', prize: '২০০টি Nusuk Key' }, { name: '', district: '', prize: '১০০টি Nusuk Key' }, { name: '', district: '', prize: '৫০টি Nusuk Key' }],
+  body: 'সকল বিজয়ীকে অভিনন্দন! আল্লাহ সবার উমরাহর স্বপ্ন পূরণ করুন।',
+  cta: 'পরের কুইজে আপনিও অংশ নিন',
+};
+const DISTRICT_NAMES = BD_DISTRICTS.map((d) => d[0]).sort((a, b) => a.localeCompare(b, 'bn'));
 
 // ------------------------------------------------------------------ general
 type GenType = 'announce' | 'feature' | 'quiz' | 'winner' | 'event' | 'steps' | 'stats' | 'quote';
@@ -190,6 +203,24 @@ function giveCaption(g: Give) {
     `${TAGS} #Giveaway #গিভঅ্যাওয়ে`,
   ]);
 }
+function winCaption(w: Win) {
+  const medals = ['🥇', '🥈', '🥉'];
+  const rows = w.winners.filter((r) => r.name.trim());
+  return lines([
+    `${w.tag.trim() ? `${w.tag.trim()} | ` : ''}${w.title.trim()}`,
+    '',
+    w.sub.trim(),
+    '',
+    ...rows.map((r, i) => `${medals[i] ?? '🏅'} ${BN_RANK[i]}: ${r.name.trim()}${r.district.trim() ? ` (${r.district.trim()})` : ''}${r.prize.trim() ? ` · ${r.prize.trim()}` : ''}`),
+    '',
+    w.body.trim(),
+    '',
+    w.cta.trim() && `👉 ${w.cta.trim()}`,
+    `🔗 ${SITE}`,
+    '',
+    `${TAGS} #বিজয়ী #RibatQuiz`,
+  ]);
+}
 function genCaption(g: Gen) {
   const T = GEN_TYPES.find((x) => x.key === g.type)!;
   const has = (f: Field) => T.fields.includes(f);
@@ -218,6 +249,7 @@ export default function SocialPage({ toast, mode }: { toast: ToastFn; mode: Soci
   const [feat, setFeat] = useDraft<Feat>('nusuk:social:feat', FEAT);
   const [give, setGive] = useDraft<Give>('nusuk:social:give', GIVE);
   const [gen, setGen] = useDraft<Gen>('nusuk:social:gen', genOf('announce'));
+  const [win, setWin] = useDraft<Win>('nusuk:social:win', WIN);
   const [map, setMap] = useState<{ counts: number[]; total: number } | null>(null);
   const [caption, setCaption] = useState('');
   const [capEdited, setCapEdited] = useState(false);
@@ -235,7 +267,7 @@ export default function SocialPage({ toast, mode }: { toast: ToastFn; mode: Soci
   }, [mode, map, toast]);
   const mapDists = map ? map.counts.filter((n) => n > 0).length : 0;
 
-  const autoCaption = useMemo(() => (mode === 'social' ? featCaption(feat, map?.total ?? 0, mapDists) : mode === 'socialgive' ? giveCaption(give) : genCaption(gen)), [mode, feat, give, gen, map, mapDists]);
+  const autoCaption = useMemo(() => (mode === 'social' ? featCaption(feat, map?.total ?? 0, mapDists) : mode === 'socialgive' ? giveCaption(give) : mode === 'socialwin' ? winCaption(win) : genCaption(gen)), [mode, feat, give, gen, win, map, mapDists]);
   useEffect(() => { setCapEdited(false); }, [mode]);
   useEffect(() => { if (!capEdited) setCaption(autoCaption); }, [autoCaption, capEdited]);
 
@@ -262,6 +294,13 @@ export default function SocialPage({ toast, mode }: { toast: ToastFn; mode: Soci
           { k: 'info', items: [{ icon: '⏰', text: give.deadline.trim() ? `শেষ সময়: ${give.deadline.trim()}` : '' }, { icon: '🎯', text: give.draw.trim() ? `ড্র: ${give.draw.trim()}` : '' }] },
           { k: 'cta', text: give.cta },
         ];
+      } else if (mode === 'socialwin') {
+        const rows = win.winners.map((r, i) => ({ place: i + 1, name: r.name, district: r.district, prize: r.prize }));
+        blocks = [
+          { k: 'tag', text: win.tag }, { k: 'title', text: win.title }, { k: 'sub', text: win.sub },
+          { k: 'winners', items: rows }, { k: 'body', text: win.body }, { k: 'cta', text: win.cta },
+        ];
+        visual = { kind: 'winmap', wins: rows.filter((r) => r.name.trim() && r.district).map((r) => ({ i: BD_DISTRICTS.findIndex((d) => d[0] === r.district), place: r.place })) };
       } else {
         const T = GEN_TYPES.find((x) => x.key === gen.type)!;
         for (const f of T.fields) {
@@ -285,12 +324,12 @@ export default function SocialPage({ toast, mode }: { toast: ToastFn; mode: Soci
       await drawDesign(canvas.current, { size: look.size, theme: look.theme, layout: look.layout, logo, brand: look.brand, brandSub: look.brandSub, footer: look.footer, blocks, visual });
     }, 150);
     return () => { off = true; clearTimeout(t); };
-  }, [mode, look, feat, give, gen, map, mapDists]);
+  }, [mode, look, feat, give, gen, win, map, mapDists]);
 
   async function download() {
     if (!canvas.current) return;
     setBusy(true);
-    const name = mode === 'social' ? feat.title : mode === 'socialgive' ? give.title : gen.title || gen.big || 'post';
+    const name = mode === 'social' ? feat.title : mode === 'socialgive' ? give.title : mode === 'socialwin' ? 'winners' : gen.title || gen.big || 'post';
     const ok = await downloadJpg(canvas.current, `nusuk-${name}`);
     setBusy(false);
     toast(ok ? 'JPG downloaded' : 'Could not make the picture', ok);
@@ -367,6 +406,46 @@ export default function SocialPage({ toast, mode }: { toast: ToastFn; mode: Soci
               </div>
               <Lbl t="Button text"><input className="nk-input" value={give.cta} maxLength={60} onChange={(e) => setGive({ ...give, cta: e.target.value })} /></Lbl>
               <button type="button" className="nk-btn nk-ghost w-fit px-3 py-2 text-xs" onClick={() => setGive(GIVE)}>Reset</button>
+            </>
+          )}
+
+          {mode === 'socialwin' && (
+            <>
+              <div>
+                <h2 className="text-base font-bold text-emerald-950">District winners post</h2>
+                <p className="text-sm text-emerald-900/70">Write each winner's name, pick their district and prize. Their districts light up on the Bangladesh map: 1st gold, 2nd silver, 3rd bronze.</p>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Lbl t="Tag"><input className="nk-input" value={win.tag} maxLength={40} onChange={(e) => setWin({ ...win, tag: e.target.value })} /></Lbl>
+                <Lbl t="Heading"><input className="nk-input" value={win.title} maxLength={90} onChange={(e) => setWin({ ...win, title: e.target.value })} /></Lbl>
+              </div>
+              <Lbl t="Sub heading" hint="e.g. the campaign name or date"><input className="nk-input" value={win.sub} maxLength={140} onChange={(e) => setWin({ ...win, sub: e.target.value })} /></Lbl>
+              <div className="grid gap-2">
+                <span className="text-sm font-semibold text-emerald-950">Winners</span>
+                {win.winners.map((r, i) => {
+                  const setR = (q: Partial<WRow>) => setWin({ ...win, winners: win.winners.map((x, j) => (j === i ? { ...x, ...q } : x)) });
+                  return (
+                    <div key={i} className="grid gap-2 rounded-xl border border-[#e7e1cf] bg-cream/40 p-3">
+                      <div className="flex items-center gap-2">
+                        <b className="w-14 shrink-0 text-sm text-emerald-900">{['🥇', '🥈', '🥉'][i] ?? '🏅'} {BN_RANK[i]}</b>
+                        <input className="nk-input flex-1" value={r.name} maxLength={50} placeholder="বিজয়ীর নাম" onChange={(e) => setR({ name: e.target.value })} />
+                        <button type="button" className="nk-btn nk-ghost px-2 py-1.5 text-red-700" aria-label="Remove winner" onClick={() => setWin({ ...win, winners: win.winners.length > 1 ? win.winners.filter((_, j) => j !== i) : [{ name: '', district: '', prize: '' }] })}><X className="h-4 w-4" /></button>
+                      </div>
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        <select className="nk-input" value={r.district} onChange={(e) => setR({ district: e.target.value })} aria-label="District">
+                          <option value="">জেলা বেছে নিন</option>
+                          {DISTRICT_NAMES.map((d) => <option key={d} value={d}>{d}</option>)}
+                        </select>
+                        <input className="nk-input" value={r.prize} maxLength={40} placeholder="পুরস্কার, যেমন ২০০টি Nusuk Key" onChange={(e) => setR({ prize: e.target.value })} />
+                      </div>
+                    </div>
+                  );
+                })}
+                {win.winners.length < 6 && <button type="button" className="nk-btn nk-ghost w-fit px-3 py-1.5 text-xs" onClick={() => setWin({ ...win, winners: [...win.winners, { name: '', district: '', prize: '' }] })}><Plus className="h-3.5 w-3.5" /> Add winner</button>}
+              </div>
+              <Lbl t="Text"><textarea className="nk-input" rows={2} value={win.body} maxLength={300} onChange={(e) => setWin({ ...win, body: e.target.value })} /></Lbl>
+              <Lbl t="Button text" hint="optional"><input className="nk-input" value={win.cta} maxLength={60} onChange={(e) => setWin({ ...win, cta: e.target.value })} /></Lbl>
+              <button type="button" className="nk-btn nk-ghost w-fit px-3 py-2 text-xs" onClick={() => setWin(WIN)}>Reset</button>
             </>
           )}
 
