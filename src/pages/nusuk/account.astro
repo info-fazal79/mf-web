@@ -18,7 +18,9 @@ import ClubApp from './_club/ClubApp';
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&family=IBM+Plex+Mono:wght@700&display=swap" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;500;600;700&family=Hind+Siliguri:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&family=IBM+Plex+Mono:wght@700&display=swap" />
+    <!-- clearer Bangla text on the account page (the photo card keeps its own font) -->
+    <style is:inline>html:root { --font-sans: "Noto Sans Bengali", "Hind Siliguri", system-ui, sans-serif; }</style>
   </head>
   <body class="min-h-screen font-sans antialiased">
     <ClubApp client:only="react" />

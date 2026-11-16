@@ -3,14 +3,14 @@ import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNod
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { ArrowLeft, Check, Clock, UserRound, Copy, Download, Gift, History, LogOut, PenLine, Share2, Sparkles, Ticket, Trophy, UserPlus, Users } from 'lucide-react';
 import {
-  CODE_RE, KIND_LABEL, markJoined, setMyDistrict, showOf, SAVE_ERR, bn, bnDate, bnTime, contestRules, fillCaption, memberClient, rememberRef, savedRef,
+  CODE_RE, KIND_LABEL, markJoined, setMyDistrict, showOf, SAVE_ERR, bn, bnDate, bnTime, contestRules, fillCaption, memberClient, refLink, rememberRef, savedRef,
   type ClubMe, type Contest, type Member, type SaveResult,
 } from '../_lib/club';
 import { drawCard, cardBlob } from '../_lib/clubcard';
 import { bnPlace } from '../_lib/clubdraw';
 import { rememberMyCode } from '../_lib/photocard';
 import { browserFp } from '../_lib/cq';
-import QuizPanel from './QuizPanel';
+import { CampaignBanner, CompetitionView, useCq } from './QuizPanel';
 
 const DISTRICTS = 'ঢাকা,গাজীপুর,নারায়ণগঞ্জ,নরসিংদী,মুন্সিগঞ্জ,মানিকগঞ্জ,টাঙ্গাইল,কিশোরগঞ্জ,ফরিদপুর,গোপালগঞ্জ,মাদারীপুর,শরীয়তপুর,রাজবাড়ী,চট্টগ্রাম,কক্সবাজার,কুমিল্লা,ফেনী,নোয়াখালী,লক্ষ্মীপুর,চাঁদপুর,ব্রাহ্মণবাড়িয়া,খাগড়াছড়ি,রাঙ্গামাটি,বান্দরবান,রাজশাহী,নাটোর,নওগাঁ,চাঁপাইনবাবগঞ্জ,পাবনা,সিরাজগঞ্জ,বগুড়া,জয়পুরহাট,খুলনা,যশোর,সাতক্ষীরা,বাগেরহাট,ঝিনাইদহ,মাগুরা,নড়াইল,কুষ্টিয়া,চুয়াডাঙ্গা,মেহেরপুর,বরিশাল,পটুয়াখালী,ভোলা,পিরোজপুর,ঝালকাঠি,বরগুনা,সিলেট,মৌলভীবাজার,হবিগঞ্জ,সুনামগঞ্জ,রংপুর,দিনাজপুর,ঠাকুরগাঁও,পঞ্চগড়,নীলফামারী,লালমনিরহাট,কুড়িগ্রাম,গাইবান্ধা,ময়মনসিংহ,জামালপুর,শেরপুর,নেত্রকোনা,দেশের বাইরে'.split(',');
 
@@ -356,121 +356,104 @@ function KeysCard({ k }: { k: NonNullable<ClubMe['keys']> }) {
 
 function Dashboard({ sb, me, onEdit, refBox }: { sb: SupabaseClient; me: ClubMe; onEdit: () => void; refBox?: ReactNode }) {
   const m = me.member!;
-  const [sel, setSel] = useState(0);
-  const [now, setNow] = useState(Date.now());
-  useEffect(() => { const t = setInterval(() => setNow(Date.now()), 30000); return () => clearInterval(t); }, []);
-  const show = showOf(me.cfg);
-  const contests = show.contests ? me.contests : [];
-  const c = contests[Math.min(sel, contests.length - 1)];
+  const cq = useCq(sb);
+  const [view, setView] = useState<'home' | 'comp'>(() => (typeof location !== 'undefined' && location.hash === '#competition' ? 'comp' : 'home'));
+  const quiz = me.contests.find((x) => x.kind === 'quiz');
+  const go = (v: 'home' | 'comp') => {
+    setView(v);
+    history.replaceState(null, '', v === 'comp' ? '#competition' : location.pathname);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  if (view === 'comp' && cq.d?.campaign) {
+    return <CompetitionView sb={sb} cq={cq} onBack={() => go('home')} share={quiz ? <ShareCard key={quiz.id} me={me} c={{ ...quiz, caption: cq.d.campaign.caption, card: cq.d.campaign.card }} /> : null} />;
+  }
+
+  const my = cq.d?.my;
+  const joined = new Date(m.joined).toLocaleDateString('bn-BD', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Dhaka' });
   return (
     <>
-      <section className="nk-card flex flex-wrap items-center justify-between gap-3 p-4 sm:p-5">
-        <div>
-          <div className="text-sm text-emerald-900/70">আসসালামু আলাইকুম,</div>
-          <div className="text-xl font-bold">{m.name}</div>
-          <div className="mt-1 flex flex-wrap gap-2 text-sm">
-            <span className="rounded-full bg-gold-400/25 px-2.5 py-0.5 font-bold">SL {bn(m.sl)}</span>
-            <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 font-mono font-semibold">{m.nusuk_code}</span>
-            {show.invite && m.referred_by && <span className="rounded-full bg-emerald-50 px-2.5 py-0.5">আমন্ত্রণ: {m.referred_by}</span>}
+      {/* profile */}
+      <section className="nk-card overflow-hidden p-0">
+        <div className="nk-quiz-head px-4 pt-5 pb-14 text-white sm:px-5">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="text-sm text-emerald-50/80">আসসালামু আলাইকুম,</div>
+              <div className="text-2xl font-bold">{m.name}</div>
+            </div>
+            <button type="button" onClick={onEdit} className="nk-quiz-icon flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold"><PenLine className="h-4 w-4" aria-hidden /> এডিট</button>
           </div>
         </div>
-        <button type="button" onClick={onEdit} className="nk-btn nk-ghost flex items-center gap-2 px-4 py-2 text-sm"><PenLine className="h-4 w-4" aria-hidden /> প্রোফাইল এডিট</button>
+        <div className="-mt-10 grid gap-3 px-4 pb-4 sm:px-5">
+          <div className="grid grid-cols-2 gap-2 rounded-2xl border border-[#eee7d3] bg-white p-3 text-sm shadow-sm sm:grid-cols-4">
+            <div><div className="text-xs text-emerald-900/60">সদস্য নম্বর</div><div className="font-bold">SL {bn(m.sl)}</div></div>
+            <div className="min-w-0"><div className="text-xs text-emerald-900/60">নুসুক কোড</div><div className="truncate font-mono font-bold">{m.nusuk_code}</div></div>
+            <div><div className="text-xs text-emerald-900/60">জেলা</div><div className="font-bold">{m.district || '—'}</div></div>
+            <div><div className="text-xs text-emerald-900/60">সদস্য হয়েছেন</div><div className="font-bold">{joined}</div></div>
+          </div>
+          {showOf(me.cfg).invite && m.referred_by && <p className="text-sm text-emerald-900/70">আপনাকে আমন্ত্রণ জানিয়েছেন: <b>{m.referred_by}</b></p>}
+        </div>
+      </section>
+
+      {/* my code */}
+      <section className="nk-card grid gap-3 p-4 sm:p-5">
+        <h2 className="flex items-center gap-2 text-lg font-bold"><Sparkles className="h-5 w-5 text-emerald-700" aria-hidden /> আমার কোডের হিসাব</h2>
+        <div className="grid grid-cols-2 gap-2.5">
+          <div className="rounded-2xl border border-gold-500/40 bg-gold-400/15 p-3.5">
+            <div className="flex items-center gap-2 text-[13px] font-semibold text-emerald-900/75"><span className="grid h-8 w-8 place-items-center rounded-full bg-gold-400 text-emerald-950"><Copy className="h-4 w-4" aria-hidden /></span>কোড কপি হয়েছে</div>
+            <div className="mt-1.5 text-3xl font-bold">{my ? bn(my.copies) : '…'}</div>
+            <div className="text-xs text-emerald-900/65">এই সাইট থেকে আপনার কোড যতবার কপি হয়েছে</div>
+          </div>
+          <div className="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-3.5">
+            <div className="flex items-center gap-2 text-[13px] font-semibold text-emerald-900/75"><span className="grid h-8 w-8 place-items-center rounded-full bg-emerald-800 text-white"><Gift className="h-4 w-4" aria-hidden /></span>স্পন্সরে পাওয়া Key</div>
+            <div className="mt-1.5 text-3xl font-bold">{my ? bn(my.gift_keys) : '…'}</div>
+            <div className="text-xs text-emerald-900/65">রিবাতের পক্ষ থেকে আপনার কোডে পাঠানো</div>
+          </div>
+        </div>
       </section>
 
       {me.keys && <KeysCard k={me.keys} />}
 
+      {/* competition */}
+      <CampaignBanner d={cq.d} onOpen={() => go('comp')} />
+
+      <RefLinkBox code={m.nusuk_code} refs={my?.refs ?? 0} keys={my?.ref_keys ?? 0} />
+
       {refBox}
-
-      {show.contests && !c && <section className="nk-card p-5 text-[15px]">এই মুহূর্তে কোনো প্রতিযোগিতা চলছে না। নতুন প্রতিযোগিতা শুরু হলে এখানে দেখাবে, ইনশাআল্লাহ।</section>}
-
-      {contests.length > 1 && (
-        <div className="flex gap-1 overflow-x-auto rounded-xl border border-[#e7e1cf] bg-white p-1" role="tablist" aria-label="প্রতিযোগিতা">
-          {contests.map((x, i) => (
-            <button key={x.id} type="button" role="tab" aria-selected={x === c} onClick={() => setSel(i)}
-              className={`shrink-0 rounded-lg px-3.5 py-2 text-sm font-bold transition ${x === c ? 'bg-emerald-900 text-white' : 'text-emerald-900 hover:bg-emerald-50'}`}>
-              {x.title}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {c && c.kind === 'quiz' && <QuizPanel sb={sb} />}
-
-      {c && c.kind !== 'quiz' && (
-        <section className="nk-card grid gap-4 p-4 sm:p-5">
-          <div className="flex flex-wrap items-start justify-between gap-2">
-            <div>
-              <h2 className="flex items-center gap-2 text-lg font-bold"><Trophy className="h-5 w-5 text-emerald-700" aria-hidden /> {c.title}</h2>
-              {c.info.trim() && <p className="mt-0.5 text-[15px] text-emerald-900/80">{c.info}</p>}
-            </div>
-            {c.ends_at && <span className="flex items-center gap-1.5 rounded-full bg-gold-400/25 px-3 py-1 text-sm font-bold"><Clock className="h-4 w-4" aria-hidden />{timeLeft(c.ends_at, now)}</span>}
-          </div>
-          {c.kind === 'top' ? (
-            <div className="grid grid-cols-2 gap-2">
-              <Stat icon={<Users className="h-4 w-4" aria-hidden />} label="আপনার কোডে যুক্ত" value={c.my?.referrals ?? 0} />
-              <Stat icon={<Trophy className="h-4 w-4" aria-hidden />} label="আপনার অবস্থান" value={c.my?.rank ?? 0} hint={c.my?.rank ? undefined : 'এখনো কেউ যুক্ত হননি'} />
-            </div>
-          ) : (
-            <div className="grid grid-cols-3 gap-2">
-              <Stat icon={<Sparkles className="h-4 w-4" aria-hidden />} label="আজকের ড্রয়ের টিকিট" value={c.my?.today ?? 0} />
-              <Stat icon={<Ticket className="h-4 w-4" aria-hidden />} label="মোট টিকিট" value={c.my?.total ?? 0} hint="পুরো প্রতিযোগিতায়" />
-              <Stat icon={<Users className="h-4 w-4" aria-hidden />} label="আপনার কোডে যুক্ত" value={c.my?.referrals ?? 0} />
-            </div>
-          )}
-          {c.t_copy > 0 && (
-            <div className={`flex items-start gap-3 rounded-xl p-3 text-[15px] ${c.my?.copied_today ? 'bg-emerald-50' : 'bg-gold-400/15'}`}>
-              <Clock className="mt-0.5 h-5 w-5 shrink-0 text-emerald-700" aria-hidden />
-              <div>
-                {c.my?.copied_today
-                  ? <><b>আজকের কোড কপির টিকিট জমা হয়েছে।</b> কাল আবার {bnTime(c.copy_from)} – {bnTime(c.copy_to)}-এর মধ্যে কপি করুন।</>
-                  : <><b>আজকের কোড কপির টিকিট এখনো নেননি।</b> {bnTime(c.copy_from)} – {bnTime(c.copy_to)}-এর মধ্যে <a href="/nusuk" className="font-bold text-emerald-700 underline">কোড পেজে</a> একটি কোড কপি করুন।{!c.in_window && ' (এখন সময়ের বাইরে)'}</>}
-              </div>
-            </div>
-          )}
-          {c.kind === 'top' && c.top && c.top.length > 0 && (
-            <div>
-              <h3 className="mb-2 font-bold">লিডারবোর্ড</h3>
-              <ol className="grid gap-1 text-sm">
-                {c.top.map((t, i) => (
-                  <li key={t.sl} className={`flex items-center justify-between rounded-lg px-3 py-1.5 ${t.sl === m.sl ? 'bg-gold-400/25 font-bold' : 'bg-emerald-50'}`}>
-                    <span>{bn(i + 1)}. {t.name} <span className="text-emerald-900/60">· SL {bn(t.sl)}</span></span>
-                    <span>{bn(t.refs)} জন</span>
-                  </li>
-                ))}
-              </ol>
-            </div>
-          )}
-          {c.prizes && c.prizes.some((p) => p.prize.trim()) && (
-            <div className="rounded-xl bg-gold-400/15 p-3">
-              <h3 className="mb-1.5 flex items-center gap-2 font-bold"><Gift className="h-4 w-4" aria-hidden /> পুরস্কার</h3>
-              <ul className="grid gap-1 text-[15px]">
-                {c.prizes.filter((p) => p.prize.trim()).slice(0, 20).map((p) => <li key={p.place}><b>{bnPlace(p.place)}:</b> {p.prize}</li>)}
-                {c.prizes.length > 20 && <li className="text-sm text-emerald-900/60">আরও {bn(c.prizes.length - 20)}টি পুরস্কার</li>}
-              </ul>
-            </div>
-          )}
-          <details className="rounded-xl border border-[#eee7d3] p-3">
-            <summary className="cursor-pointer font-bold">এই প্রতিযোগিতার নিয়ম</summary>
-            <div className="mt-2"><ContestRules c={c} /></div>
-          </details>
-        </section>
-      )}
-
-      {c && <ShareCard key={c.id} me={me} c={c} />}
-
-      {show.tickets && <section className="nk-card p-4 sm:p-5">
-        <h2 className="flex items-center gap-2 text-lg font-bold"><History className="h-5 w-5 text-emerald-700" aria-hidden /> টিকিটের হিসাব</h2>
-        {(me.history ?? []).length === 0 && <p className="mt-2 text-sm text-emerald-900/60">এখনো কোনো টিকিট নেই।</p>}
-        <ul className="mt-3 divide-y divide-[#eee7d3] text-sm">
-          {(me.history ?? []).map((h, i) => (
-            <li key={i} className="flex items-center justify-between gap-3 py-2">
-              <span>{KIND_LABEL[h.kind]}{h.kind === 'referral' && h.from ? `: ${h.from}` : ''}<span className="block text-xs text-emerald-900/55">{h.contest}</span></span>
-              <span className="shrink-0 text-emerald-900/60">+{bn(h.qty ?? 1)} · {new Date(h.at).toLocaleDateString('bn-BD', { day: 'numeric', month: 'short', timeZone: 'Asia/Dhaka' })}</span>
-            </li>
-          ))}
-        </ul>
-      </section>}
     </>
+  );
+}
+
+/** The member's own referral link, ready to copy or share */
+function RefLinkBox({ code, refs, keys }: { code: string; refs: number; keys: number }) {
+  const link = refLink(code);
+  const [note, setNote] = useState('');
+  async function copy() {
+    try { await navigator.clipboard.writeText(link); setNote('লিংক কপি হয়েছে'); } catch { setNote('লিংকটি সিলেক্ট করে কপি করুন'); }
+    setTimeout(() => setNote(''), 2000);
+  }
+  async function share() {
+    try { await navigator.share({ title: 'রিবাত ইসলামিক কুইজ', text: 'আমার লিংক দিয়ে অ্যাকাউন্ট খুললে আপনিও পাবেন ১টি বাড়তি চাবি:', url: link }); } catch { /* closed */ }
+  }
+  return (
+    <section className="nk-card grid gap-3 p-4 sm:p-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0 flex-1">
+          <h2 className="flex items-center gap-2 text-lg font-bold"><UserPlus className="h-5 w-5 text-emerald-700" aria-hidden /> আমার রেফারেল লিংক</h2>
+          <p className="mt-0.5 text-sm text-emerald-900/70">এই লিংকে কেউ অ্যাকাউন্ট খুললে আপনি ও তিনি দুজনেই ১টি করে বাড়তি চাবি পাবেন।</p>
+        </div>
+        <div className="flex gap-2 text-center">
+          <div className="rounded-xl bg-emerald-50 px-3 py-1.5"><div className="text-lg font-bold">{bn(refs)}</div><div className="text-[11px] text-emerald-900/65">যুক্ত হয়েছেন</div></div>
+          <div className="rounded-xl bg-gold-400/20 px-3 py-1.5"><div className="text-lg font-bold">{bn(keys)}</div><div className="text-[11px] text-emerald-900/65">বাড়তি চাবি</div></div>
+        </div>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <input readOnly value={link} onFocus={(e) => e.target.select()} className="nk-input min-w-0 flex-1 font-mono text-sm" aria-label="রেফারেল লিংক" />
+        <button type="button" onClick={copy} className="nk-btn nk-green flex items-center gap-1.5 px-4 py-2.5"><Copy className="h-4 w-4" aria-hidden /> কপি</button>
+        {typeof navigator !== 'undefined' && 'share' in navigator && <button type="button" onClick={share} className="nk-btn nk-ghost flex items-center gap-1.5 px-4 py-2.5"><Share2 className="h-4 w-4" aria-hidden /> শেয়ার</button>}
+      </div>
+      {note && <p className="text-sm font-semibold text-emerald-800" role="status">{note}</p>}
+    </section>
   );
 }
 
@@ -489,7 +472,8 @@ function ShareCard({ me, c }: { me: ClubMe; c: Contest }) {
     setReady(false);
     drawCard(canvas.current, {
       code: m.nusuk_code, sl: m.sl, name: m.name,
-      theme: c.card.theme, headline: c.card.headline, sub: c.card.sub || c.title, line: c.card.line,
+      theme: c.card.theme, headline: c.card.headline, sub: c.card.sub || c.title,
+      line: c.card.line || (c.kind === 'quiz' ? 'এই লিংকে যুক্ত হলে আপনিও পাবেন ১টি বাড়তি চাবি' : undefined),
       badge: c.ends_at ? `শেষ: ${bnDate(c.ends_at)}` : undefined,
     }).then(() => setReady(true));
   }, [m.nusuk_code, m.sl, m.name, c]);

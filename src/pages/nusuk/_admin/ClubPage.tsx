@@ -3,7 +3,6 @@ import { useCallback, useEffect, useState } from 'react';
 import { Download, ExternalLink, Gift, KeyRound, RefreshCw, Search, Ticket, Trophy, Users } from 'lucide-react';
 import { supabase as sb } from '@/lib/supabase';
 import { DEFAULT_NOTICE, DEFAULT_NOTICE_BTN, DEFAULT_TITLE, parseClub, type ClubCfg, type Contest } from '../_lib/club';
-import ContestsPanel from './ContestsPanel';
 import ClubDrawPanel from './ClubDrawPanel';
 
 type ToastFn = (t: string, ok?: boolean) => void;
@@ -51,7 +50,10 @@ export default function ClubPage({ toast }: { toast: ToastFn }) {
   const [dayRows, setDayRows] = useState<DayRow[] | null>(null);
   const [contests, setContests] = useState<Contest[]>([]);
   const [contest, setContest] = useState<number | null>(null);
-  const onContests = useCallback((l: Contest[]) => setContests(l), []);
+  // quiz campaigns (Reward Club → Quiz competition) for the raffle draw; the old competitions are not used any more
+  useEffect(() => {
+    sb!.from('nusuk_club_contests').select('*').eq('kind', 'quiz').order('id', { ascending: false }).then(({ data: l }) => setContests((l ?? []) as Contest[]));
+  }, []);
 
   useEffect(() => {
     sb!.from('nusuk_settings').select('content').eq('id', 1).single().then(({ data: d }) => {
@@ -245,12 +247,10 @@ export default function ClubPage({ toast }: { toast: ToastFn }) {
         </div>
         <label className="max-w-md"><span className="mb-1 block text-sm font-semibold">Name of the club</span>
           <input className="nk-input" value={c.title} placeholder={DEFAULT_TITLE} maxLength={80} onChange={(e) => set({ title: e.target.value })} /></label>
-        <p className="text-xs text-emerald-900/60">Ticket rules, copy time, photo card and caption are set per competition below.</p>
+        <p className="text-xs text-emerald-900/60">Competitions, questions, photo card and caption: Reward Club → <b>Quiz competition</b>.</p>
       </section>
 
-      <ContestsPanel toast={toast} onChange={onContests} />
-
-      <section className="nk-card flex flex-wrap items-center gap-3 p-4 sm:p-5">
+      <section className="hidden">
         <span className="text-sm font-bold text-emerald-950">Show numbers for</span>
         <select className="nk-input w-auto py-1.5 text-sm" value={contest ?? ''} onChange={(e) => setContest(e.target.value ? Number(e.target.value) : null)} aria-label="Competition">
           <option value="">All competitions</option>

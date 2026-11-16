@@ -33,6 +33,26 @@ export default function QuizCompPage({ toast }: { toast: ToastFn }) {
   const [stats, setStats] = useState<Stats | null>(null);
   const [statFor, setStatFor] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
+  const [defs, setDefs] = useState<Defaults>(BUILT_IN);
+
+  // default caption / rules / pledge for new campaigns (nusuk_settings.content.cq_defaults)
+  useEffect(() => {
+    sb!.from('nusuk_settings').select('content').eq('id', 1).single().then(({ data }) => {
+      const d = ((data?.content as Record<string, unknown> | null)?.cq_defaults ?? {}) as Partial<Defaults>;
+      setDefs({ caption: d.caption?.trim() || BUILT_IN.caption, rules: d.rules?.trim() || BUILT_IN.rules, pledge: d.pledge?.trim() || BUILT_IN.pledge });
+    });
+  }, []);
+  async function saveDefault(key: keyof Defaults, text: string) {
+    if (!text.trim()) return toast('Write something first', false);
+    const { data, error: e1 } = await sb!.from('nusuk_settings').select('content').eq('id', 1).single();
+    if (e1) return toast(errText(e1), false);
+    const content = (data?.content as Record<string, unknown>) ?? {};
+    const cur = (content.cq_defaults ?? {}) as Partial<Defaults>;
+    const { error } = await sb!.from('nusuk_settings').update({ content: { ...content, cq_defaults: { ...cur, [key]: text.trim() } }, updated_at: new Date().toISOString() }).eq('id', 1);
+    if (error) return toast(errText(error), false);
+    setDefs((d) => ({ ...d, [key]: text.trim() }));
+    toast('Saved as default: new campaigns start with this text');
+  }
 
   const load = useCallback(async () => {
     const { data, error } = await sb!.from('nusuk_club_contests').select('*').eq('kind', 'quiz').order('id', { ascending: false });
@@ -56,8 +76,8 @@ export default function QuizCompPage({ toast }: { toast: ToastFn }) {
       c: { title: 'রিবাত ইসলামিক কুইজ প্রতিযোগিতা', kind: 'quiz', active: false, starts_at: null, ends_at: null, info: 'প্রতিদিন ৫টি প্রশ্ন, প্রতিটি সঠিক উত্তরে লটারির ১টি টিকিট।',
         t_join: 0, t_enter: 0, t_ref_bonus: 0, t_referral: 0, t_copy: 0, copy_from: '09:00', copy_to: '17:00',
         card: { theme: 'green', headline: 'রিবাত ইসলামিক কুইজ', sub: 'প্রতিদিন পুরস্কার জেতার সুযোগ', line: 'আমার লিংকে যুক্ত হলে আপনিও পাবেন ১টি বাড়তি চাবি' },
-        caption: '', sort: 0 },
-      q: parseCqCfg({}),
+        caption: defs.caption, sort: 0 },
+      q: { ...parseCqCfg({}), rules: defs.rules, pledge: defs.pledge },
     });
   }
   async function save() {
@@ -141,13 +161,13 @@ export default function QuizCompPage({ toast }: { toast: ToastFn }) {
               <div className="flex shrink-0 flex-wrap gap-1.5">
                 <button type="button" className={`nk-btn flex items-center gap-1 px-3 py-1.5 text-sm ${c.active ? 'nk-green' : 'nk-ghost'}`} onClick={() => toggle(c)}><Power className="h-4 w-4" aria-hidden />{c.active ? 'On' : 'Off'}</button>
                 {!q.bonus_done && <button type="button" className="nk-btn nk-ghost px-3 py-1.5 text-sm" onClick={() => bonus(c)}>Give bonus</button>}
-                <button type="button" className="nk-btn nk-ghost px-2.5 py-1.5" onClick={() => setEdit({ c: { ...c }, q })} aria-label="Edit"><Pencil className="h-4 w-4" aria-hidden /></button>
+                <button type="button" className="nk-btn nk-ghost px-2.5 py-1.5" onClick={() => setEdit({ c: { ...c, caption: c.caption?.trim() || defs.caption }, q: { ...q, rules: q.rules.trim() || defs.rules, pledge: q.pledge.trim() || defs.pledge } })} aria-label="Edit"><Pencil className="h-4 w-4" aria-hidden /></button>
                 <button type="button" className="nk-btn nk-ghost px-2.5 py-1.5 text-red-700" onClick={() => remove(c)} aria-label="Delete"><Trash2 className="h-4 w-4" aria-hidden /></button>
               </div>
             </div>
           );
         })}
-        {edit && <CampaignForm edit={edit} setEdit={setEdit} busy={busy} onSave={save} />}
+        {edit && <CampaignForm edit={edit} setEdit={setEdit} busy={busy} onSave={save} onDefault={saveDefault} />}
       </section>
 
       {/* ---------- numbers ---------- */}
@@ -204,7 +224,12 @@ export default function QuizCompPage({ toast }: { toast: ToastFn }) {
 }
 
 // ------------------------------------------------------------------ campaign form
-function CampaignForm({ edit, setEdit, busy, onSave }: { edit: { c: Partial<Camp>; q: CqCfg }; setEdit: (e: { c: Partial<Camp>; q: CqCfg } | null) => void; busy: boolean; onSave: () => void }) {
+type Defaults = { caption: string; rules: string; pledge: string };
+const BUILT_IN: Defaults = { caption: CONTEST_CAPTIONS.quiz, rules: QUIZ_RULES, pledge: DEFAULT_PLEDGE };
+const DefBtn = ({ onClick }: { onClick: () => void }) => (
+  <button type="button" onClick={onClick} className="-mt-2 w-fit text-xs font-semibold text-emerald-700 hover:underline">★ Save this text as the default for new campaigns</button>
+);
+function CampaignForm({ edit, setEdit, busy, onSave, onDefault }: { edit: { c: Partial<Camp>; q: CqCfg }; setEdit: (e: { c: Partial<Camp>; q: CqCfg } | null) => void; busy: boolean; onSave: () => void; onDefault: (k: keyof Defaults, t: string) => void }) {
   const { c, q } = edit;
   const setC = (p: Partial<Camp>) => setEdit({ c: { ...c, ...p }, q });
   const setQ = (p: Partial<CqCfg>) => setEdit({ c, q: { ...q, ...p } });
@@ -260,14 +285,15 @@ function CampaignForm({ edit, setEdit, busy, onSave }: { edit: { c: Partial<Camp
       <p className="-mt-2 text-xs text-emerald-900/60">Extra keys (referrals, bonus) never expire; members can use this many per day, inside this daily time. 00:00–23:59 = all day.</p>
 
       <label><span className={label}>Pledge before every question (members must tick it)</span>
-        <textarea className="nk-input text-sm" rows={2} value={q.pledge} placeholder={DEFAULT_PLEDGE} onChange={(e) => setQ({ pledge: e.target.value })} />
-        <span className="mt-0.5 block text-xs text-emerald-900/60">Empty = the default text shown above.</span></label>
+        <textarea className="nk-input text-sm" rows={2} value={q.pledge} placeholder={DEFAULT_PLEDGE} onChange={(e) => setQ({ pledge: e.target.value })} /></label>
+      <DefBtn onClick={() => onDefault('pledge', q.pledge)} />
       <label><span className={label}>Rules (one per line)</span>
-        <textarea className="nk-input text-sm" rows={7} value={q.rules} placeholder={QUIZ_RULES} onChange={(e) => setQ({ rules: e.target.value })} />
-        <span className="mt-0.5 block text-xs text-emerald-900/60">Empty = the default rules shown above.</span></label>
+        <textarea className="nk-input text-sm" rows={8} value={q.rules} placeholder={QUIZ_RULES} onChange={(e) => setQ({ rules: e.target.value })} /></label>
+      <DefBtn onClick={() => onDefault('rules', q.rules)} />
       <label><span className={label}>Caption for the members' photo card</span>
         <textarea className="nk-input text-sm" rows={6} value={c.caption ?? ''} placeholder={CONTEST_CAPTIONS.quiz} onChange={(e) => setC({ caption: e.target.value })} />
-        <span className="mt-0.5 block text-xs text-emerald-900/60">{'{ref_link}'} = the member's own referral link · {'{code}'} = their Nusuk code · {'{name}'} · {'{sl}'}. Empty = the default above.</span></label>
+        <span className="mt-0.5 block text-xs text-emerald-900/60">{'{ref_link}'} = the member's own referral link · {'{code}'} = their Nusuk code · {'{name}'} · {'{sl}'}</span></label>
+      <DefBtn onClick={() => onDefault('caption', c.caption ?? '')} />
       <div className="grid gap-3 sm:grid-cols-2">
         <label><span className="mb-1 block text-xs font-semibold">Photo card heading</span><input className="nk-input" maxLength={60} value={c.card?.headline ?? ''} onChange={(e) => setC({ card: { ...(c.card ?? {}), headline: e.target.value } })} /></label>
         <label><span className="mb-1 block text-xs font-semibold">Photo card line</span><input className="nk-input" maxLength={80} value={c.card?.sub ?? ''} onChange={(e) => setC({ card: { ...(c.card ?? {}), sub: e.target.value } })} /></label>

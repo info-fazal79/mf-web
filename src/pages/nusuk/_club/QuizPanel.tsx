@@ -1,9 +1,10 @@
-/* /nusuk/account · Ribat quiz competition for a member (update_44_quiz_competition.sql):
-   today's question times, extra (referral) keys, own numbers, and the question screen
-   (rules + pledge first, then a 30-second question; leaving the page cancels it). */
+/* /nusuk/account · Ribat quiz competition for a member (update_44 / 45):
+   the campaign banner on the dashboard, and the competition page: my numbers, rules,
+   today's question times, extra (referral) keys, prizes, then the photo card.
+   The question screen asks for the pledge first, gives N seconds, and leaving the page cancels it. */
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { CheckCircle2, Clock, Copy, Gift, Hourglass, KeyRound, Lock, Sparkles, Target, Ticket, Trophy, Users, XCircle } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CalendarClock, CheckCircle2, Clock, Gift, Hourglass, KeyRound, Lock, ScrollText, Sparkles, Ticket, Trophy, Users, XCircle } from 'lucide-react';
 import { DEFAULT_PLEDGE, QUIZ_RULES, bn, bnDate, bnTime } from '../_lib/club';
 import { bnPlace } from '../_lib/clubdraw';
 import { OPEN_ERR, leaveBeacon, timeBn, type CqAnswer, type CqMe, type CqOpen, type CqSlot } from '../_lib/cq';
@@ -22,35 +23,21 @@ const SLOT_LOOK: Record<CqSlot['status'], { t: string; cls: string; icon: ReactN
   missed: { t: 'সময় পেরিয়ে গেছে', cls: 'bg-[#f1ede1] text-emerald-900/55', icon: <Clock className="h-4 w-4" aria-hidden /> },
 };
 
-function Stat({ icon, label, value, hint }: { icon: ReactNode; label: string; value: number; hint?: string }) {
-  return (
-    <div className="rounded-xl bg-emerald-50 p-3">
-      <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-900/70">{icon}{label}</div>
-      <div className="mt-0.5 text-2xl font-bold text-emerald-950">{bn(value)}</div>
-      {hint && <div className="text-xs text-emerald-900/60">{hint}</div>}
-    </div>
-  );
-}
-
-type Flow = { kind: 'slot' | 'ref'; slot?: number } | null;
-
-export default function QuizPanel({ sb }: { sb: SupabaseClient }) {
+/** The member's quiz data; reloads itself when a question time starts or ends (no polling) */
+export function useCq(sb: SupabaseClient) {
   const [d, setD] = useState<CqMe | null>(null);
   const [err, setErr] = useState('');
-  const [flow, setFlow] = useState<Flow>(null);
   const [now, setNow] = useState(Date.now());
   const skew = useRef(0);
-
   const load = useCallback(async () => {
     const { data, error } = await sb.rpc('nusuk_cq_me');
-    if (error) { setErr(errText(error).includes('nusuk_cq_me') ? 'কুইজ এখনো চালু হয়নি।' : errText(error)); return; }
+    if (error) { setErr(errText(error)); return; }
     setErr('');
     const x = data as CqMe | null;
     if (x?.now) skew.current = new Date(x.now).getTime() - Date.now();
     setD(x);
   }, [sb]);
   useEffect(() => { load(); }, [load]);
-  // the clock on the page moves; the data reloads only when a question time starts or ends
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 20_000); return () => clearInterval(t); }, []);
   useEffect(() => {
     if (!d?.slots) return;
@@ -62,36 +49,71 @@ export default function QuizPanel({ sb }: { sb: SupabaseClient }) {
     const id = setTimeout(load, wait);
     return () => clearTimeout(id);
   }, [d, load, now]);
+  return { d, err, load, now, skew: skew.current };
+}
 
-  if (err) return <section className="nk-card p-5 text-sm text-emerald-900/70">{err}</section>;
-  if (!d) return <section className="nk-card p-5 text-sm text-emerald-900/60">কুইজ লোড হচ্ছে…</section>;
-  const c = d.campaign;
-  const my = d.my;
-
-  const statsBlock = (
-    <section className="nk-card grid gap-3 p-4 sm:p-5">
-      <h2 className="flex items-center gap-2 text-lg font-bold"><Target className="h-5 w-5 text-emerald-700" aria-hidden /> আমার হিসাব</h2>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-        {c && <Stat icon={<Ticket className="h-4 w-4" aria-hidden />} label="এই প্রতিযোগিতায় টিকিট" value={my.tickets ?? 0} hint={`আজ ${bn(my.tickets_today ?? 0)}টি`} />}
-        <Stat icon={<CheckCircle2 className="h-4 w-4" aria-hidden />} label="সঠিক উত্তর" value={my.correct} hint={`মোট উত্তর ${bn(my.answered)}টি`} />
-        <Stat icon={<Users className="h-4 w-4" aria-hidden />} label="আমার লিংকে যুক্ত" value={my.refs} hint="নতুন সদস্য" />
-        <Stat icon={<KeyRound className="h-4 w-4" aria-hidden />} label="বাড়তি চাবি পেয়েছি" value={my.ref_earned} hint={`এখন জমা ${bn(my.ref_keys)}টি`} />
-        <Stat icon={<Copy className="h-4 w-4" aria-hidden />} label="আমার কোড কপি হয়েছে" value={my.copies} hint="এই সাইট থেকে" />
-        {my.gift_keys > 0 && <Stat icon={<Gift className="h-4 w-4" aria-hidden />} label="স্পন্সরে পাওয়া Key" value={my.gift_keys} />}
+function Tile({ icon, label, value, hint, tone = 'green' }: { icon: ReactNode; label: string; value: number; hint?: ReactNode; tone?: 'green' | 'gold' }) {
+  return (
+    <div className={`rounded-2xl border p-3.5 ${tone === 'gold' ? 'border-gold-500/40 bg-gold-400/15' : 'border-emerald-100 bg-emerald-50/70'}`}>
+      <div className="flex items-center gap-2 text-[13px] font-semibold text-emerald-900/75">
+        <span className={`grid h-8 w-8 place-items-center rounded-full ${tone === 'gold' ? 'bg-gold-400 text-emerald-950' : 'bg-emerald-800 text-white'}`}>{icon}</span>{label}
       </div>
-    </section>
+      <div className="mt-1.5 text-3xl font-bold text-emerald-950">{bn(value)}</div>
+      {hint && <div className="mt-0.5 text-xs text-emerald-900/65">{hint}</div>}
+    </div>
   );
+}
 
+/** Dashboard: a big banner while a campaign runs, a calm card when none does */
+export function CampaignBanner({ d, onOpen }: { d: CqMe | null; onOpen: () => void }) {
+  const c = d?.campaign;
   if (!c) {
     return (
-      <>
-        <section className="nk-card p-5 text-[15px]">এই মুহূর্তে কোনো কুইজ প্রতিযোগিতা চলছে না। নতুন প্রতিযোগিতা শুরু হলে এখানে দেখাবে, ইনশাআল্লাহ।</section>
-        {statsBlock}
-      </>
+      <section className="nk-card flex items-center gap-4 p-5">
+        <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-emerald-50 text-emerald-700"><Trophy className="h-7 w-7" aria-hidden /></span>
+        <div>
+          <h2 className="text-lg font-bold">এখন কোনো প্রতিযোগিতা চলছে না</h2>
+          <p className="mt-0.5 text-[15px] text-emerald-900/70">নতুন প্রতিযোগিতা শুরু হলে এখানে ব্যানার দেখাবে, ইনশাআল্লাহ। আপনার রেফারেল লিংক শেয়ার করে বাড়তি চাবি জমিয়ে রাখুন।</p>
+        </div>
+      </section>
     );
   }
+  const ready = (d?.slots ?? []).filter((s) => s.status === 'ready').length;
+  const next = (d?.slots ?? []).find((s) => s.status === 'upcoming');
+  return (
+    <section className="nk-quiz-head overflow-hidden rounded-[1.25rem] p-5 text-white shadow-lg ring-1 ring-gold-400/40">
+      <div className="flex items-start gap-4">
+        <span className="nk-quiz-icon grid h-14 w-14 shrink-0 place-items-center rounded-2xl text-gold-100"><Trophy className="h-7 w-7" aria-hidden /></span>
+        <div className="min-w-0 flex-1">
+          <span className="inline-block rounded-full bg-gold-400 px-2.5 py-0.5 text-xs font-bold text-emerald-950">চলমান প্রতিযোগিতা</span>
+          <h2 className="mt-1.5 text-xl font-bold leading-snug">{c.title}</h2>
+          {c.info.trim() && <p className="mt-1 text-[15px] text-emerald-50/85">{c.info}</p>}
+        </div>
+      </div>
+      <div className="mt-4 flex flex-wrap gap-2 text-sm">
+        {c.ends_at && <span className="nk-quiz-icon flex items-center gap-1.5 rounded-full px-3 py-1"><CalendarClock className="h-4 w-4" aria-hidden />শেষ: {bnDate(c.ends_at)}</span>}
+        <span className="nk-quiz-icon flex items-center gap-1.5 rounded-full px-3 py-1"><Ticket className="h-4 w-4" aria-hidden />আপনার টিকিট {bn(d?.my.tickets ?? 0)}টি</span>
+        {ready > 0
+          ? <span className="flex items-center gap-1.5 rounded-full bg-gold-400 px-3 py-1 font-bold text-emerald-950"><Sparkles className="h-4 w-4" aria-hidden />এখন {bn(ready)}টি প্রশ্ন খোলা</span>
+          : next && <span className="nk-quiz-icon flex items-center gap-1.5 rounded-full px-3 py-1"><Clock className="h-4 w-4" aria-hidden />পরের প্রশ্ন {timeBn(next.from)}-এ</span>}
+      </div>
+      <button type="button" onClick={onOpen} className="nk-btn nk-gold mt-4 flex w-full items-center justify-center gap-2 py-3.5 text-base shadow-lg">
+        প্রতিযোগিতায় অংশ নিন <ArrowRight className="h-5 w-5" aria-hidden />
+      </button>
+    </section>
+  );
+}
 
-  const t = now + skew.current;
+type Flow = { kind: 'slot' | 'ref'; slot?: number } | null;
+
+/** The competition page */
+export function CompetitionView({ sb, cq, onBack, share }: { sb: SupabaseClient; cq: ReturnType<typeof useCq>; onBack: () => void; share?: ReactNode }) {
+  const [flow, setFlow] = useState<Flow>(null);
+  const { d, load, now, skew } = cq;
+  if (!d?.campaign) return null;
+  const c = d.campaign;
+  const my = d.my;
+  const t = now + skew;
   const slots = d.slots ?? [];
   const next = slots.find((s) => s.status === 'upcoming');
   const readyCount = slots.filter((s) => s.status === 'ready').length;
@@ -104,58 +126,80 @@ export default function QuizPanel({ sb }: { sb: SupabaseClient }) {
 
   return (
     <>
-      <section className="nk-card overflow-hidden p-0">
-        <div className="nk-quiz-head px-4 pt-4 pb-4 text-white sm:px-5">
-          <div className="flex flex-wrap items-start justify-between gap-2">
-            <div>
-              <h2 className="flex items-center gap-2 text-lg font-bold"><Trophy className="h-5 w-5 text-gold-100" aria-hidden /> {c.title}</h2>
-              {c.info.trim() && <p className="mt-0.5 text-sm text-emerald-50/85">{c.info}</p>}
-            </div>
-            {c.ends_at && <span className="nk-quiz-icon flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-bold"><Clock className="h-4 w-4" aria-hidden />শেষ: {bnDate(c.ends_at)}</span>}
-          </div>
-          {target > 0 && (
-            <div className="mt-3">
-              <div className="mb-1 flex justify-between text-xs text-emerald-50/85">
-                <span>{c.rule === 'people' ? 'অংশগ্রহণকারী' : 'মোট টিকিট'}: {bn(progress)} / {bn(target)}</span>
-                <span>লক্ষ্য পূর্ণ হলেই লটারি</span>
-              </div>
-              <div className="h-2.5 overflow-hidden rounded-full bg-white/15"><div className="h-full rounded-full bg-gold-400" style={{ width: `${Math.min(100, (progress / target) * 100)}%` }} /></div>
-            </div>
-          )}
-          {c.full && <p className="mt-3 rounded-xl bg-gold-400 px-3 py-2 text-sm font-bold text-emerald-950">🎉 লক্ষ্য পূর্ণ হয়েছে! লাইভ লটারির অপেক্ষায় থাকুন।</p>}
-        </div>
+      <button type="button" onClick={onBack} className="flex w-fit items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold text-emerald-800 hover:bg-emerald-900/5"><ArrowLeft className="h-4 w-4" aria-hidden /> ড্যাশবোর্ডে ফিরুন</button>
 
-        <div className="grid gap-3 p-4 sm:p-5">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h3 className="flex items-center gap-2 font-bold"><KeyRound className="h-5 w-5 text-emerald-700" aria-hidden /> আজকের {bn(slots.length)}টি চাবি</h3>
-            {next && <span className="text-sm text-emerald-900/70">পরের প্রশ্ন খুলবে <b>{timeBn(next.from)}</b>-এ</span>}
+      <section className="nk-quiz-head overflow-hidden rounded-[1.25rem] p-5 text-white shadow-lg">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <h1 className="flex items-center gap-2 text-xl font-bold"><Trophy className="h-6 w-6 text-gold-100" aria-hidden /> {c.title}</h1>
+          {c.ends_at && <span className="nk-quiz-icon flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-bold"><Clock className="h-4 w-4" aria-hidden />শেষ: {bnDate(c.ends_at)}</span>}
+        </div>
+        {c.info.trim() && <p className="mt-1 text-[15px] text-emerald-50/85">{c.info}</p>}
+        {target > 0 && (
+          <div className="mt-3">
+            <div className="mb-1 flex justify-between text-xs text-emerald-50/85">
+              <span>{c.rule === 'people' ? 'অংশগ্রহণকারী' : 'মোট টিকিট'}: {bn(progress)} / {bn(target)}</span>
+              <span>লক্ষ্য পূর্ণ হলেই লটারি</span>
+            </div>
+            <div className="h-2.5 overflow-hidden rounded-full bg-white/15"><div className="h-full rounded-full bg-gold-400" style={{ width: `${Math.min(100, (progress / target) * 100)}%` }} /></div>
           </div>
-          <ol className="grid gap-2">
-            {slots.map((s) => {
-              const look = SLOT_LOOK[s.status];
-              const canOpen = s.status === 'ready' && !c.full;
-              const leftMin = Math.max(0, Math.round((new Date(s.to).getTime() - t) / 60000));
-              return (
-                <li key={s.i} className={`flex flex-wrap items-center gap-3 rounded-xl border p-3 ${canOpen ? 'border-gold-500 bg-gold-400/10' : 'border-[#eee7d3]'}`}>
-                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-emerald-900 text-sm font-bold text-white">{bn(s.i + 1)}</span>
-                  <div className="min-w-0 flex-1">
-                    <div className="font-semibold">{timeBn(s.from)} – {timeBn(s.to)}</div>
-                    <span className={`mt-0.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold ${look.cls}`}>{look.icon}{look.t}{s.status === 'ready' && ` · আর ${bn(leftMin)} মিনিট`}</span>
-                  </div>
-                  {canOpen && <button type="button" onClick={() => setFlow({ kind: 'slot', slot: s.i })} className="nk-btn nk-green px-4 py-2 text-sm">উত্তর দিন</button>}
-                </li>
-              );
-            })}
-          </ol>
-          {readyCount === 0 && !next && <p className="text-sm text-emerald-900/65">আজকের সব প্রশ্নের সময় শেষ। কাল আবার নতুন ৫টি চাবি পাবেন, ইনশাআল্লাহ।</p>}
+        )}
+        {c.full && <p className="mt-3 rounded-xl bg-gold-400 px-3 py-2 text-sm font-bold text-emerald-950">🎉 লক্ষ্য পূর্ণ হয়েছে! লাইভ লটারির অপেক্ষায় থাকুন।</p>}
+      </section>
+
+      {/* 1. my numbers in this competition */}
+      <section className="nk-card grid gap-3 p-4 sm:p-5">
+        <h2 className="flex items-center gap-2 text-lg font-bold"><Sparkles className="h-5 w-5 text-emerald-700" aria-hidden /> এই প্রতিযোগিতায় আপনার অবস্থান</h2>
+        <div className="grid grid-cols-2 gap-2.5">
+          <Tile tone="gold" icon={<Ticket className="h-4 w-4" aria-hidden />} label="মোট টিকিট" value={my.tickets ?? 0} hint="যত বেশি টিকিট, তত বেশি সুযোগ" />
+          <Tile tone="gold" icon={<CalendarClock className="h-4 w-4" aria-hidden />} label="আজকের টিকিট" value={my.tickets_today ?? 0}
+            hint={<>দৈনিক প্রশ্নে {bn(my.today_slot ?? 0)} · বাড়তি চাবিতে {bn(my.today_ref ?? 0)}</>} />
+          <Tile icon={<CheckCircle2 className="h-4 w-4" aria-hidden />} label="সঠিক উত্তর" value={my.correct} hint={`মোট উত্তর ${bn(my.answered)}টি · আজ ${bn(my.answered_today ?? 0)}টি`} />
+          <Tile icon={<Users className="h-4 w-4" aria-hidden />} label="আমার লিংকে যুক্ত" value={my.refs} hint="নতুন সদস্য" />
+          <Tile icon={<KeyRound className="h-4 w-4" aria-hidden />} label="বাড়তি চাবি হাতে" value={ref.keys} hint={`এ পর্যন্ত পেয়েছেন ${bn(my.ref_earned)}টি`} />
+          <Tile icon={<Gift className="h-4 w-4" aria-hidden />} label="আজ বাড়তি চাবি বাকি" value={Math.min(ref.keys, refLeftToday)} hint={`দিনে সর্বোচ্চ ${bn(ref.per_day)}টি`} />
         </div>
       </section>
 
+      {/* 2. rules, open */}
+      <section className="nk-card p-4 sm:p-5">
+        <h2 className="flex items-center gap-2 text-lg font-bold"><ScrollText className="h-5 w-5 text-emerald-700" aria-hidden /> প্রতিযোগিতার নিয়ম</h2>
+        <ol className="mt-3 grid gap-2 text-[15px] leading-relaxed">
+          {rules.map((l, i) => <li key={i} className="flex gap-3"><span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-emerald-800 text-xs font-bold text-white">{bn(i + 1)}</span><span>{l}</span></li>)}
+        </ol>
+      </section>
+
+      {/* 3. today's keys */}
+      <section className="nk-card grid gap-3 p-4 sm:p-5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="flex items-center gap-2 text-lg font-bold"><KeyRound className="h-5 w-5 text-emerald-700" aria-hidden /> আজকের {bn(slots.length)}টি চাবি</h2>
+          {next && <span className="text-sm text-emerald-900/70">পরের প্রশ্ন খুলবে <b>{timeBn(next.from)}</b>-এ</span>}
+        </div>
+        <ol className="grid gap-2">
+          {slots.map((s) => {
+            const look = SLOT_LOOK[s.status];
+            const canOpen = s.status === 'ready' && !c.full;
+            const leftMin = Math.max(0, Math.round((new Date(s.to).getTime() - t) / 60000));
+            return (
+              <li key={s.i} className={`flex flex-wrap items-center gap-3 rounded-xl border p-3 ${canOpen ? 'border-gold-500 bg-gold-400/10' : 'border-[#eee7d3]'}`}>
+                <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-full text-sm font-bold ${s.status === 'upcoming' ? 'bg-[#efe9d8] text-emerald-900/60' : 'bg-emerald-900 text-white'}`}>{s.status === 'upcoming' ? <Lock className="h-4 w-4" aria-hidden /> : bn(s.i + 1)}</span>
+                <div className="min-w-0 flex-1">
+                  <div className="font-semibold">{timeBn(s.from)} – {timeBn(s.to)}</div>
+                  <span className={`mt-0.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold ${look.cls}`}>{look.icon}{look.t}{s.status === 'ready' && ` · আর ${bn(leftMin)} মিনিট`}</span>
+                </div>
+                {canOpen && <button type="button" onClick={() => setFlow({ kind: 'slot', slot: s.i })} className="nk-btn nk-green px-4 py-2 text-sm">উত্তর দিন</button>}
+              </li>
+            );
+          })}
+        </ol>
+        {readyCount === 0 && !next && <p className="text-sm text-emerald-900/65">আজকের সব প্রশ্নের সময় শেষ। কাল আবার নতুন চাবি পাবেন, ইনশাআল্লাহ।</p>}
+      </section>
+
+      {/* 4. extra keys */}
       <section className={`nk-card grid gap-3 p-4 sm:p-5 ${canRef ? 'border-gold-500/70' : ''}`}>
         <div className="flex flex-wrap items-start justify-between gap-2">
-          <div>
+          <div className="min-w-0 flex-1">
             <h2 className="flex items-center gap-2 text-lg font-bold"><Gift className="h-5 w-5 text-emerald-700" aria-hidden /> বাড়তি চাবি</h2>
-            <p className="mt-0.5 text-sm text-emerald-900/70">আপনার লিংক দিয়ে কেউ অ্যাকাউন্ট খুললে আপনি ও তিনি দুজনেই ১টি করে বাড়তি চাবি পাবেন। এই চাবি নষ্ট হয় না।</p>
+            <p className="mt-0.5 text-sm text-emerald-900/70">আপনার রেফারেল লিংক দিয়ে কেউ অ্যাকাউন্ট খুললে আপনি ও তিনি দুজনেই ১টি করে বাড়তি চাবি পাবেন। এই চাবি নষ্ট হয় না।</p>
           </div>
           <div className="rounded-2xl bg-gold-400/25 px-4 py-2 text-center">
             <div className="text-2xl font-bold">{bn(ref.keys)}</div>
@@ -171,8 +215,6 @@ export default function QuizPanel({ sb }: { sb: SupabaseClient }) {
         </button>
       </section>
 
-      {statsBlock}
-
       {c.prizes && c.prizes.some((p) => p.prize.trim()) && (
         <section className="nk-card p-4 sm:p-5">
           <h2 className="mb-2 flex items-center gap-2 text-lg font-bold"><Gift className="h-5 w-5 text-emerald-700" aria-hidden /> পুরস্কার</h2>
@@ -182,14 +224,10 @@ export default function QuizPanel({ sb }: { sb: SupabaseClient }) {
         </section>
       )}
 
-      <details className="nk-card p-4 sm:p-5">
-        <summary className="cursor-pointer text-lg font-bold">প্রতিযোগিতার নিয়ম</summary>
-        <ul className="mt-3 grid gap-1.5 text-[15px] leading-relaxed">
-          {rules.map((l, i) => <li key={i} className="flex gap-2.5"><CheckCircle2 className="mt-1 h-4 w-4 shrink-0 text-emerald-600" aria-hidden />{l}</li>)}
-        </ul>
-      </details>
+      {/* 5. photo card + caption */}
+      {share}
 
-      {flow && <QuestionFlow sb={sb} flow={flow} secs={d.secs ?? 30} pledge={d.pledge?.trim() || DEFAULT_PLEDGE} skew={skew.current}
+      {flow && <QuestionFlow sb={sb} flow={flow} secs={d.secs ?? 30} pledge={d.pledge?.trim() || DEFAULT_PLEDGE} skew={skew}
         onClose={() => { setFlow(null); load(); }} />}
     </>
   );

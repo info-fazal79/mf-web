@@ -198,7 +198,8 @@ export async function drawCard(canvas: HTMLCanvasElement, d: CardData) {
   ctx.font = `700 38px ${FONT}`;
   ctx.fillText('স্ক্যান করুন অথবা ভিজিট করুন', 395, py + 75);
   ctx.fillStyle = L.text;
-  fitText(ctx, 'muhammadfazal.com/nusuk', 395, py + 135, 590, 46, 700, MONO);
+  // the member's own referral link (same as the QR code), so a new member is counted for them
+  fitText(ctx, `muhammadfazal.com/nusuk?ref=${d.code}`, 395, py + 135, 590, 40, 700, MONO);
   ctx.fillStyle = L.soft;
   ctx.font = `500 29px ${FONT}`;
   ctx.fillText('হাজারো নুসুক কোড, একদম ফ্রি', 395, py + 195);

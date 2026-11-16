@@ -22,6 +22,7 @@ export type CqMe = {
   my: {
     sl: number; code: string; ref_keys: number; ref_earned: number; refs: number; answered: number; correct: number;
     copies: number; gift_keys: number; tickets?: number; tickets_today?: number;
+    today_slot?: number; today_ref?: number; answered_today?: number;
   };
 };
 export type CqOpen = {
