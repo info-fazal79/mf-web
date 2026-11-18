@@ -65,7 +65,8 @@ export function initLiveWinner() {
   }
 
   function renderList(raw: unknown[]) {
-    const list = parseWinners({ winners: raw });
+    // only the Umrah winners (Zamzam winners are no longer shown)
+    const list = parseWinners({ winners: raw }).filter((w) => w.prize === 'umrah');
     const total = bn(list.length);
     if ($('lw-total').textContent !== total) $('lw-total').textContent = total;
     setHtml($('lw-list'), list.slice(0, 5).map((w, i) => `
