@@ -131,3 +131,34 @@ body.ls-squeeze .tv-pl, body.ls-squeeze .tv-pb { opacity: 1; transform: none; }
 @keyframes tvn-bg-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes tvn-bg-out { to { opacity: 0; visibility: hidden; } }
 @keyframes tvn-card-in { from { opacity: 0; transform: scale(0.8) translateY(40px); } to { opacity: 1; transform: none; } }
+
+/* ---------- a viewer's comment (Nusuk Manager → Live screen → Live comments), over every view ---------- */
+.tvc { position: absolute; z-index: 70; width: 940px; pointer-events: none; }
+.tvc-pos-bl { left: 40px; bottom: 120px; }
+.tvc-pos-br { right: 40px; bottom: 120px; }
+.tvc-pos-tr { right: 40px; top: 150px; }
+body.ls-has-bk .tvc-pos-bl, body.ls-has-bk .tvc-pos-br { bottom: 190px; }
+.tvc-card { position: relative; display: flex; align-items: flex-start; gap: 24px; padding: 30px 36px 34px 30px; border-radius: 30px; overflow: hidden;
+  background: linear-gradient(150deg, #ffffff, #f3f6fb); color: #0f1b2d; border: 3px solid #fff;
+  box-shadow: 0 30px 70px -24px rgba(0, 0, 0, 0.6), 0 0 0 6px color-mix(in srgb, var(--accent, #f2c94c) 55%, transparent); }
+.tvc-quote { position: absolute; right: 26px; top: -30px; font: 900 220px/1 Georgia, serif; color: #1877f2; opacity: 0.09; }
+.tvc-av { flex-shrink: 0; display: grid; place-items: center; width: 96px; height: 96px; border-radius: 9999px; color: #fff; font-size: 46px; font-weight: 800;
+  box-shadow: 0 0 0 5px #fff, 0 0 0 8px #1877f2; }
+.tvc-body { position: relative; min-width: 0; flex: 1; }
+.tvc-top { display: flex; align-items: center; gap: 16px; }
+.tvc-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 34px; font-weight: 800; color: #0b2a55; }
+.tvc-src { margin-left: auto; flex-shrink: 0; display: inline-flex; align-items: center; gap: 8px; padding: 6px 16px; border-radius: 9999px; background: #1877f2; color: #fff; font-size: 20px; font-weight: 800; }
+.tvc-text { margin-top: 10px; font-size: 38px; line-height: 1.45; font-weight: 600; word-break: break-word;
+  display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+.tvc-bar { position: absolute; left: 0; bottom: 0; height: 7px; width: 100%; background: linear-gradient(90deg, #1877f2, #42b0ff); transform-origin: 0 50%; animation: tvc-bar linear both; }
+@keyframes tvc-bar { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+.tvc-in .tvc-card { animation: tvc-in 0.75s cubic-bezier(0.2, 1.25, 0.4, 1) both; }
+.tvc-pos-br.tvc-in .tvc-card, .tvc-pos-tr.tvc-in .tvc-card { animation-name: tvc-in-r; }
+.tvc-in .tvc-av { animation: tvc-pop 0.6s cubic-bezier(0.2, 1.5, 0.4, 1) 0.25s both; }
+.tvc-in .tvc-text { animation: tvc-up 0.6s ease 0.35s both; }
+.tvc-out { animation: tvc-out 0.5s ease both; }
+@keyframes tvc-in { from { opacity: 0; transform: translateX(-120px) scale(0.92); } to { opacity: 1; transform: none; } }
+@keyframes tvc-in-r { from { opacity: 0; transform: translateX(120px) scale(0.92); } to { opacity: 1; transform: none; } }
+@keyframes tvc-pop { from { transform: scale(0.3); } to { transform: none; } }
+@keyframes tvc-up { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes tvc-out { to { opacity: 0; transform: translateY(30px); visibility: hidden; } }

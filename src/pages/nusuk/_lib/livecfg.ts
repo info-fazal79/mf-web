@@ -41,7 +41,47 @@ export type LiveCfg = {
   music: Music;
   /** The "join" scene: QR code to the site + your links */
   join: Join;
+  /** Live comments picked in Nusuk Manager and shown as a card over every view */
+  cmt: Cmt;
 };
+
+// ---------------------------------------------------------------- live comments
+/** the comment on screen; at = when Show was pressed (ms) */
+export type CmtShow = { id: string; name: string; text: string; at: number };
+export type CmtPos = 'bl' | 'br' | 'tr';
+export const CMT_POS: { key: CmtPos; name: string }[] = [
+  { key: 'bl', name: 'Bottom left' },
+  { key: 'br', name: 'Bottom right' },
+  { key: 'tr', name: 'Top right' },
+];
+/**
+ * secs = how long a comment stays (0 = until Hide) · pos = where the card sits
+ * filter = hide codes, links, numbers and very short comments · bangla = only comments with Bangla letters
+ * min_words = shorter comments are hidden · block = hide comments containing any of these words
+ * poll = fetch new comments every N seconds · video = a Facebook video link/ID to read ('' = the Page's current live)
+ */
+export type Cmt = { show: CmtShow | null; secs: number; pos: CmtPos; filter: boolean; bangla: boolean; min_words: number; block: string[]; poll: number; video: string };
+export const defaultCmt = (): Cmt => ({ show: null, secs: 15, pos: 'bl', filter: true, bangla: false, min_words: 1, block: [], poll: 5, video: '' });
+function parseCmt(raw: unknown): Cmt {
+  const d = defaultCmt();
+  if (!raw || typeof raw !== 'object') return d;
+  const m = raw as Record<string, unknown>;
+  const sh = m.show && typeof m.show === 'object' ? (m.show as Record<string, unknown>) : null;
+  const num = (v: unknown, lo: number, hi: number, f: number) => (v === undefined || v === null || v === '' || isNaN(Number(v)) ? f : Math.min(hi, Math.max(lo, Math.round(Number(v)))));
+  return {
+    show: sh && typeof sh.text === 'string' && sh.text.trim()
+      ? { id: typeof sh.id === 'string' ? sh.id.slice(0, 80) : '', name: typeof sh.name === 'string' ? sh.name.slice(0, 80) : '', text: sh.text.slice(0, 400), at: Number(sh.at) || 0 }
+      : null,
+    secs: num(m.secs, 0, 600, d.secs),
+    pos: m.pos === 'br' || m.pos === 'tr' ? m.pos : 'bl',
+    filter: m.filter !== false,
+    bangla: m.bangla === true,
+    min_words: num(m.min_words, 0, 10, d.min_words),
+    block: Array.isArray(m.block) ? (m.block as unknown[]).filter((x): x is string => typeof x === 'string' && !!x.trim()).map((x) => x.trim().slice(0, 40)).slice(0, 100) : [],
+    poll: num(m.poll, 2, 60, d.poll),
+    video: typeof m.video === 'string' ? m.video.slice(0, 300) : '',
+  };
+}
 
 // ---------------------------------------------------------------- TV program
 export type SceneKey = 'home' | 'stats' | 'winners' | 'lastwin' | 'join' | 'video';
@@ -172,6 +212,7 @@ export const defaultLiveCfg = (): LiveCfg => ({
   vplay: { mode: 'off', show: null, at: 0, music: false, music_vol: 30 },
   music: { on: false, volume: 40, tracks: [] },
   join: { ...DEFAULT_JOIN, links: DEFAULT_JOIN.links.map((l) => ({ ...l })) },
+  cmt: defaultCmt(),
 });
 
 const isTheme = (t: unknown): t is Theme => t === 'green' || t === 'mint' || t === 'cream' || t === 'navy';
@@ -204,6 +245,7 @@ export function parseLiveCfg(raw: unknown): LiveCfg {
     vplay: parseVPlay(r.vplay),
     music: parseMusic(r.music),
     join: parseJoin(r.join),
+    cmt: parseCmt(r.cmt),
   };
 }
 

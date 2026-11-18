@@ -7,6 +7,7 @@ import { ArrowDown, ArrowUp, ChevronDown, Copy, ExternalLink, EyeOff, Music2, Pl
 import { supabase as sb } from '@/lib/supabase';
 import { uploadMedia } from '@/admin/media';
 import { liveSender } from '../_lib/livebus';
+import LiveComments from './LiveComments';
 import {
   DEFAULT_ANNOUNCE, DEFAULT_BREAKING_LABEL, LSHAPE_MODES, SAMPLE_QUESTIONS, SCENES, THEMES, defaultLiveCfg, lshapeClashes, parseLiveCfg, themeAt, uid, videoClashes, ytId,
   type Announce, type BkItem, type BkSpeed, type Breaking, type Fx, type LiveCfg, type Notice, type Promo, type Scene, type SceneKey, type Slot, type Theme, type Track, type Video,
@@ -204,6 +205,7 @@ export default function LiveScreenPage({ toast }: { toast: ToastFn }) {
     <div className="grid gap-4 pb-16">
       {/* ============================================================ studio */}
       <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,27rem)]">
+        <div className="grid min-w-0 gap-4">
         <section className="nk-card grid gap-3 p-3 sm:p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="flex items-center gap-2 text-base font-bold text-emerald-950"><Radio className="h-5 w-5 text-red-600" aria-hidden /> Live screen · preview</h2>
@@ -216,8 +218,11 @@ export default function LiveScreenPage({ toast }: { toast: ToastFn }) {
           <div className="relative w-full overflow-hidden rounded-xl border border-[#e7e1cf] bg-black" style={{ aspectRatio: '16 / 9' }}>
             <iframe key={previewKey} src={`${url}?preview=1`} title="Live screen preview" className="absolute inset-0 h-full w-full border-0" />
           </div>
-          <p className="text-xs text-emerald-900/60">The preview is silent (music and videos play only on the real stream). Changes show here within 5 seconds.</p>
+          <p className="text-xs text-emerald-900/60">The preview is silent (music and videos play only on the real stream). Changes show here at once.</p>
         </section>
+        {/* Facebook live comments: pick one, it shows on screen over every view */}
+        <LiveComments cmt={c.cmt} setCmt={(p, msg) => now_({ cmt: { ...c.cmt, ...p } }, msg)} toast={toast} />
+        </div>
 
         {/* ---------- controller ---------- */}
         <section className="nk-card grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4 overflow-hidden p-4">

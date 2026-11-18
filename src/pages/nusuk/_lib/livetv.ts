@@ -388,6 +388,50 @@ export function initLiveTv(opts: { muted: boolean; data: () => TvData }) {
     if (!was) { box.classList.remove('tvn-out', 'tvn-in'); void box.offsetWidth; box.classList.add('tvn-in'); }
   }
 
+  // ------------------------------------------------------------ a viewer's comment, picked in Nusuk Manager (over every view)
+  // The time it stays is counted from when this screen first got it, so a wrong clock on the OBS PC does not matter;
+  // a comment pressed long ago is not brought back when the page is opened later.
+  let cmKey = '';
+  let cmUntil = 0;
+  function comment() {
+    const box = document.getElementById('ls-cm');
+    if (!box || !cfg) return;
+    const m = cfg.cmt;
+    const s = m.show;
+    const key = s ? `${s.id}|${s.at}|${s.name}|${s.text}` : '';
+    if (key !== cmKey) {
+      cmKey = key;
+      const fresh = s && (m.secs === 0 || Math.abs(Date.now() - s.at) < m.secs * 1000 + 60_000);
+      if (s && fresh) {
+        cmUntil = m.secs ? Date.now() + m.secs * 1000 : Infinity;
+        const hue = [...(s.name || '?')].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) % 360, 0);
+        box.innerHTML = `<div class="tvc-card">
+          <div class="tvc-quote">“</div>
+          <div class="tvc-av" style="background:linear-gradient(135deg,hsl(${hue} 65% 48%),hsl(${(hue + 40) % 360} 70% 38%))">${esc((s.name.trim()[0] ?? '?').toUpperCase())}</div>
+          <div class="tvc-body">
+            <div class="tvc-top"><span class="tvc-name" dir="auto">${esc(s.name.trim() || 'দর্শক')}</span><span class="tvc-src">${lucide('messageCircle', 'h-5 w-5', 2.4)} লাইভ মন্তব্য</span></div>
+            <p class="tvc-text" dir="auto">${esc(s.text)}</p>
+          </div>
+          ${m.secs ? `<i class="tvc-bar" style="animation-duration:${m.secs}s"></i>` : ''}
+        </div>`;
+        box.removeAttribute('data-hidden');
+        box.classList.remove('tvc-out', 'tvc-in');
+        void box.offsetWidth;
+        box.classList.add('tvc-in');
+      } else if (!box.hasAttribute('data-hidden')) cmOut(box);
+    }
+    for (const p of ['bl', 'br', 'tr']) box.classList.toggle(`tvc-pos-${p}`, p === m.pos);
+    if (cmUntil && Date.now() > cmUntil) cmOut(box);
+  }
+  function cmOut(box: HTMLElement) {
+    cmUntil = 0;
+    box.classList.remove('tvc-in');
+    box.classList.add('tvc-out');
+    const k = cmKey;
+    setTimeout(() => { if (cmKey === k && !cmUntil) box.setAttribute('data-hidden', ''); }, 600);
+  }
+  setInterval(comment, 500);
+
   const scene = (k: SceneKey) => cfg?.tv.scenes.find((s) => s.key === k);
 
   return {
@@ -399,6 +443,7 @@ export function initLiveTv(opts: { muted: boolean; data: () => TvData }) {
       videoTick();
       music(c);
       notice(c);
+      comment();
     },
   };
 }
