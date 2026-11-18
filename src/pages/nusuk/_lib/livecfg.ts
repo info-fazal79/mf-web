@@ -29,6 +29,8 @@ export type LiveCfg = {
   tv: Tv;
   /** Promo ads shown in the "L" around the shrunk screen */
   promos: Promo[];
+  /** When the "L" comes: off, by hand (show = promo id), one after another, or at set times */
+  lshape: LShape;
   /** Short notices: a card in the middle over the blurred screen; notice_show = id on screen */
   notices: Notice[];
   notice_show: string | null;
@@ -41,20 +43,43 @@ export type LiveCfg = {
 };
 
 // ---------------------------------------------------------------- TV program
-export type SceneKey = 'home' | 'stats' | 'winners' | 'lastwin' | 'join' | 'promo' | 'video';
+export type SceneKey = 'home' | 'stats' | 'winners' | 'lastwin' | 'join' | 'video';
 export const SCENES: { key: SceneKey; name: string; hint: string; secs: number }[] = [
   { key: 'home', name: 'Main screen', hint: 'The normal dashboard, or the winner view when Live view is on Winner', secs: 60 },
   { key: 'stats', name: 'Live numbers + active users chart', hint: 'Big numbers and the active-users graph', secs: 25 },
   { key: 'winners', name: 'Bangladeshi Umrah winners', hint: 'One winner at a time, big', secs: 30 },
   { key: 'lastwin', name: 'Latest Nusuk winner', hint: "Today's / yesterday's winner, big", secs: 20 },
   { key: 'join', name: 'Join: QR code + links', hint: 'Scan to open the site, with your links', secs: 20 },
-  { key: 'promo', name: 'Promo ads (L-shape)', hint: 'The screen shrinks; promos fill the left and bottom', secs: 30 },
   { key: 'video', name: 'Videos', hint: 'YouTube videos from the list, one after another', secs: 0 },
 ];
 export type Scene = { key: SceneKey; on: boolean; secs: number };
 export type Fx = 'fade' | 'slide' | 'zoom';
 export type Tv = { auto: boolean; pin: SceneKey; fx: Fx; scenes: Scene[] };
-export type Promo = { id: string; on: boolean; tag: string; title: string; text: string; points: string[]; image: string };
+/** secs = how long this promo stays on screen; times = "HH:MM" (Bangladesh) when it opens in the schedule */
+export type Promo = { id: string; on: boolean; tag: string; title: string; text: string; points: string[]; image: string; secs: number; times: string[] };
+export type LShapeMode = 'off' | 'manual' | 'rotate' | 'schedule';
+/** gap = seconds of full screen between two promos when they take turns */
+export type LShape = { mode: LShapeMode; show: string | null; gap: number };
+export const LSHAPE_MODES: { key: LShapeMode; name: string; hint: string }[] = [
+  { key: 'off', name: 'Off', hint: 'Full screen, no L-shape' },
+  { key: 'manual', name: 'By hand', hint: 'Press Show on a promo; Hide brings the full screen back' },
+  { key: 'rotate', name: 'Take turns', hint: 'Each ticked promo for its seconds, then full screen for the gap, then the next' },
+  { key: 'schedule', name: 'At set times', hint: 'Each promo opens at its own times (Bangladesh time) for its seconds' },
+];
+/** Two schedule times clash when one promo would open while another is still on screen */
+export function lshapeClashes(promos: Promo[]) {
+  const toS = (t: string) => Number(t.slice(0, 2)) * 3600 + Number(t.slice(3, 5)) * 60;
+  const slots = promos.filter((p) => p.on).flatMap((p, i) => p.times.filter((t) => /^\d\d:\d\d$/.test(t)).map((t) => ({ id: p.id, n: i + 1, t, a: toS(t), b: toS(t) + Math.max(5, p.secs) })));
+  const out: { id: string; t: string; msg: string }[] = [];
+  const hhmmss = (x: number) => [Math.floor(x / 3600) % 24, Math.floor((x % 3600) / 60), x % 60].map((v) => String(v).padStart(2, '0')).join(':');
+  slots.sort((x, y) => x.a - y.a);
+  let last: (typeof slots)[number] | null = null; // the slot that ends latest so far
+  for (const y of slots) {
+    if (last && y.a < last.b) out.push({ id: y.id, t: y.t, msg: `Promo ${y.n} at ${y.t} clashes with promo ${last.n} at ${last.t} (on screen until ${hhmmss(last.b)})` });
+    if (!last || y.b > last.b) last = y;
+  }
+  return out;
+}
 export type Notice = { id: string; tag: string; title: string; text: string };
 export type Video = { id: string; on: boolean; title: string; url: string };
 export type Track = { id: string; on: boolean; title: string; url: string };
@@ -120,6 +145,7 @@ export const defaultLiveCfg = (): LiveCfg => ({
   announce_show: null,
   tv: defaultTv(),
   promos: [],
+  lshape: { mode: 'off', show: null, gap: 60 },
   notices: [],
   notice_show: null,
   videos: [],
@@ -151,6 +177,7 @@ export function parseLiveCfg(raw: unknown): LiveCfg {
     ...parseAnnounces(r),
     tv: parseTv(r.tv),
     promos: parsePromos(r.promos),
+    lshape: parseLShape(r.lshape),
     ...parseNotices(r),
     videos: list(r.videos, 30).map((v) => ({ id: str(v.id, 20) || uid(), on: v.on !== false, title: str(v.title, 120), url: str(v.url, 300) })),
     music: parseMusic(r.music),
@@ -197,7 +224,14 @@ function parsePromos(raw: unknown): Promo[] {
   return list(raw, 20).map((p) => ({
     id: str(p.id, 20) || uid(), on: p.on !== false, tag: str(p.tag, 60), title: str(p.title, 140), text: str(p.text, 500),
     points: lines(p.points, 6), image: str(p.image, 500),
+    secs: Math.min(3600, Math.max(5, Math.round(Number(p.secs) || 30))),
+    times: (Array.isArray(p.times) ? (p.times as unknown[]) : []).filter((t): t is string => typeof t === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(t)).slice(0, 24),
   }));
+}
+function parseLShape(raw: unknown): LShape {
+  const l = (raw && typeof raw === 'object' ? raw : {}) as Obj;
+  const mode = l.mode === 'manual' || l.mode === 'rotate' || l.mode === 'schedule' ? l.mode : 'off';
+  return { mode, show: typeof l.show === 'string' ? l.show : null, gap: Math.min(86400, Math.max(0, Math.round(Number(l.gap ?? 60)))) };
 }
 function parseNotices(r: Obj): { notices: Notice[]; notice_show: string | null } {
   const notices = list(r.notices, 20).map((n) => ({ id: str(n.id, 20) || uid(), tag: str(n.tag, 60), title: str(n.title, 140), text: str(n.text, 500) }));

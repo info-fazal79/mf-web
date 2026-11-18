@@ -2,7 +2,8 @@
  * /nusuk/live — the TV program (Nusuk Manager → Live screen → Controller):
  *   • scenes that follow one another by themselves (auto) or the one picked (pin):
  *     main dashboard, live numbers + chart, Bangladeshi Umrah winners, latest Nusuk winner,
- *     join (QR + links), promo ads in an "L" around the shrunk screen, YouTube videos
+ *     join (QR + links), YouTube videos
+ *   • promo ads in an "L" around the shrunk screen, over any scene: by hand, taking turns or at set times
  *   • short notices over the blurred screen
  *   • background music (a playlist that loops), paused while a video plays
  * In the Winner view the program runs too (its main screen is the winner view); only a Reward Club raffle draw stops it.
@@ -67,14 +68,14 @@ export function initLiveTv(opts: { muted: boolean; data: () => TvData }) {
   const today = () => parseToday({ today_winner: raw._today });
   const promos = () => (cfg?.promos ?? []).filter((p) => p.on && (p.title.trim() || p.text.trim()));
   const vids = () => (cfg?.videos ?? []).filter((v) => v.on && ytId(v.url));
-  const ok = (k: SceneKey) => (k === 'video' ? vids().length > 0 : k === 'promo' ? promos().length > 0 : k === 'winners' ? umrah().length > 0 : k === 'lastwin' ? !!today() : true);
+  const ok = (k: SceneKey) => (k === 'video' ? vids().length > 0 : k === 'winners' ? umrah().length > 0 : k === 'lastwin' ? !!today() : true);
   const scenes = () => { const s = (cfg?.tv.scenes ?? []).filter((x) => x.on && ok(x.key)); return s.length ? s : [{ key: 'home' as SceneKey, on: true, secs: 60 }]; };
 
   // ------------------------------------------------------------ program
   function schedule() {
     if (!cfg) return;
     if (mode === 'raffle') { clearTimeout(timer); plan = 'off'; show('home'); return; } // a raffle draw has the whole screen
-    const key = JSON.stringify([cfg.tv, promos().length, vids().length, umrah().length, !!today()]);
+    const key = JSON.stringify([cfg.tv, vids().length, umrah().length, !!today()]);
     if (key === plan) return;
     plan = key;
     clearTimeout(timer);
@@ -108,10 +109,7 @@ export function initLiveTv(opts: { muted: boolean; data: () => TvData }) {
     stopVideo();
     const host = $('ls-scene');
     host.querySelectorAll('.tv-scene').forEach((el) => { el.classList.add('tv-out'); setTimeout(() => el.remove(), 750); });
-    // promo: the screen shrinks to the top right, the ads fill the "L"
-    document.body.classList.toggle('ls-squeeze', k === 'promo');
-    if (k === 'promo') startPromos(); else stopPromos();
-    if (k === 'home' || k === 'promo') return;
+    if (k === 'home') return;
     const el = document.createElement('div');
     el.className = `tv-scene tv-in-${cfg?.tv.fx ?? 'fade'}`;
     host.append(el);
@@ -186,18 +184,40 @@ export function initLiveTv(opts: { muted: boolean; data: () => TvData }) {
       </div>`;
   }
 
-  // ------------------------------------------------------------ promo "L"
-  let promoI = 0;
-  function startPromos() {
+  // ------------------------------------------------------------ promo "L" (over any scene)
+  // the screen (and whatever scene is on it) shrinks to the top right; the ad fills the left and the bottom
+  let lsShown = '';
+  const dhakaSec = () => { const d = new Date(Date.now() + 6 * 3600e3); return d.getUTCHours() * 3600 + d.getUTCMinutes() * 60 + d.getUTCSeconds(); };
+  function lshapeWanted(): Promo | null {
+    if (!cfg || mode === 'raffle') return null;
+    const L = cfg.lshape;
     const list = promos();
-    if (!list.length) return;
-    promoI = 0;
-    const one = () => { promo(list[promoI % list.length]); promoI++; };
-    one();
-    const per = Math.max(8, Math.floor((scene('promo')?.secs || 30) / list.length));
-    if (list.length > 1) inner = setInterval(one, per * 1000);
+    if (!list.length || L.mode === 'off') return null;
+    if (L.mode === 'manual') return list.find((p) => p.id === L.show) ?? null;
+    if (L.mode === 'rotate') {
+      // from the clock, so every screen (OBS, preview) shows the same promo at the same moment
+      const total = list.reduce((a, p) => a + p.secs + L.gap, 0);
+      let t = Math.floor(Date.now() / 1000) % Math.max(1, total);
+      for (const p of list) { if (t < p.secs) return p; t -= p.secs + L.gap; if (t < 0) return null; }
+      return null;
+    }
+    const now = dhakaSec();
+    for (const p of list) for (const hm of p.times) {
+      const a = Number(hm.slice(0, 2)) * 3600 + Number(hm.slice(3, 5)) * 60;
+      if (now >= a && now < a + p.secs) return p;
+    }
+    return null;
   }
-  function stopPromos() { $('tv-pl').innerHTML = ''; $('tv-pb').innerHTML = ''; }
+  function lshape() {
+    const p = lshapeWanted();
+    const key = p ? JSON.stringify(p) : '';
+    if (key === lsShown) return;
+    lsShown = key;
+    document.body.classList.toggle('ls-squeeze', !!p);
+    if (p) promo(p);
+    else setTimeout(() => { if (!lsShown) { $('tv-pl').innerHTML = ''; $('tv-pb').innerHTML = ''; } }, 900);
+  }
+  setInterval(lshape, 1000);
   function promo(p: Promo) {
     $('tv-pl').innerHTML = `<div class="tv-pl-in tv-pop">
         ${p.tag.trim() ? `<span class="tv-pl-tag">${esc(p.tag)}</span>` : ''}
@@ -323,6 +343,7 @@ export function initLiveTv(opts: { muted: boolean; data: () => TvData }) {
       cfg = c;
       raw = (r && typeof r === 'object' ? r : {}) as Raw;
       schedule();
+      lshape();
       music(c);
       notice(c);
     },

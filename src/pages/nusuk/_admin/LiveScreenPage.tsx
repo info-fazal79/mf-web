@@ -7,7 +7,7 @@ import { ArrowDown, ArrowUp, ChevronDown, Copy, ExternalLink, EyeOff, Music2, Pl
 import { supabase as sb } from '@/lib/supabase';
 import { uploadMedia } from '@/admin/media';
 import {
-  DEFAULT_ANNOUNCE, DEFAULT_BREAKING_LABEL, SAMPLE_QUESTIONS, SCENES, THEMES, defaultLiveCfg, parseLiveCfg, themeAt, uid, ytId,
+  DEFAULT_ANNOUNCE, DEFAULT_BREAKING_LABEL, LSHAPE_MODES, SAMPLE_QUESTIONS, SCENES, THEMES, defaultLiveCfg, lshapeClashes, parseLiveCfg, themeAt, uid, ytId,
   type Announce, type BkItem, type BkSpeed, type Breaking, type Fx, type LiveCfg, type Notice, type Promo, type Scene, type SceneKey, type Slot, type Theme, type Track, type Video,
 } from '../_lib/livecfg';
 
@@ -28,6 +28,17 @@ const SWATCH: Record<Theme, [string, string]> = {
 };
 const themeName = (t: Theme) => THEMES.find((x) => x.key === t)?.name ?? t;
 const sceneInfo = (k: SceneKey) => SCENES.find((x) => x.key === k)!;
+/** Where each scene's settings live: a folded section below, or another page of Nusuk Manager */
+const SCENE_PLACE: Record<SceneKey, string> = { home: 'sec-main', stats: 'sec-main', winners: '#/winners', lastwin: '#/today', join: 'sec-join', video: 'sec-videos' };
+function jump(to: string) {
+  if (to.startsWith('#/')) { location.hash = to.slice(1); return; }
+  const el = document.getElementById(to) as HTMLDetailsElement | null;
+  if (!el) return;
+  el.open = true;
+  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  el.classList.add('ring-2', 'ring-gold-500');
+  setTimeout(() => el.classList.remove('ring-2', 'ring-gold-500'), 1600);
+}
 
 function ThemeCard({ t, on, onClick, small = false }: { t: Theme; on: boolean; onClick: () => void; small?: boolean }) {
   const [bg, dot] = SWATCH[t];
@@ -43,9 +54,9 @@ function ThemeCard({ t, on, onClick, small = false }: { t: Theme; on: boolean; o
 }
 
 /** A folded section (closed until opened) */
-function Sec({ title, badge, hint, children }: { title: ReactNode; badge?: ReactNode; hint?: string; children: ReactNode }) {
+function Sec({ id, title, badge, hint, children }: { id?: string; title: ReactNode; badge?: ReactNode; hint?: string; children: ReactNode }) {
   return (
-    <details className="nk-card group overflow-hidden p-0">
+    <details id={id} className="nk-card group scroll-mt-4 overflow-hidden p-0">
       <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-3.5 sm:px-5 [&::-webkit-details-marker]:hidden">
         <span className="text-base font-bold text-emerald-950">{title}</span>
         {badge}
@@ -107,6 +118,8 @@ export default function LiveScreenPage({ toast }: { toast: ToastFn }) {
   const current = useMemo(() => themeAt(c, now), [c, now]);
 
   async function save(next: LiveCfg = c, quiet = false) {
+    const clash = lshapeClashes(next.promos);
+    if (clash.length) return toast(`Promo times clash: ${clash[0].msg}. Change one of the times first.`, false);
     if (saving.current) await new Promise((r) => setTimeout(r, 300));
     saving.current = true;
     setBusy(true);
@@ -156,7 +169,9 @@ export default function LiveScreenPage({ toast }: { toast: ToastFn }) {
   const anOn = c.announce_show != null ? c.announces[c.announce_show] : null;
   const ntOn = c.notices.find((n) => n.id === c.notice_show) ?? null;
   const qOn = c.questions.show != null ? c.questions.items[c.questions.show] : null;
-  const ready = (k: SceneKey) => (k === 'promo' ? c.promos.some((p) => p.on && p.title.trim()) : k === 'video' ? c.videos.some((v) => v.on && ytId(v.url)) : true);
+  const ready = (k: SceneKey) => (k === 'video' ? c.videos.some((v) => v.on && ytId(v.url)) : true);
+  const clashes = lshapeClashes(c.promos);
+  const promoList = c.promos.filter((p) => p.on && (p.title.trim() || p.text.trim()));
   const onAirScene: SceneKey | null = draw?.mode === 'raffle' ? null : c.tv.auto ? null : c.tv.pin;
 
   if (!loaded) return <section className="nk-card p-5 text-sm text-emerald-900/60">Loading…</section>;
@@ -212,10 +227,10 @@ export default function LiveScreenPage({ toast }: { toast: ToastFn }) {
                 return (
                   <li key={s.key} className={`flex items-center gap-1.5 rounded-xl border px-2 py-1.5 ${air ? 'border-red-500 bg-red-50' : 'border-[#eee7d3]'} ${c.tv.auto && !s.on ? 'opacity-55' : ''}`}>
                     {c.tv.auto && <input type="checkbox" className="h-4 w-4 accent-emerald-700" checked={s.on} onChange={(e) => setScene(s.key, { on: e.target.checked })} aria-label={`Use ${info.name}`} />}
-                    <div className="min-w-0 flex-1" title={info.hint}>
-                      <div className="truncate text-sm font-semibold">{air && <span className="text-red-600">● </span>}{info.name}</div>
-                      {!ready(s.key) && <div className="text-[11px] text-gold-600">{s.key === 'promo' ? 'Add a promo below' : 'Add a video below'}</div>}
-                    </div>
+                    <button type="button" className="min-w-0 flex-1 text-left" title={`${info.hint} · click to open its settings`} onClick={() => jump(SCENE_PLACE[s.key])}>
+                      <div className="truncate text-sm font-semibold hover:underline">{air && <span className="text-red-600">● </span>}{info.name}</div>
+                      {!ready(s.key) && <div className="text-[11px] text-gold-600">Add a video below</div>}
+                    </button>
                     {c.tv.auto && (s.key !== 'video'
                       ? <label className="flex shrink-0 items-center gap-1 text-[11px] text-emerald-900/60" title="How long this scene stays on screen"><input type="number" min={5} max={3600} className="rounded-md border border-[#d9d2bd] bg-white px-1 py-0.5 text-right text-xs font-semibold text-emerald-950" style={{ width: 52 }} value={s.secs} onChange={(e) => setScene(s.key, { secs: Math.max(5, Math.round(+e.target.value) || 5) })} aria-label={`Seconds for ${info.name}`} />{s.key === 'winners' ? 's each' : 's'}</label>
                       : <span className="shrink-0 text-[11px] text-emerald-900/50">till end</span>)}
@@ -229,6 +244,42 @@ export default function LiveScreenPage({ toast }: { toast: ToastFn }) {
                 );
               })}
             </ol>
+          </div>
+
+          <div className={`grid gap-2 rounded-xl border p-2.5 ${c.lshape.mode !== 'off' ? 'border-gold-500 bg-gold-400/10' : 'border-[#e7e1cf]'}`}>
+            <div className="flex items-center justify-between gap-2">
+              <button type="button" className="text-xs font-bold tracking-wide text-emerald-900/60 uppercase hover:underline" onClick={() => jump('sec-promos')}>L-shape ads ↓</button>
+              <span className="text-[11px] text-emerald-900/55">{promoList.length} promo{promoList.length === 1 ? '' : 's'} ready</span>
+            </div>
+            <div className="grid grid-cols-4 gap-1 rounded-xl border border-[#e7e1cf] bg-white p-1">
+              {LSHAPE_MODES.map((m) => (
+                <button key={m.key} type="button" title={m.hint} onClick={() => {
+                  if (m.key === 'schedule' && clashes.length) return toast(`Fix the clashing promo times first: ${clashes[0].msg}`, false);
+                  now_({ lshape: { ...c.lshape, mode: m.key, show: m.key === 'manual' ? c.lshape.show : null } }, `L-shape: ${m.name}`);
+                }} className={`rounded-lg px-1 py-1.5 text-xs font-bold ${c.lshape.mode === m.key ? (m.key === 'off' ? 'bg-emerald-900 text-white' : 'bg-gold-500 text-emerald-950') : 'text-emerald-900 hover:bg-emerald-50'}`}>{m.name}</button>
+              ))}
+            </div>
+            <p className="text-[11px] text-emerald-900/60">{LSHAPE_MODES.find((m) => m.key === c.lshape.mode)?.hint}. Works over every scene; the screen shrinks to the top right while an ad is on.</p>
+            {c.lshape.mode === 'manual' && (promoList.length ? (
+              <ul className="grid gap-1">
+                {promoList.map((p) => {
+                  const on = c.lshape.show === p.id;
+                  return (
+                    <li key={p.id} className={`flex items-center gap-2 rounded-lg px-2 py-1 ${on ? 'bg-red-50 ring-1 ring-red-400' : ''}`}>
+                      <span className="min-w-0 flex-1 truncate text-sm">{on && <span className="text-red-600">● </span>}{p.title || p.text}</span>
+                      <button type="button" onClick={() => now_({ lshape: { ...c.lshape, show: on ? null : p.id } }, on ? 'L-shape hidden' : 'L-shape on screen')} className={`nk-btn px-2.5 py-1 text-xs ${on ? 'bg-red-600 text-white' : 'nk-green'}`}>{on ? 'Hide' : 'Show'}</button>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : <p className="text-xs text-gold-600">Add a promo below first.</p>)}
+            {c.lshape.mode === 'rotate' && (
+              <label className="flex items-center gap-2 text-xs font-semibold">Full screen between two promos
+                <input type="number" min={0} max={86400} className="rounded-md border border-[#d9d2bd] bg-white px-1 py-0.5 text-right text-xs" style={{ width: 64 }} value={c.lshape.gap} onChange={(e) => set({ lshape: { ...c.lshape, gap: Math.max(0, Math.round(+e.target.value) || 0) } })} />s
+                <span className="font-normal text-emerald-900/55">(each promo stays for its own seconds)</span>
+              </label>
+            )}
+            {c.lshape.mode === 'schedule' && <p className="text-xs text-emerald-900/70">Times are set on each promo below (Bangladesh time). {clashes.length ? <b className="text-red-700">{clashes.length} clash{clashes.length === 1 ? '' : 'es'} to fix.</b> : 'No clashes.'}</p>}
           </div>
 
           <div className="grid gap-1.5 rounded-xl border border-[#e7e1cf] bg-cream/50 p-2.5 text-sm">
@@ -287,7 +338,7 @@ export default function LiveScreenPage({ toast }: { toast: ToastFn }) {
         )}
       </Sec>
 
-      <Sec title="🧩 Main dashboard: what to show" hint="panels of the main dashboard scene, headline">
+      <Sec id="sec-main" title="🧩 Main screen & live numbers" hint="panels of the main dashboard, headline">
         <div className="grid gap-2 sm:grid-cols-2">
           {PANELS.map((p) => <label key={p.key} className="flex items-center gap-2.5 text-sm"><input type="checkbox" className="h-4 w-4 accent-emerald-700" checked={!c.hide.includes(p.key)} onChange={() => togglePanel(p.key)} />{p.label}</label>)}
         </div>
@@ -393,8 +444,9 @@ export default function LiveScreenPage({ toast }: { toast: ToastFn }) {
         </div>
       </Sec>
 
-      <Sec title="📢 Promo ads (L-shape)" hint="the screen shrinks; the ad fills the left and bottom">
-        <p className="text-xs text-emerald-900/60">Shown by the <b>Promo ads</b> scene (Auto, or ▶ in the controller). Several promos take turns. Left: tag, heading, picture, text. Bottom: the points and the site link.</p>
+      <Sec id="sec-promos" title="📢 Promo ads (L-shape)" badge={c.lshape.mode !== 'off' ? <span className="rounded-full bg-gold-500 px-2 py-0.5 text-[11px] font-bold text-emerald-950">{LSHAPE_MODES.find((m) => m.key === c.lshape.mode)?.name}</span> : undefined} hint="over any scene: the screen shrinks, the ad fills the left and bottom">
+        <p className="text-xs text-emerald-900/60">When the L-shape comes is set in the controller (<b>By hand</b>, <b>Take turns</b> or <b>At set times</b>). Each promo: how long it stays, and its own opening times for "At set times". Left: tag, heading, picture, text. Bottom: the points and the site link.</p>
+        {clashes.length > 0 && <div className="rounded-xl border border-red-300 bg-red-50 p-3 text-sm text-red-800"><b>These times clash</b> (one promo would open while another is still on screen). Saving is blocked until they are fixed:<ul className="mt-1 list-disc pl-5">{clashes.map((x, k) => <li key={k}>{x.msg}</li>)}</ul></div>}
         {c.promos.map((p, i) => (
           <div key={p.id} className={`grid gap-2 rounded-xl border border-[#e7e1cf] p-3 ${p.on ? '' : 'opacity-60'}`}>
             <div className="flex flex-wrap items-center gap-2">
@@ -408,6 +460,31 @@ export default function LiveScreenPage({ toast }: { toast: ToastFn }) {
             </div>
             <textarea className={input} rows={2} maxLength={500} value={p.text} placeholder="Text" onChange={(e) => setPr(p.id, { text: e.target.value })} />
             <textarea className={input} rows={2} value={p.points.join('\n')} placeholder={'Points for the bottom bar, one per line\nযেমন: আকর্ষণীয় পুরস্কার'} onChange={(e) => setPr(p.id, { points: e.target.value.split('\n').slice(0, 6) })} />
+            <div className="grid gap-2 rounded-lg bg-cream/60 p-2.5 sm:grid-cols-[auto_1fr] sm:items-start">
+              <label className="flex items-center gap-2 text-sm font-semibold">Stays on screen
+                <input type="number" min={5} max={3600} className="rounded-md border border-[#d9d2bd] bg-white px-1.5 py-1 text-right text-sm" style={{ width: 70 }} value={p.secs} onChange={(e) => setPr(p.id, { secs: Math.max(5, Math.round(+e.target.value) || 5) })} />s</label>
+              <div className="flex flex-wrap items-center gap-1.5 text-sm">
+                <span className="font-semibold">Opens at</span>
+                {p.times.map((t, k) => {
+                  const bad = clashes.some((x) => x.id === p.id && x.t === t);
+                  return (
+                    <span key={k} className={`flex items-center gap-0.5 rounded-lg border px-1 ${bad ? 'border-red-500 bg-red-50' : 'border-[#d9d2bd] bg-white'}`}>
+                      <input type="time" className="bg-transparent py-0.5 text-sm" value={t} onChange={(e) => e.target.value && setPr(p.id, { times: p.times.map((x, j) => (j === k ? e.target.value : x)).sort() })} />
+                      <button type="button" className="px-1 text-red-700" onClick={() => setPr(p.id, { times: p.times.filter((_, j) => j !== k) })} aria-label="Remove time">✕</button>
+                    </span>
+                  );
+                })}
+                {p.times.length < 24 && <button type="button" className="nk-btn nk-ghost px-2 py-1 text-xs" onClick={() => {
+                  // next free hour that does not clash
+                  const used = new Set(p.times);
+                  let h = new Date(Date.now() + 6 * 3600e3).getUTCHours() + 1;
+                  let t = '';
+                  for (let k = 0; k < 24; k++) { const c2 = `${String((h + k) % 24).padStart(2, '0')}:00`; if (!used.has(c2)) { t = c2; break; } }
+                  if (t) setPr(p.id, { times: [...p.times, t].sort() });
+                }}>+ time</button>}
+                <span className="text-[11px] text-emerald-900/55">(for "At set times", Bangladesh time)</span>
+              </div>
+            </div>
             <div className="flex flex-wrap items-center gap-2">
               {p.image && <img src={p.image} alt="" className="h-12 w-12 rounded-lg border border-[#e7e1cf] object-contain" />}
               <label className="nk-btn nk-ghost flex cursor-pointer items-center gap-1.5 px-3 py-1.5 text-xs"><Upload className="h-3.5 w-3.5" />{upBusy === 'nusuk-promo' ? 'Uploading…' : p.image ? 'Change picture' : 'Picture'}
@@ -416,10 +493,10 @@ export default function LiveScreenPage({ toast }: { toast: ToastFn }) {
             </div>
           </div>
         ))}
-        {c.promos.length < 20 && <button type="button" className="nk-btn nk-ghost flex w-fit items-center gap-1.5 px-3 py-1.5 text-sm" onClick={() => set({ promos: [...c.promos, { id: uid(), on: true, tag: '🎁 আসছে', title: '', text: '', points: [], image: '' }] })}><Plus className="h-4 w-4" /> New promo</button>}
+        {c.promos.length < 20 && <button type="button" className="nk-btn nk-ghost flex w-fit items-center gap-1.5 px-3 py-1.5 text-sm" onClick={() => set({ promos: [...c.promos, { id: uid(), on: true, tag: '🎁 আসছে', title: '', text: '', points: [], image: '', secs: 30, times: [] }] })}><Plus className="h-4 w-4" /> New promo</button>}
       </Sec>
 
-      <Sec title="▶️ Videos" hint="YouTube tutorials, played one after another">
+      <Sec id="sec-videos" title="▶️ Videos" hint="YouTube tutorials, played one after another">
         <p className="text-xs text-emerald-900/60">Paste YouTube links (watch, youtu.be or shorts). The <b>Videos</b> scene plays the ticked ones in order; music pauses while a video plays. In Auto it moves on after the last video.</p>
         {c.videos.map((v, i) => {
           const id = ytId(v.url);
@@ -461,7 +538,7 @@ export default function LiveScreenPage({ toast }: { toast: ToastFn }) {
         </div>
       </Sec>
 
-      <Sec title="📱 Join scene: QR code + links" hint="the QR opens muhammadfazal.com/nusuk">
+      <Sec id="sec-join" title="📱 Join scene: QR code + links" hint="the QR opens muhammadfazal.com/nusuk">
         <label className={field}>Heading<input className={input} maxLength={100} value={c.join.title} onChange={(e) => set({ join: { ...c.join, title: e.target.value } })} /></label>
         <label className={field}>Text<textarea className={input} rows={2} maxLength={300} value={c.join.text} onChange={(e) => set({ join: { ...c.join, text: e.target.value } })} /></label>
         <div className="grid gap-1.5">

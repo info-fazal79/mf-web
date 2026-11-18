@@ -21,8 +21,8 @@ body.theme-cream #ls-stage { --on-accent: #ffffff; --on-hero-pill: #ffffff; } /*
 .tv-clock { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); text-align: center; }
 
 /* ---------- the screen shrinks to the top right for the promo "L" ---------- */
-#ls-screen { transform-origin: 100% 0; transition: transform 0.9s cubic-bezier(0.65, 0, 0.25, 1); will-change: transform; }
-body.ls-squeeze #ls-screen { transform: scale(0.7); }
+#ls-fit { transform-origin: 100% 0; transition: transform 0.9s cubic-bezier(0.65, 0, 0.25, 1); will-change: transform; }
+body.ls-squeeze #ls-fit { transform: scale(0.7); }
 .tv-pl, .tv-pb { position: absolute; z-index: 6; pointer-events: none; opacity: 0; transition: transform 0.9s cubic-bezier(0.65, 0, 0.25, 1), opacity 0.6s ease; }
 .tv-pl { left: 0; top: 0; bottom: 0; width: calc(30% - 20px); transform: translateX(-60px); }
 .tv-pb { right: 0; bottom: 0; width: 70%; height: calc(30% - 20px); transform: translateY(60px); }
