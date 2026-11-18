@@ -341,7 +341,8 @@ export default function LiveScreenPage({ toast }: { toast: ToastFn }) {
                   <li key={v.id} className="flex items-center gap-2 rounded-lg px-1 py-0.5">
                     <span className="min-w-0 flex-1 truncate text-sm" title={v.url}>{v.title || `Video ${c.videos.indexOf(v) + 1}`}</span>
                     {c.vplay.show === v.id && Date.now() - c.vplay.at < 10 * 60e3 && <span className="text-[11px] text-sky-700">started {new Date(c.vplay.at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</span>}
-                    <button type="button" onClick={() => now_({ vplay: { ...c.vplay, mode: 'manual', show: v.id, at: Date.now() } }, 'Video starts within 5 seconds')} className="nk-btn flex items-center gap-1 bg-sky-600 px-2.5 py-1 text-xs text-white"><Play className="h-3 w-3" fill="currentColor" /> Play</button>
+                    {c.vplay.show === v.id && Date.now() - c.vplay.at < 60 * 60e3 && <button type="button" onClick={() => now_({ vplay: { ...c.vplay, show: null } }, 'Video stopped')} className="nk-btn bg-red-600 px-2.5 py-1 text-xs text-white">■ Stop</button>}
+                    <button type="button" onClick={() => now_({ vplay: { ...c.vplay, mode: 'manual', show: v.id, at: Date.now() } }, 'Video starts now')} className="nk-btn flex items-center gap-1 bg-sky-600 px-2.5 py-1 text-xs text-white"><Play className="h-3 w-3" fill="currentColor" /> Play</button>
                   </li>
                 ))}
               </ul>

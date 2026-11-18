@@ -20,7 +20,10 @@ export type TvData = {
   ins: { active: Series; copies: Series } | null;
 };
 type Raw = { _winners?: unknown; _today?: unknown };
-type YTPlayer = { loadVideoById: (id: string) => void; playVideo: () => void; mute: () => void; destroy: () => void; unloadModule?: (m: string) => void };
+type YTPlayer = {
+  loadVideoById: (id: string) => void; playVideo: () => void; mute: () => void; unMute: () => void; isMuted: () => boolean; setVolume: (v: number) => void;
+  getCurrentTime: () => number; destroy: () => void; unloadModule?: (m: string) => void;
+};
 type YTNs = { Player: new (el: string | HTMLElement, o: unknown) => YTPlayer };
 
 const bn = (n: number) => Math.round(n).toLocaleString('bn-BD');
@@ -249,19 +252,24 @@ export function initLiveTv(opts: { muted: boolean; data: () => TvData }) {
   }
   // ------------------------------------------------------------ videos cut in (by hand or at their set times) and play to the end
   let cutting = false;
+  let cutKey = ''; // which press / set time started the video now playing
+  let cutAt = 0;
   let cutQueue: Video[] = [];
   let resumeAt = -1;
   const played = new Set<string>();
+  let bootKey: string | null = null;
   const dayKey = () => new Date(Date.now() + 6 * 3600e3).toISOString().slice(0, 10);
   function videoTick() {
     if (!cfg || mode === 'raffle' || cutting) return;
     const V = cfg.vplay;
     let v: Video | undefined;
     let key = '';
+    if (bootKey === null) bootKey = V.mode === 'manual' && V.show ? `m:${V.show}:${V.at}` : '';
     if (V.mode === 'manual' && V.show) {
       key = `m:${V.show}:${V.at}`;
-      // a press older than 10 minutes is not replayed when the page is opened later
-      if (Date.now() - V.at < 10 * 60e3) v = vids().find((x) => x.id === V.show);
+      // a press made while this page is open always plays (even if this PC's clock is wrong);
+      // one found when the page opens plays only if it is less than 10 minutes old
+      if (key !== bootKey || Date.now() - V.at < 10 * 60e3) v = vids().find((x) => x.id === V.show);
     } else if (V.mode === 'schedule') {
       const now = dhakaSec();
       for (const x of vids()) for (const t of x.times) {
@@ -272,6 +280,10 @@ export function initLiveTv(opts: { muted: boolean; data: () => TvData }) {
     if (!v || played.has(key)) return;
     played.add(key);
     cutting = true;
+    cutKey = key;
+    cutAt = Date.now();
+    lastT = -1;
+    stuckAt = Date.now();
     cutQueue = [v];
     clearTimeout(timer);
     resumeAt = idx;
@@ -287,7 +299,26 @@ export function initLiveTv(opts: { muted: boolean; data: () => TvData }) {
     else schedule();
   }
   function stopCut() { if (cutting) { cutting = false; cutQueue = []; } }
-  setInterval(videoTick, 1000);
+  /** Nusuk Manager no longer wants the video that is playing (Stop, Off, another video, times changed): end it now */
+  function checkCut() {
+    if (!cutting || !cfg) return;
+    const V = cfg.vplay;
+    const v = cutQueue[0];
+    const still = V.mode === 'manual' ? cutKey === `m:${V.show}:${V.at}` : V.mode === 'schedule' ? cutKey.startsWith('s:') && !!v && vids().some((x) => x.id === v.id) : false;
+    if (!still) endCut();
+  }
+  function endCut() { if (!cutting) return; stopVideo(); cutDone(); }
+  // a video that does not start or stops moving (blocked, deleted, no internet) never holds the screen
+  let lastT = -1;
+  let stuckAt = 0;
+  function videoWatch() {
+    if (!cutting) return;
+    let t = -1;
+    try { t = yt?.getCurrentTime() ?? -1; } catch { /* not ready */ }
+    if (t !== lastT) { lastT = t; stuckAt = Date.now(); return; }
+    if (Date.now() - stuckAt > (t <= 0 ? 30_000 : 25_000) && Date.now() - cutAt > 30_000) endCut();
+  }
+  setInterval(() => { videoTick(); videoWatch(); }, 1000);
 
   async function video(el: HTMLElement) {
     const list = cutQueue.length ? cutQueue : vids().slice(0, 1);
@@ -312,13 +343,21 @@ export function initLiveTv(opts: { muted: boolean; data: () => TvData }) {
         videoId: ytId(v.url), width: '100%', height: '100%',
         playerVars: { autoplay: 1, controls: 0, rel: 0, modestbranding: 1, playsinline: 1, iv_load_policy: 3, cc_load_policy: 0, disablekb: 1, fs: 0, mute: opts.muted ? 1 : 0 },
         events: {
-          onReady: (e: { target: YTPlayer }) => { if (opts.muted) e.target.mute(); noCaptions(e.target); e.target.playVideo(); },
-          onStateChange: (e: { data: number; target: YTPlayer }) => { if (e.data === 1) noCaptions(e.target); if (e.data === 0) { i++; if (i < list.length) play(); else done(); } },
+          onReady: (e: { target: YTPlayer }) => { sound(e.target); noCaptions(e.target); e.target.playVideo(); },
+          onStateChange: (e: { data: number; target: YTPlayer }) => { if (e.data === 1) { sound(e.target); noCaptions(e.target); } if (e.data === 0) { i++; if (i < list.length) play(); else done(); } },
           onError: () => { i++; if (i < list.length) play(); else done(); },
         },
       });
     };
     play();
+  }
+  /** the stream gets the video's sound at full volume (the preview in Nusuk Manager stays silent) */
+  function sound(p: YTPlayer) {
+    try {
+      if (opts.muted) { p.mute(); return; }
+      if (p.isMuted()) p.unMute();
+      p.setVolume(100);
+    } catch { /* old player */ }
   }
   /** no subtitles on the stream (YouTube may turn them on by itself) */
   function noCaptions(p: YTPlayer) {
@@ -432,12 +471,29 @@ export function initLiveTv(opts: { muted: boolean; data: () => TvData }) {
   }
   setInterval(comment, 500);
 
+  // ------------------------------------------------------------ a new version of the site: reload by itself (OBS never needs a manual refresh)
+  const myScripts = () => [...document.querySelectorAll<HTMLScriptElement>('script[src*="/_astro/"]')].map((s) => new URL(s.src, location.href).pathname).sort().join();
+  const mine = myScripts();
+  let newVersion = false;
+  async function checkVersion() {
+    if (!mine) return;
+    try {
+      const html = await (await fetch(location.href, { cache: 'no-store' })).text();
+      const theirs = [...html.matchAll(/src="(\/_astro\/[^"]+\.js)"/g)].map((m) => m[1]).sort().join();
+      if (theirs && theirs !== mine) newVersion = true;
+    } catch { /* offline: try later */ }
+  }
+  setInterval(checkVersion, 120_000);
+  // wait for a quiet moment: no video, no raffle draw
+  setInterval(() => { if (newVersion && !cutting && mode !== 'raffle') location.reload(); }, 5_000);
+
   const scene = (k: SceneKey) => cfg?.tv.scenes.find((s) => s.key === k);
 
   return {
     apply(c: LiveCfg, r: unknown) {
       cfg = c;
       raw = (r && typeof r === 'object' ? r : {}) as Raw;
+      checkCut();
       schedule();
       lshape();
       videoTick();
