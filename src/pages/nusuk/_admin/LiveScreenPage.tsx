@@ -74,7 +74,7 @@ function PollLive({ id, options }: { id: string; options: string[] }) {
   const [r, setR] = useState<{ counts: (number | null)[]; total: number } | null>(null);
   useEffect(() => {
     let off = false;
-    const load = () => sb!.rpc('nusuk_poll_results', { p_poll: id }).then(({ data }) => { if (!off && data) setR(data as { counts: (number | null)[]; total: number }); });
+    const load = () => sb!.rpc('nusuk_lv_results', { p_poll: id }).then(({ data }) => { if (!off && data) setR(data as { counts: (number | null)[]; total: number }); });
     load();
     const t = setInterval(load, 3000);
     return () => { off = true; clearInterval(t); };
@@ -519,8 +519,8 @@ export default function LiveScreenPage({ toast }: { toast: ToastFn }) {
                 <button type="button" onClick={() => { if (!on && !ok) return toast('Write the question and at least 2 options', false); now_({ poll_show: on ? null : pl.id }, on ? 'Voting closed' : 'Voting on screen'); }} className={`nk-btn px-3 py-1.5 text-xs ${on ? 'bg-red-600 text-white' : 'nk-green'}`}>{on ? '● On screen · Close voting' : 'Show and open voting'}</button>
                 <button type="button" className="nk-btn nk-ghost px-3 py-1.5 text-xs" onClick={async () => {
                   if (!confirm('Start this vote again from zero? All its votes are deleted.')) return;
-                  const { error } = await sb!.rpc('nusuk_admin_poll_reset', { p_poll: pl.id });
-                  toast(error ? (error.message.includes('nusuk_admin_poll_reset') ? 'Run update_53_live_polls.sql in Supabase first' : error.message) : 'Votes cleared', !error);
+                  const { error } = await sb!.rpc('nusuk_admin_lv_reset', { p_poll: pl.id });
+                  toast(error ? (error.message.includes('nusuk_admin_lv_reset') ? 'Run update_53_live_polls.sql in Supabase first' : error.message) : 'Votes cleared', !error);
                 }}>Clear votes</button>
                 <button type="button" className="nk-btn nk-ghost px-3 py-1.5 text-xs" onClick={() => set({ polls: [...c.polls, { ...pl, id: uid() }] })}><Copy className="inline h-3.5 w-3.5" /> Copy</button>
                 <button type="button" className="nk-btn nk-ghost px-3 py-1.5 text-xs text-red-700" onClick={() => set({ polls: c.polls.filter((x) => x.id !== pl.id), poll_show: on ? null : c.poll_show })}><Trash2 className="inline h-3.5 w-3.5" /> Delete</button>

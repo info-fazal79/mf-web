@@ -2,6 +2,8 @@
 -- Nusuk · update 53 · live voting (Nusuk Manager → Live screen → Voting)
 -- Run once in Supabase → SQL Editor (after update 52), BEFORE pushing.
 -- Safe to run again.
+-- (Names start with nusuk_lv_ so they never clash with the old vote feature's
+--  nusuk_polls / nusuk_poll_votes tables from update 21.)
 --
 -- The poll and its options live in nusuk_settings.content.livescreen.polls;
 -- livescreen.poll_show = the id of the poll on screen (voting is open only then).
@@ -12,7 +14,7 @@
 --     counts the votes again (it reads that row every few seconds)
 -- =====================================================================
 
-create table if not exists public.nusuk_poll_votes (
+create table if not exists public.nusuk_lv_votes (
   poll        text not null,
   device      uuid not null,
   choice      smallint not null,
@@ -20,24 +22,24 @@ create table if not exists public.nusuk_poll_votes (
   created_at  timestamptz not null default now(),
   primary key (poll, device)
 );
-create index if not exists nusuk_poll_votes_ip on public.nusuk_poll_votes (poll, ip);
+create index if not exists nusuk_lv_votes_ip on public.nusuk_lv_votes (poll, ip);
 
-create table if not exists public.nusuk_poll_counts (
+create table if not exists public.nusuk_lv_counts (
   poll        text primary key,
   counts      int[] not null default '{}',
   total       int not null default 0,
   updated_at  timestamptz not null default now()
 );
 
-alter table public.nusuk_poll_votes enable row level security;
-alter table public.nusuk_poll_counts enable row level security;
-drop policy if exists "nusuk_poll_votes: admin all" on public.nusuk_poll_votes;
-create policy "nusuk_poll_votes: admin all" on public.nusuk_poll_votes for all using (public.is_admin()) with check (public.is_admin());
-drop policy if exists "nusuk_poll_counts: admin all" on public.nusuk_poll_counts;
-create policy "nusuk_poll_counts: admin all" on public.nusuk_poll_counts for all using (public.is_admin()) with check (public.is_admin());
+alter table public.nusuk_lv_votes enable row level security;
+alter table public.nusuk_lv_counts enable row level security;
+drop policy if exists "nusuk_lv_votes: admin all" on public.nusuk_lv_votes;
+create policy "nusuk_lv_votes: admin all" on public.nusuk_lv_votes for all using (public.is_admin()) with check (public.is_admin());
+drop policy if exists "nusuk_lv_counts: admin all" on public.nusuk_lv_counts;
+create policy "nusuk_lv_counts: admin all" on public.nusuk_lv_counts for all using (public.is_admin()) with check (public.is_admin());
 
 /** The poll on the live screen right now (null when none) */
-create or replace function public.nusuk_poll_on()
+create or replace function public.nusuk_lv_on()
 returns jsonb
 language sql stable security definer set search_path = public as $$
   select p
@@ -46,41 +48,41 @@ language sql stable security definer set search_path = public as $$
   where s.id = 1 and p->>'id' = s.content->'livescreen'->>'poll_show'
   limit 1
 $$;
-revoke all on function public.nusuk_poll_on() from public, anon, authenticated;
+revoke all on function public.nusuk_lv_on() from public, anon, authenticated;
 
 /** Counts of one poll (one row read) */
-create or replace function public.nusuk_poll_results(p_poll text)
+create or replace function public.nusuk_lv_results(p_poll text)
 returns jsonb
 language sql stable security definer set search_path = public as $$
   select coalesce(
-    (select jsonb_build_object('poll', poll, 'counts', to_jsonb(counts), 'total', total) from public.nusuk_poll_counts where poll = p_poll),
+    (select jsonb_build_object('poll', poll, 'counts', to_jsonb(counts), 'total', total) from public.nusuk_lv_counts where poll = p_poll),
     jsonb_build_object('poll', p_poll, 'counts', '[]'::jsonb, 'total', 0))
 $$;
-grant execute on function public.nusuk_poll_results(text) to anon, authenticated;
+grant execute on function public.nusuk_lv_results(text) to anon, authenticated;
 
 /** The vote page: the poll on screen, its counts, and this phone's vote (if any) */
-create or replace function public.nusuk_poll_current(p_device text default null)
+create or replace function public.nusuk_lv_current(p_device text default null)
 returns jsonb
 language plpgsql stable security definer set search_path = public as $$
-declare p jsonb := public.nusuk_poll_on(); mine int;
+declare p jsonb := public.nusuk_lv_on(); mine int;
 begin
   if p is null then return jsonb_build_object('poll', null); end if;
   if p_device ~ '^[0-9a-fA-F-]{36}$' then
-    select choice into mine from public.nusuk_poll_votes where poll = p->>'id' and device = p_device::uuid;
+    select choice into mine from public.nusuk_lv_votes where poll = p->>'id' and device = p_device::uuid;
   end if;
   return jsonb_build_object(
     'poll', jsonb_build_object('id', p->>'id', 'q', p->>'q', 'options', p->'options'),
-    'results', public.nusuk_poll_results(p->>'id'),
+    'results', public.nusuk_lv_results(p->>'id'),
     'mine', mine);
 end $$;
-grant execute on function public.nusuk_poll_current(text) to anon, authenticated;
+grant execute on function public.nusuk_lv_current(text) to anon, authenticated;
 
 /** Cast a vote (only for the poll on screen; one per device) */
-create or replace function public.nusuk_poll_vote(p_poll text, p_choice int, p_device text)
+create or replace function public.nusuk_lv_vote(p_poll text, p_choice int, p_device text)
 returns jsonb
 language plpgsql volatile security definer set search_path = public as $$
 declare
-  p jsonb := public.nusuk_poll_on();
+  p jsonb := public.nusuk_lv_on();
   n int;
   v_ip text;
   done int;
@@ -94,32 +96,32 @@ begin
   exception when others then v_ip := null;
   end;
   v_ip := nullif(btrim(v_ip), '');
-  if v_ip is not null and (select count(*) from public.nusuk_poll_votes where poll = p_poll and ip = v_ip) >= 30 then
+  if v_ip is not null and (select count(*) from public.nusuk_lv_votes where poll = p_poll and ip = v_ip) >= 30 then
     return jsonb_build_object('ok', false, 'reason', 'busy');
   end if;
-  insert into public.nusuk_poll_votes (poll, device, choice, ip) values (p_poll, p_device::uuid, p_choice, v_ip)
+  insert into public.nusuk_lv_votes (poll, device, choice, ip) values (p_poll, p_device::uuid, p_choice, v_ip)
   on conflict (poll, device) do nothing;
   get diagnostics done = row_count;
   if done = 0 then
-    return jsonb_build_object('ok', false, 'reason', 'voted', 'results', public.nusuk_poll_results(p_poll),
-      'mine', (select choice from public.nusuk_poll_votes where poll = p_poll and device = p_device::uuid));
+    return jsonb_build_object('ok', false, 'reason', 'voted', 'results', public.nusuk_lv_results(p_poll),
+      'mine', (select choice from public.nusuk_lv_votes where poll = p_poll and device = p_device::uuid));
   end if;
-  insert into public.nusuk_poll_counts (poll, counts, total) values (p_poll, array_fill(0, array[n]), 0) on conflict (poll) do nothing;
-  update public.nusuk_poll_counts
+  insert into public.nusuk_lv_counts (poll, counts, total) values (p_poll, array_fill(0, array[n]), 0) on conflict (poll) do nothing;
+  update public.nusuk_lv_counts
      set counts[p_choice + 1] = coalesce(counts[p_choice + 1], 0) + 1, total = total + 1, updated_at = now()
    where poll = p_poll;
-  return jsonb_build_object('ok', true, 'results', public.nusuk_poll_results(p_poll), 'mine', p_choice);
+  return jsonb_build_object('ok', true, 'results', public.nusuk_lv_results(p_poll), 'mine', p_choice);
 end $$;
-grant execute on function public.nusuk_poll_vote(text, int, text) to anon, authenticated;
+grant execute on function public.nusuk_lv_vote(text, int, text) to anon, authenticated;
 
 /** Nusuk Manager: start a poll again from zero */
-create or replace function public.nusuk_admin_poll_reset(p_poll text)
+create or replace function public.nusuk_admin_lv_reset(p_poll text)
 returns jsonb
 language plpgsql volatile security definer set search_path = public as $$
 begin
   if not public.is_admin() then raise exception 'not allowed'; end if;
-  delete from public.nusuk_poll_votes where poll = p_poll;
-  delete from public.nusuk_poll_counts where poll = p_poll;
+  delete from public.nusuk_lv_votes where poll = p_poll;
+  delete from public.nusuk_lv_counts where poll = p_poll;
   return jsonb_build_object('ok', true);
 end $$;
-grant execute on function public.nusuk_admin_poll_reset(text) to authenticated;
+grant execute on function public.nusuk_admin_lv_reset(text) to authenticated;

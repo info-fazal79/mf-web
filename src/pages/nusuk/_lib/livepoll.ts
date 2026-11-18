@@ -62,7 +62,7 @@ export function initLivePoll() {
   }
   async function fetchResults() {
     if (!shown) return;
-    try { draw(await rpc<Results>('nusuk_poll_results', { p_poll: shown.id })); } catch { /* next time */ }
+    try { draw(await rpc<Results>('nusuk_lv_results', { p_poll: shown.id })); } catch { /* next time */ }
   }
 
   return {
