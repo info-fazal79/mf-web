@@ -163,7 +163,7 @@ export default function LiveScreenPage({ toast }: { toast: ToastFn }) {
   return (
     <div className="grid gap-4 pb-16">
       {/* ============================================================ studio */}
-      <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_25rem]">
+      <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,27rem)]">
         <section className="nk-card grid gap-3 p-3 sm:p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="flex items-center gap-2 text-base font-bold text-emerald-950"><Radio className="h-5 w-5 text-red-600" aria-hidden /> Live screen · preview</h2>
@@ -180,7 +180,7 @@ export default function LiveScreenPage({ toast }: { toast: ToastFn }) {
         </section>
 
         {/* ---------- controller ---------- */}
-        <section className="nk-card grid gap-4 p-4">
+        <section className="nk-card grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4 overflow-hidden p-4">
           <div>
             <div className="mb-1.5 text-xs font-bold tracking-wide text-emerald-900/60 uppercase">Live view</div>
             <div className="grid grid-cols-3 gap-1 rounded-xl border border-[#e7e1cf] bg-white p-1" role="tablist" aria-label="What the live screen shows">
@@ -196,7 +196,7 @@ export default function LiveScreenPage({ toast }: { toast: ToastFn }) {
           <div className="grid gap-2">
             <div className="flex items-center justify-between gap-2">
               <span className="text-xs font-bold tracking-wide text-emerald-900/60 uppercase">TV program</span>
-              <select className="nk-input w-auto py-1 text-xs" value={c.tv.fx} onChange={(e) => now_({ tv: { ...c.tv, fx: e.target.value as Fx } })} aria-label="Change effect">
+              <select className="rounded-lg border border-[#d9d2bd] bg-white px-2 py-1 text-xs font-semibold text-emerald-950" value={c.tv.fx} onChange={(e) => now_({ tv: { ...c.tv, fx: e.target.value as Fx } })} aria-label="Change effect">
                 <option value="fade">Effect: fade</option><option value="slide">Effect: slide</option><option value="zoom">Effect: zoom</option>
               </select>
             </div>
@@ -204,7 +204,7 @@ export default function LiveScreenPage({ toast }: { toast: ToastFn }) {
               <button type="button" onClick={() => now_({ tv: { ...c.tv, auto: true } }, 'Auto: the scenes follow one another')} className={`rounded-lg px-2 py-2 text-sm font-bold ${c.tv.auto ? 'bg-emerald-900 text-white' : 'text-emerald-900 hover:bg-emerald-50'}`}>⟳ Auto</button>
               <button type="button" onClick={() => now_({ tv: { ...c.tv, auto: false } }, 'By hand: press ▶ on a scene')} className={`rounded-lg px-2 py-2 text-sm font-bold ${!c.tv.auto ? 'bg-emerald-900 text-white' : 'text-emerald-900 hover:bg-emerald-50'}`}>✋ By hand</button>
             </div>
-            <p className="text-xs text-emerald-900/60">{c.tv.auto ? <>Ticked scenes play from top to bottom, then start again. The number next to each scene = <b>how many seconds that scene stays on screen</b>. Press <b>Save</b> after changing them. ▶ = show that scene now (switches to By hand).</> : 'The scene with ● stays on screen until you press ▶ on another one.'}</p>
+            <p className="text-xs text-emerald-900/60">{c.tv.auto ? <>Ticked scenes play from top to bottom, then start again. The number next to each scene = <b>how many seconds that scene stays on screen</b> (for the winners: seconds for <b>each</b> winner). Press <b>Save</b> after changing them. ▶ = show that scene now (switches to By hand).</> : 'The scene with ● stays on screen until you press ▶ on another one.'}</p>
             <ol className="grid gap-1">
               {c.tv.scenes.map((s, i) => {
                 const info = sceneInfo(s.key);
@@ -217,7 +217,7 @@ export default function LiveScreenPage({ toast }: { toast: ToastFn }) {
                       {!ready(s.key) && <div className="text-[11px] text-gold-600">{s.key === 'promo' ? 'Add a promo below' : 'Add a video below'}</div>}
                     </div>
                     {c.tv.auto && (s.key !== 'video'
-                      ? <label className="flex shrink-0 items-center gap-1 text-[11px] text-emerald-900/60" title="How long this scene stays on screen"><input type="number" min={5} max={3600} className="rounded-md border border-[#d9d2bd] bg-white px-1 py-0.5 text-right text-xs font-semibold text-emerald-950" style={{ width: 52 }} value={s.secs} onChange={(e) => setScene(s.key, { secs: Math.max(5, Math.round(+e.target.value) || 5) })} aria-label={`Seconds for ${info.name}`} />s</label>
+                      ? <label className="flex shrink-0 items-center gap-1 text-[11px] text-emerald-900/60" title="How long this scene stays on screen"><input type="number" min={5} max={3600} className="rounded-md border border-[#d9d2bd] bg-white px-1 py-0.5 text-right text-xs font-semibold text-emerald-950" style={{ width: 52 }} value={s.secs} onChange={(e) => setScene(s.key, { secs: Math.max(5, Math.round(+e.target.value) || 5) })} aria-label={`Seconds for ${info.name}`} />{s.key === 'winners' ? 's each' : 's'}</label>
                       : <span className="shrink-0 text-[11px] text-emerald-900/50">till end</span>)}
                     {c.tv.auto && <>
                       <button type="button" className="nk-btn nk-ghost px-1 py-1" disabled={i === 0} onClick={() => set({ tv: { ...c.tv, scenes: move(c.tv.scenes, i, -1) } })} aria-label="Move up"><ArrowUp className="h-3.5 w-3.5" /></button>

@@ -19,7 +19,7 @@ export type TvData = {
   ins: { active: Series; copies: Series } | null;
 };
 type Raw = { _winners?: unknown; _today?: unknown };
-type YTPlayer = { loadVideoById: (id: string) => void; playVideo: () => void; mute: () => void; destroy: () => void };
+type YTPlayer = { loadVideoById: (id: string) => void; playVideo: () => void; mute: () => void; destroy: () => void; unloadModule?: (m: string) => void };
 type YTNs = { Player: new (el: string | HTMLElement, o: unknown) => YTPlayer };
 
 const bn = (n: number) => Math.round(n).toLocaleString('bn-BD');
@@ -89,7 +89,9 @@ export function initLiveTv(opts: { muted: boolean; data: () => TvData }) {
     const s = order[idx];
     if (!keep || s.key !== cur) show(s.key);
     if (s.key === 'video') return; // the video scene moves on when the videos end
-    timer = setTimeout(next, Math.max(5, s.secs || 20) * 1000);
+    // winners: the seconds are for each winner, so the scene lasts seconds × winners
+    const secs = s.key === 'winners' ? Math.max(3, s.secs || 8) * Math.max(1, umrah().length) : Math.max(5, s.secs || 20);
+    timer = setTimeout(next, secs * 1000);
   }
   function next() {
     clearTimeout(timer);
@@ -152,7 +154,7 @@ export function initLiveTv(opts: { muted: boolean; data: () => TvData }) {
       i++;
     };
     one();
-    const per = Math.max(4, Math.min(8, Math.floor((scene('winners')?.secs || 30) / Math.max(1, list.length))));
+    const per = Math.max(3, scene('winners')?.secs || 8); // seconds for each winner
     if (list.length > 1) inner = setInterval(one, per * 1000);
   }
 
@@ -226,7 +228,13 @@ export function initLiveTv(opts: { muted: boolean; data: () => TvData }) {
   }
   async function video(el: HTMLElement) {
     const list = vids();
-    el.innerHTML = `<div class="tv-head"><span class="tv-head-ico">${lucide('play', 'h-8 w-8', 2.2)}</span><span id="tv-vt" class="min-w-0 truncate"></span><span id="tv-vn" class="tv-head-r"></span></div><div class="tv-video"><div id="tv-yt"></div></div>`;
+    el.innerHTML = `<div class="tv-head"><span class="tv-head-ico">${lucide('play', 'h-8 w-8', 2.2)}</span><span id="tv-vt" class="min-w-0 truncate"></span><span id="tv-vn" class="tv-head-r"></span></div><div class="tv-video" id="tv-vwrap"><div class="tv-video-box" id="tv-vbox"><div id="tv-yt"></div></div></div>`;
+    // the frame is exactly 16:9 and as big as fits, so there is no black band around the video
+    const wrap = $('tv-vwrap'), box = $('tv-vbox');
+    const ww = wrap.clientWidth, wh = wrap.clientHeight;
+    const bw = Math.min(ww, (wh * 16) / 9);
+    box.style.width = `${Math.floor(bw)}px`;
+    box.style.height = `${Math.floor((bw * 9) / 16)}px`;
     const YT = await loadYT();
     if (cur !== 'video') return;
     duck(true);
@@ -239,15 +247,19 @@ export function initLiveTv(opts: { muted: boolean; data: () => TvData }) {
       if (yt) { yt.loadVideoById(ytId(v.url)); return; }
       yt = new YT.Player('tv-yt', {
         videoId: ytId(v.url), width: '100%', height: '100%',
-        playerVars: { autoplay: 1, controls: 0, rel: 0, modestbranding: 1, playsinline: 1, iv_load_policy: 3, mute: opts.muted ? 1 : 0 },
+        playerVars: { autoplay: 1, controls: 0, rel: 0, modestbranding: 1, playsinline: 1, iv_load_policy: 3, cc_load_policy: 0, disablekb: 1, fs: 0, mute: opts.muted ? 1 : 0 },
         events: {
-          onReady: (e: { target: YTPlayer }) => { if (opts.muted) e.target.mute(); e.target.playVideo(); },
-          onStateChange: (e: { data: number }) => { if (e.data === 0) { i++; if (i < list.length) play(); else done(); } },
+          onReady: (e: { target: YTPlayer }) => { if (opts.muted) e.target.mute(); noCaptions(e.target); e.target.playVideo(); },
+          onStateChange: (e: { data: number; target: YTPlayer }) => { if (e.data === 1) noCaptions(e.target); if (e.data === 0) { i++; if (i < list.length) play(); else done(); } },
           onError: () => { i++; if (i < list.length) play(); else done(); },
         },
       });
     };
     play();
+  }
+  /** no subtitles on the stream (YouTube may turn them on by itself) */
+  function noCaptions(p: YTPlayer) {
+    try { p.unloadModule?.('captions'); p.unloadModule?.('cc'); } catch { /* old player */ }
   }
   function stopVideo() {
     if (yt) { try { yt.destroy(); } catch { /* gone */ } yt = null; }
