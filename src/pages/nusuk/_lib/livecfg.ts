@@ -83,8 +83,9 @@ export function lshapeClashes(promos: Promo[]) {
 export type Notice = { id: string; tag: string; title: string; text: string };
 /** times = "HH:MM" (Bangladesh) when this video starts by itself (mode "At set times") */
 export type Video = { id: string; on: boolean; title: string; url: string; times: string[] };
-/** off · manual: show = video started by hand at `at` (plays once to the end) · schedule: each video at its own times */
-export type VPlay = { mode: 'off' | 'manual' | 'schedule'; show: string | null; at: number };
+/** off · manual: show = video started by hand at `at` (plays once to the end) · schedule: each video at its own times.
+ *  music = keep the background music on while a video plays, at music_vol % of its normal volume */
+export type VPlay = { mode: 'off' | 'manual' | 'schedule'; show: string | null; at: number; music: boolean; music_vol: number };
 /** the same start time on two videos */
 export function videoClashes(videos: Video[]) {
   const seen = new Map<string, number>();
@@ -168,7 +169,7 @@ export const defaultLiveCfg = (): LiveCfg => ({
   notices: [],
   notice_show: null,
   videos: [],
-  vplay: { mode: 'off', show: null, at: 0 },
+  vplay: { mode: 'off', show: null, at: 0, music: false, music_vol: 30 },
   music: { on: false, volume: 40, tracks: [] },
   join: { ...DEFAULT_JOIN, links: DEFAULT_JOIN.links.map((l) => ({ ...l })) },
 });
@@ -255,7 +256,10 @@ function hhmm(v: unknown) {
 }
 function parseVPlay(raw: unknown): VPlay {
   const v = (raw && typeof raw === 'object' ? raw : {}) as Obj;
-  return { mode: v.mode === 'manual' || v.mode === 'schedule' ? v.mode : 'off', show: typeof v.show === 'string' ? v.show : null, at: Number(v.at) || 0 };
+  return {
+    mode: v.mode === 'manual' || v.mode === 'schedule' ? v.mode : 'off', show: typeof v.show === 'string' ? v.show : null, at: Number(v.at) || 0,
+    music: v.music === true, music_vol: Math.min(100, Math.max(0, Math.round(Number(v.music_vol ?? 30)))),
+  };
 }
 function parseLShape(raw: unknown): LShape {
   const l = (raw && typeof raw === 'object' ? raw : {}) as Obj;

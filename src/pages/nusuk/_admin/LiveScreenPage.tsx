@@ -264,7 +264,7 @@ export default function LiveScreenPage({ toast }: { toast: ToastFn }) {
             </ol>
           </div>
 
-          <div className={`grid gap-2 rounded-xl border p-2.5 ${c.lshape.mode !== 'off' ? 'border-gold-500 bg-gold-400/10' : 'border-[#e7e1cf]'}`}>
+          <div className={`grid min-w-0 grid-cols-[minmax(0,1fr)] gap-2 rounded-xl border p-2.5 ${c.lshape.mode !== 'off' ? 'border-gold-500 bg-gold-400/10' : 'border-[#e7e1cf]'}`}>
             <div className="flex items-center justify-between gap-2">
               <button type="button" className="text-xs font-bold tracking-wide text-emerald-900/60 uppercase hover:underline" onClick={() => jump('sec-promos')}>L-shape ads ↓</button>
               <span className="text-[11px] text-emerald-900/55">{promoList.length} promo{promoList.length === 1 ? '' : 's'} ready</span>
@@ -279,7 +279,7 @@ export default function LiveScreenPage({ toast }: { toast: ToastFn }) {
             </div>
             <p className="text-[11px] text-emerald-900/60">{LSHAPE_MODES.find((m) => m.key === c.lshape.mode)?.hint}. Works over every scene; the screen shrinks to the top right while an ad is on.</p>
             {c.lshape.mode === 'manual' && (promoList.length ? (
-              <ul className="grid gap-1">
+              <ul className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-1">
                 {promoList.map((p) => {
                   const on = c.lshape.show === p.id;
                   return (
@@ -300,7 +300,7 @@ export default function LiveScreenPage({ toast }: { toast: ToastFn }) {
             {c.lshape.mode === 'schedule' && <p className="text-xs text-emerald-900/70">Times are set on each promo below (Bangladesh time). {clashes.length ? <b className="text-red-700">{clashes.length} clash{clashes.length === 1 ? '' : 'es'} to fix.</b> : 'No clashes.'}</p>}
           </div>
 
-          <div className={`grid gap-2 rounded-xl border p-2.5 ${c.vplay.mode !== 'off' ? 'border-sky-400 bg-sky-50/60' : 'border-[#e7e1cf]'}`}>
+          <div className={`grid min-w-0 grid-cols-[minmax(0,1fr)] gap-2 rounded-xl border p-2.5 ${c.vplay.mode !== 'off' ? 'border-sky-400 bg-sky-50/60' : 'border-[#e7e1cf]'}`}>
             <div className="flex items-center justify-between gap-2">
               <button type="button" className="text-xs font-bold tracking-wide text-emerald-900/60 uppercase hover:underline" onClick={() => jump('sec-videos')}>Videos ↓</button>
               <span className="text-[11px] text-emerald-900/55">{vidList.length} video{vidList.length === 1 ? '' : 's'} ready</span>
@@ -313,14 +313,23 @@ export default function LiveScreenPage({ toast }: { toast: ToastFn }) {
                 }} className={`rounded-lg px-1 py-1.5 text-xs font-bold ${c.vplay.mode === k ? (k === 'off' ? 'bg-emerald-900 text-white' : 'bg-sky-600 text-white') : 'text-emerald-900 hover:bg-emerald-50'}`}>{t}</button>
               ))}
             </div>
-            <p className="text-[11px] text-emerald-900/60">A video cuts in over whatever is on screen, plays to the end, then the scenes go on where they were. Music pauses meanwhile.</p>
+            <p className="text-[11px] text-emerald-900/60">A video cuts in over whatever is on screen, plays to the end, then the scenes go on where they were.</p>
+            <div className="grid gap-1.5 rounded-lg bg-white/70 p-2">
+              <Switch on={c.vplay.music} set={(v) => now_({ vplay: { ...c.vplay, music: v } }, v ? 'Music keeps playing (softer) during videos' : 'Music pauses during videos')} label={<span className="text-xs">Background music during a video</span>} />
+              {c.vplay.music
+                ? <label className="flex items-center gap-2 text-xs font-semibold">Music volume during video
+                    <input type="range" min={0} max={100} value={c.vplay.music_vol} className="min-w-0 flex-1 accent-sky-600" onChange={(e) => setC((x) => ({ ...x, vplay: { ...x.vplay, music_vol: +e.target.value } }))} onMouseUp={() => now_({})} onTouchEnd={() => now_({})} />
+                    <b className="w-10 text-right tabular-nums">{c.vplay.music_vol}%</b></label>
+                : <span className="text-[11px] text-emerald-900/55">Off: the music pauses while a video plays.</span>}
+              {c.vplay.music && <span className="text-[11px] text-emerald-900/55">{c.vplay.music_vol}% of the normal music volume, so the video's own sound stays clear.</span>}
+            </div>
             {c.vplay.mode === 'manual' && (vidList.length ? (
-              <ul className="grid gap-1">
+              <ul className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-1">
                 {vidList.map((v) => (
                   <li key={v.id} className="flex items-center gap-2 rounded-lg px-1 py-0.5">
-                    <span className="min-w-0 flex-1 truncate text-sm">{v.title || v.url}</span>
+                    <span className="min-w-0 flex-1 truncate text-sm" title={v.url}>{v.title || `Video ${c.videos.indexOf(v) + 1}`}</span>
                     {c.vplay.show === v.id && Date.now() - c.vplay.at < 10 * 60e3 && <span className="text-[11px] text-sky-700">started {new Date(c.vplay.at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</span>}
-                    <button type="button" onClick={() => now_({ vplay: { mode: 'manual', show: v.id, at: Date.now() } }, 'Video starts within 5 seconds')} className="nk-btn flex items-center gap-1 bg-sky-600 px-2.5 py-1 text-xs text-white"><Play className="h-3 w-3" fill="currentColor" /> Play</button>
+                    <button type="button" onClick={() => now_({ vplay: { ...c.vplay, mode: 'manual', show: v.id, at: Date.now() } }, 'Video starts within 5 seconds')} className="nk-btn flex items-center gap-1 bg-sky-600 px-2.5 py-1 text-xs text-white"><Play className="h-3 w-3" fill="currentColor" /> Play</button>
                   </li>
                 ))}
               </ul>

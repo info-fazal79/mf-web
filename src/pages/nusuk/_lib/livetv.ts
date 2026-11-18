@@ -346,16 +346,25 @@ export function initLiveTv(opts: { muted: boolean; data: () => TvData }) {
   }
   function music(c: LiveCfg) {
     const list = c.music.tracks.filter((t) => t.on && /^https?:\/\//.test(t.url.trim())).map((t) => t.url.trim());
-    audio.volume = c.music.volume / 100;
+    setVolume();
     if (!c.music.on || !list.length) { audio.pause(); tracksKey = ''; tracks = []; return; }
     const k = list.join('|');
     if (k !== tracksKey) { tracksKey = k; tracks = list; ti = 0; playTrack(); }
     else if (audio.paused && !ducked) audio.play().catch(() => {});
   }
+  /** during a video: pause the music, or (if chosen) keep it at a lower volume */
   function duck(on: boolean) {
-    ducked = on;
-    if (on) audio.pause();
+    const keep = !!cfg?.vplay.music;
+    ducked = on && !keep;
+    setVolume(on);
+    if (ducked) audio.pause();
     else if (tracks.length && cfg?.music.on) audio.play().catch(() => {});
+  }
+  let videoOn = false;
+  function setVolume(during = videoOn) {
+    videoOn = during;
+    const base = (cfg?.music.volume ?? 40) / 100;
+    audio.volume = during && cfg?.vplay.music ? base * ((cfg.vplay.music_vol ?? 30) / 100) : base;
   }
   // a click anywhere starts the music when the browser blocked autoplay (normal browsers; OBS plays by itself)
   addEventListener('pointerdown', () => { if (tracks.length && audio.paused && !ducked) audio.play().catch(() => {}); });
