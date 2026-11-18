@@ -36,24 +36,37 @@ async function get<T>(path: string, params: Record<string, string>): Promise<T> 
  * Turn the short token from Graph API Explorer into a long one, then list the Pages it manages.
  * A Page token taken from a long user token does not expire (until the password changes or access is removed).
  */
-export async function fbConnect(appId: string, appSecret: string, userToken: string) {
-  const long = await get<{ access_token: string }>('oauth/access_token', {
-    grant_type: 'fb_exchange_token', client_id: appId.trim(), client_secret: appSecret.trim(), fb_exchange_token: userToken.trim(),
-  });
-  const perms = await get<{ data: { permission: string; status: string }[] }>('me/permissions', { access_token: long.access_token }).catch(() => ({ data: [] }));
-  const granted = perms.data.filter((p) => p.status === 'granted').map((p) => p.permission);
-  const pages = await get<{ data: FbPage[] }>('me/accounts', { fields: 'id,name,access_token', limit: '100', access_token: long.access_token });
+export async function fbConnect(appId: string, appSecret: string, token: string) {
+  const app = `${appId.trim()}|${appSecret.trim()}`;
+  // what was pasted: a user token (normal) or a Page token (from "Get Page Access Token")
+  const dbg = await get<{ data: { type?: string; scopes?: string[]; is_valid?: boolean; error?: { message?: string } } }>('debug_token', { input_token: token.trim(), access_token: app });
+  if (dbg.data.is_valid === false) throw new FbError(dbg.data.error?.message ?? 'This token is not valid. Make a new one in Graph API Explorer.');
+  const granted = dbg.data.scopes ?? [];
+  const exchange = (t: string) => get<{ access_token: string }>('oauth/access_token', {
+    grant_type: 'fb_exchange_token', client_id: appId.trim(), client_secret: appSecret.trim(), fb_exchange_token: t,
+  }).then((r) => r.access_token);
+  if (dbg.data.type === 'PAGE') {
+    const long = await exchange(token.trim()).catch(() => token.trim());
+    const me = await get<{ id: string; name: string }>('me', { fields: 'id,name', access_token: long });
+    return { pages: [{ id: me.id, name: me.name, access_token: long }], granted };
+  }
+  const long = await exchange(token.trim());
+  const pages = await get<{ data: FbPage[] }>('me/accounts', { fields: 'id,name,access_token', limit: '100', access_token: long });
   return { pages: pages.data, granted };
 }
 export const NEEDED_PERMS = ['pages_show_list', 'pages_read_engagement', 'pages_read_user_content'];
 
-/** the live video the Page is broadcasting now (null = none) */
+/**
+ * The video the Page is broadcasting live now (null = none).
+ * Read from the Page's videos (live_status = LIVE), not from /live_videos: that one needs Facebook's
+ * "Live Video API" review. The comments are then read from the video itself.
+ */
 export async function fbCurrentLive(c: FbConn): Promise<FbLive | null> {
-  const r = await get<{ data: { id: string; title?: string; description?: string; video?: { id: string } }[] }>(`${c.page_id}/live_videos`, {
-    broadcast_status: '["LIVE"]', fields: 'id,title,description,video{id}', limit: '5', access_token: c.page_token,
+  const r = await get<{ data: { id: string; title?: string; description?: string; live_status?: string }[] }>(`${c.page_id}/videos`, {
+    fields: 'id,title,description,live_status', limit: '10', access_token: c.page_token,
   });
-  const v = r.data[0];
-  return v ? { id: v.id, title: v.title || v.description || 'Live video', videoId: v.video?.id ?? '' } : null;
+  const v = r.data.find((x) => (x.live_status ?? '').toUpperCase() === 'LIVE');
+  return v ? { id: v.id, title: v.title || (v.description ?? '').slice(0, 60) || 'Live video', videoId: v.id } : null;
 }
 
 /** a video ID from a Facebook link (…/videos/123…, ?v=123…, /reel/123…) or a bare number */
