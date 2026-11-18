@@ -22,9 +22,59 @@ export type LiveCfg = {
   breaking: Breaking;
   /** Questions for the audience: the one being shown pops up at the top of the screen */
   questions: Questions;
-  /** Full-screen announcement over the whole live screen; hidden until "on" */
-  announce: Announce;
+  /** Full-screen announcements: several drafts, the one at announce_show is on screen (null = none) */
+  announces: Announce[];
+  announce_show: number | null;
+  /** TV program: scenes that follow one another by themselves (auto) or the one picked (pin) */
+  tv: Tv;
+  /** Promo ads shown in the "L" around the shrunk screen */
+  promos: Promo[];
+  /** Short notices: a card in the middle over the blurred screen; notice_show = id on screen */
+  notices: Notice[];
+  notice_show: string | null;
+  /** YouTube videos played in the video scene */
+  videos: Video[];
+  /** Background music played by the live page (instead of OBS) */
+  music: Music;
+  /** The "join" scene: QR code to the site + your links */
+  join: Join;
 };
+
+// ---------------------------------------------------------------- TV program
+export type SceneKey = 'home' | 'stats' | 'winners' | 'lastwin' | 'join' | 'promo' | 'video';
+export const SCENES: { key: SceneKey; name: string; hint: string; secs: number }[] = [
+  { key: 'home', name: 'Main dashboard', hint: 'Numbers, charts, activity feed, quiz and winner cards', secs: 60 },
+  { key: 'stats', name: 'Live numbers + active users chart', hint: 'Big numbers and the active-users graph', secs: 25 },
+  { key: 'winners', name: 'Bangladeshi Umrah winners', hint: 'One winner at a time, big', secs: 30 },
+  { key: 'lastwin', name: 'Latest Nusuk winner', hint: "Today's / yesterday's winner, big", secs: 20 },
+  { key: 'join', name: 'Join: QR code + links', hint: 'Scan to open the site, with your links', secs: 20 },
+  { key: 'promo', name: 'Promo ads (L-shape)', hint: 'The screen shrinks; promos fill the left and bottom', secs: 30 },
+  { key: 'video', name: 'Videos', hint: 'YouTube videos from the list, one after another', secs: 0 },
+];
+export type Scene = { key: SceneKey; on: boolean; secs: number };
+export type Fx = 'fade' | 'slide' | 'zoom';
+export type Tv = { auto: boolean; pin: SceneKey; fx: Fx; scenes: Scene[] };
+export type Promo = { id: string; on: boolean; tag: string; title: string; text: string; points: string[]; image: string };
+export type Notice = { id: string; tag: string; title: string; text: string };
+export type Video = { id: string; on: boolean; title: string; url: string };
+export type Track = { id: string; on: boolean; title: string; url: string };
+export type Music = { on: boolean; volume: number; tracks: Track[] };
+export type Join = { title: string; text: string; links: { label: string; url: string }[] };
+export const uid = () => Math.random().toString(36).slice(2, 10);
+export const defaultTv = (): Tv => ({
+  auto: false, pin: 'home', fx: 'fade',
+  scenes: SCENES.map((x) => ({ key: x.key, on: x.key !== 'video', secs: x.secs })),
+});
+export const DEFAULT_JOIN: Join = {
+  title: 'আপনিও যুক্ত হোন!',
+  text: 'ফোনের ক্যামেরায় QR কোডটি স্ক্যান করুন: হাজারো নুসুক কোড, দৈনিক কুইজ আর পুরস্কার জেতার সুযোগ।',
+  links: [{ label: 'ওয়েবসাইট', url: 'muhammadfazal.com/nusuk' }],
+};
+/** YouTube video id from any YouTube link (watch, youtu.be, shorts, embed) */
+export function ytId(url: string) {
+  const m = url.trim().match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?(?:.*&)?v=|shorts\/|embed\/|live\/))([\w-]{11})/);
+  return m ? m[1] : /^[\w-]{11}$/.test(url.trim()) ? url.trim() : '';
+}
 export type Announce = { on: boolean; tag: string; title: string; body: string; points: string[]; ask: string; choices: string[]; footer: string };
 export const DEFAULT_ANNOUNCE: Announce = {
   on: false,
@@ -66,7 +116,15 @@ export const defaultLiveCfg = (): LiveCfg => ({
   title: '',
   breaking: { on: false, label: '', items: [{ text: '', on: true }], speed: 'normal' },
   questions: { items: [...SAMPLE_QUESTIONS], show: null },
-  announce: { ...DEFAULT_ANNOUNCE, points: [...DEFAULT_ANNOUNCE.points], choices: [...DEFAULT_ANNOUNCE.choices] },
+  announces: [{ ...DEFAULT_ANNOUNCE, points: [...DEFAULT_ANNOUNCE.points], choices: [...DEFAULT_ANNOUNCE.choices] }],
+  announce_show: null,
+  tv: defaultTv(),
+  promos: [],
+  notices: [],
+  notice_show: null,
+  videos: [],
+  music: { on: false, volume: 40, tracks: [] },
+  join: { ...DEFAULT_JOIN, links: DEFAULT_JOIN.links.map((l) => ({ ...l })) },
 });
 
 const isTheme = (t: unknown): t is Theme => t === 'green' || t === 'mint' || t === 'cream' || t === 'navy';
@@ -90,7 +148,77 @@ export function parseLiveCfg(raw: unknown): LiveCfg {
     title: typeof r.title === 'string' ? r.title.slice(0, 80) : '',
     breaking: parseBreaking(r.breaking),
     questions: parseQuestions(r.questions),
-    announce: parseAnnounce(r.announce),
+    ...parseAnnounces(r),
+    tv: parseTv(r.tv),
+    promos: parsePromos(r.promos),
+    ...parseNotices(r),
+    videos: list(r.videos, 30).map((v) => ({ id: str(v.id, 20) || uid(), on: v.on !== false, title: str(v.title, 120), url: str(v.url, 300) })),
+    music: parseMusic(r.music),
+    join: parseJoin(r.join),
+  };
+}
+
+// ---------------------------------------------------------------- helpers for the TV parts
+type Obj = Record<string, unknown>;
+const str = (v: unknown, n: number) => (typeof v === 'string' ? v.slice(0, n) : '');
+const list = (v: unknown, n: number): Obj[] => (Array.isArray(v) ? (v as unknown[]).filter((x): x is Obj => !!x && typeof x === 'object').slice(0, n) : []);
+const lines = (v: unknown, n: number) => (Array.isArray(v) ? (v as unknown[]).filter((x): x is string => typeof x === 'string').map((x) => x.slice(0, 140)).slice(0, n) : []);
+
+function parseAnnounces(r: Obj): { announces: Announce[]; announce_show: number | null } {
+  // first version: one announcement with its own on/off
+  if (!Array.isArray(r.announces)) {
+    const a = parseAnnounce(r.announce);
+    return { announces: [a], announce_show: a.on ? 0 : null };
+  }
+  const items = (r.announces as unknown[]).slice(0, 20).map((x) => parseAnnounce(x));
+  const all = items.length ? items : [parseAnnounce(null)];
+  const show = typeof r.announce_show === 'number' && r.announce_show >= 0 && r.announce_show < all.length ? r.announce_show : null;
+  return { announces: all, announce_show: show };
+}
+function parseTv(raw: unknown): Tv {
+  const d = defaultTv();
+  if (!raw || typeof raw !== 'object') return d;
+  const t = raw as Obj;
+  const keys = SCENES.map((x) => x.key);
+  const saved = list(t.scenes, 20).filter((x) => keys.includes(x.key as SceneKey));
+  // saved order first, then any scene added later
+  const scenes: Scene[] = [
+    ...saved.map((x) => ({ key: x.key as SceneKey, on: x.on !== false, secs: Math.min(3600, Math.max(0, Math.round(Number(x.secs) || 0))) })),
+    ...d.scenes.filter((x) => !saved.some((y) => y.key === x.key)),
+  ];
+  return {
+    auto: t.auto === true,
+    pin: keys.includes(t.pin as SceneKey) ? (t.pin as SceneKey) : 'home',
+    fx: t.fx === 'slide' || t.fx === 'zoom' ? t.fx : 'fade',
+    scenes,
+  };
+}
+function parsePromos(raw: unknown): Promo[] {
+  return list(raw, 20).map((p) => ({
+    id: str(p.id, 20) || uid(), on: p.on !== false, tag: str(p.tag, 60), title: str(p.title, 140), text: str(p.text, 500),
+    points: lines(p.points, 6), image: str(p.image, 500),
+  }));
+}
+function parseNotices(r: Obj): { notices: Notice[]; notice_show: string | null } {
+  const notices = list(r.notices, 20).map((n) => ({ id: str(n.id, 20) || uid(), tag: str(n.tag, 60), title: str(n.title, 140), text: str(n.text, 500) }));
+  const show = typeof r.notice_show === 'string' && notices.some((n) => n.id === r.notice_show) ? r.notice_show : null;
+  return { notices, notice_show: show };
+}
+function parseMusic(raw: unknown): Music {
+  const m = (raw && typeof raw === 'object' ? raw : {}) as Obj;
+  return {
+    on: m.on === true,
+    volume: Math.min(100, Math.max(0, Math.round(Number(m.volume ?? 40)))),
+    tracks: list(m.tracks, 40).map((t) => ({ id: str(t.id, 20) || uid(), on: t.on !== false, title: str(t.title, 120), url: str(t.url, 500) })),
+  };
+}
+function parseJoin(raw: unknown): Join {
+  if (!raw || typeof raw !== 'object') return { ...DEFAULT_JOIN, links: DEFAULT_JOIN.links.map((l) => ({ ...l })) };
+  const j = raw as Obj;
+  return {
+    title: str(j.title, 100) || DEFAULT_JOIN.title,
+    text: str(j.text, 300),
+    links: list(j.links, 6).map((l) => ({ label: str(l.label, 40), url: str(l.url, 200) })),
   };
 }
 

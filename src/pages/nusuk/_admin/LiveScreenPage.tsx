@@ -1,9 +1,15 @@
-/* Nusuk Manager → Live screen: settings for the OBS broadcast page (/nusuk/live).
-   Saved in nusuk_settings.content.livescreen; the live page checks them every 10 seconds,
-   so changes show on the stream by themselves (no need to touch OBS). */
-import { useEffect, useMemo, useState } from 'react';
+/* Nusuk Manager → Live screen: the "studio" for the OBS broadcast page (/nusuk/live).
+   Top: the preview and the controller (live view, TV program auto / by hand, scenes, pop-ups, music).
+   Below: folded sections for everything that goes on screen. Saved in nusuk_settings.content.livescreen;
+   the live page checks it every 5 seconds, so changes reach the stream by themselves. */
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { ArrowDown, ArrowUp, ChevronDown, Copy, ExternalLink, EyeOff, Music2, Play, Plus, Radio, Trash2, Upload } from 'lucide-react';
 import { supabase as sb } from '@/lib/supabase';
-import { DEFAULT_BREAKING_LABEL, SAMPLE_QUESTIONS, THEMES, defaultLiveCfg, parseLiveCfg, themeAt, type BkItem, type BkSpeed, type Breaking, type LiveCfg, type Slot, type Theme } from '../_lib/livecfg';
+import { uploadMedia } from '@/admin/media';
+import {
+  DEFAULT_ANNOUNCE, DEFAULT_BREAKING_LABEL, SAMPLE_QUESTIONS, SCENES, THEMES, defaultLiveCfg, parseLiveCfg, themeAt, uid, ytId,
+  type Announce, type BkItem, type BkSpeed, type Breaking, type Fx, type LiveCfg, type Notice, type Promo, type Scene, type SceneKey, type Slot, type Theme, type Track, type Video,
+} from '../_lib/livecfg';
 
 type ToastFn = (t: string, ok?: boolean) => void;
 const errText = (e: unknown) => (e && typeof e === 'object' && 'message' in e ? String((e as { message: string }).message) : String(e));
@@ -21,6 +27,7 @@ const SWATCH: Record<Theme, [string, string]> = {
   navy: ['linear-gradient(135deg,#18264a,#060b17)', '#4fe3d0'],
 };
 const themeName = (t: Theme) => THEMES.find((x) => x.key === t)?.name ?? t;
+const sceneInfo = (k: SceneKey) => SCENES.find((x) => x.key === k)!;
 
 function ThemeCard({ t, on, onClick, small = false }: { t: Theme; on: boolean; onClick: () => void; small?: boolean }) {
   const [bg, dot] = SWATCH[t];
@@ -35,6 +42,32 @@ function ThemeCard({ t, on, onClick, small = false }: { t: Theme; on: boolean; o
   );
 }
 
+/** A folded section (closed until opened) */
+function Sec({ title, badge, hint, children }: { title: ReactNode; badge?: ReactNode; hint?: string; children: ReactNode }) {
+  return (
+    <details className="nk-card group overflow-hidden p-0">
+      <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-3.5 sm:px-5 [&::-webkit-details-marker]:hidden">
+        <span className="text-base font-bold text-emerald-950">{title}</span>
+        {badge}
+        {hint && <span className="hidden text-xs text-emerald-900/55 md:inline">{hint}</span>}
+        <ChevronDown className="ml-auto h-5 w-5 shrink-0 text-emerald-900/50 transition group-open:rotate-180" aria-hidden />
+      </summary>
+      <div className="grid gap-3 border-t border-[#eee7d3] px-4 py-4 sm:px-5">{children}</div>
+    </details>
+  );
+}
+const OnAir = () => <span className="rounded-full bg-red-600 px-2 py-0.5 text-[11px] font-bold text-white">● ON SCREEN</span>;
+function Switch({ on, set, label }: { on: boolean; set: (v: boolean) => void; label: ReactNode }) {
+  return (
+    <button type="button" role="switch" aria-checked={on} onClick={() => set(!on)} className="flex items-center gap-2.5 text-sm font-semibold">
+      <span className={`relative h-6 w-11 rounded-full transition ${on ? 'bg-emerald-600' : 'bg-emerald-900/20'}`}><span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${on ? 'left-[22px]' : 'left-0.5'}`} /></span>
+      {label}
+    </button>
+  );
+}
+const field = 'grid gap-1 text-sm font-semibold';
+const input = 'nk-input font-normal';
+
 export default function LiveScreenPage({ toast }: { toast: ToastFn }) {
   const [c, setC] = useState<LiveCfg>(defaultLiveCfg());
   const [loaded, setLoaded] = useState(false);
@@ -42,13 +75,14 @@ export default function LiveScreenPage({ toast }: { toast: ToastFn }) {
   const [busy, setBusy] = useState(false);
   const [now, setNow] = useState(Date.now());
   const [previewKey, setPreviewKey] = useState(0);
-  // Normal live or the Reward Club raffle draw (nusuk_club_draw_state, update 34)
+  const [upBusy, setUpBusy] = useState('');
+  // Normal live, Reward Club raffle draw or Winner live (nusuk_club_draw_state, update 34 / 40)
   const [draw, setDraw] = useState<{ mode: 'normal' | 'raffle' | 'winner'; contest_id: number | null; scope: string; title?: string } | null>(null);
   const loadDraw = async () => {
     const { data, error } = await sb!.from('nusuk_club_draw_state').select('mode,contest_id,scope').eq('id', 1).maybeSingle();
     if (error || !data) return setDraw(null);
     let title = '';
-    if (data.contest_id) { const { data: c } = await sb!.from('nusuk_club_contests').select('title').eq('id', data.contest_id).maybeSingle(); title = c?.title ?? ''; }
+    if (data.contest_id) { const { data: x } = await sb!.from('nusuk_club_contests').select('title').eq('id', data.contest_id).maybeSingle(); title = x?.title ?? ''; }
     setDraw({ ...(data as { mode: 'normal' | 'raffle' | 'winner'; contest_id: number | null; scope: string }), title });
   };
   useEffect(() => { loadDraw(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -57,7 +91,7 @@ export default function LiveScreenPage({ toast }: { toast: ToastFn }) {
     const { error } = await sb!.from('nusuk_club_draw_state').update({ mode, updated_at: new Date().toISOString() }).eq('id', 1);
     if (error) return toast(errText(error).includes('check') ? 'Run update_40_live_winner.sql in Supabase first' : errText(error), false);
     await loadDraw();
-    toast(mode === 'raffle' ? 'Live screen: raffle draw (changes within 2 seconds)' : mode === 'winner' ? 'Live screen: winner announcement (changes within 2 seconds)' : 'Live screen: normal');
+    toast(mode === 'raffle' ? 'Live screen: raffle draw' : mode === 'winner' ? 'Live screen: winner announcement' : 'Live screen: normal');
   }
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 15000); return () => clearInterval(t); }, []);
   useEffect(() => {
@@ -66,306 +100,396 @@ export default function LiveScreenPage({ toast }: { toast: ToastFn }) {
       setLoaded(true);
     });
   }, []);
+  // a running save; edits made meanwhile are saved by the next one
+  const saving = useRef(false);
   const set = (p: Partial<LiveCfg>) => { setC((x) => ({ ...x, ...p })); setDirty(true); };
   const url = `${typeof location !== 'undefined' ? location.origin : ''}/nusuk/live`;
   const current = useMemo(() => themeAt(c, now), [c, now]);
 
-  async function save(next: LiveCfg = c) {
+  async function save(next: LiveCfg = c, quiet = false) {
+    if (saving.current) await new Promise((r) => setTimeout(r, 300));
+    saving.current = true;
     setBusy(true);
     const { data, error: e1 } = await sb!.from('nusuk_settings').select('content').eq('id', 1).single();
-    if (e1) { setBusy(false); return toast(errText(e1), false); }
+    if (e1) { saving.current = false; setBusy(false); return toast(errText(e1), false); }
     const content = { ...((data?.content as object) ?? {}), livescreen: next };
     const { error } = await sb!.from('nusuk_settings').update({ content, updated_at: new Date().toISOString() }).eq('id', 1);
+    saving.current = false;
     setBusy(false);
     if (error) return toast(errText(error), false);
     setDirty(false);
-    toast('Saved · the live screen changes within 5 seconds');
+    if (!quiet) toast('Saved · the live screen changes within 5 seconds');
   }
+  /** Controller buttons: change and save at once (with any other edits) */
+  function now_(p: Partial<LiveCfg>, msg?: string) {
+    const next = { ...c, ...p };
+    setC(next);
+    save(next, true).then(() => msg && toast(msg));
+  }
+
+  // ---------- small list helpers ----------
+  const move = <T,>(a: T[], i: number, d: -1 | 1) => { const b = [...a]; const j = i + d; if (j < 0 || j >= b.length) return b; [b[i], b[j]] = [b[j], b[i]]; return b; };
+  const setScene = (k: SceneKey, p: Partial<Scene>) => set({ tv: { ...c.tv, scenes: c.tv.scenes.map((s) => (s.key === k ? { ...s, ...p } : s)) } });
   const setSlot = (i: number, p: Partial<Slot>) => set({ schedule: c.schedule.map((s, j) => (j === i ? { ...s, ...p } : s)) });
   const setBk = (p: Partial<Breaking>) => set({ breaking: { ...c.breaking, ...p } });
-  // ---- Audience questions ----
-  const setQ = (p: Partial<LiveCfg['questions']>) => set({ questions: { ...c.questions, ...p } });
-  const setQText = (i: number, t: string) => setQ({ items: c.questions.items.map((x, j) => (j === i ? t : x)) });
-  const removeQ = (i: number) => {
-    const items = c.questions.items.length > 1 ? c.questions.items.filter((_, j) => j !== i) : [''];
-    const show = c.questions.show == null || c.questions.show === i ? null : c.questions.show > i ? c.questions.show - 1 : c.questions.show;
-    setQ({ items, show });
-  };
-  // ---- Full-screen announcement ----
-  const setAn = (p: Partial<LiveCfg['announce']>) => set({ announce: { ...c.announce, ...p } });
-  async function showAn(on: boolean) {
-    if (on && !c.announce.title.trim()) return toast('Write the heading first', false);
-    const next = { ...c, announce: { ...c.announce, on } };
-    setC(next);
-    await save(next);
-  }
-  /** Show / hide is saved at once (with any other edits), so it reaches the stream within 5 s */
-  async function showQ(i: number | null) {
-    if (i != null && !c.questions.items[i]?.trim()) return toast('Write the question first', false);
-    const next = { ...c, questions: { ...c.questions, show: i } };
-    setC(next);
-    await save(next);
-  }
   const setBkItem = (i: number, p: Partial<BkItem>) => setBk({ items: c.breaking.items.map((x, j) => (j === i ? { ...x, ...p } : x)) });
-  const blank = (): BkItem => ({ text: '', on: true });
-  const moveBk = (i: number, d: -1 | 1) => {
-    const a = [...c.breaking.items];
-    const j = i + d;
-    if (j < 0 || j >= a.length) return;
-    [a[i], a[j]] = [a[j], a[i]];
-    setBk({ items: a });
-  };
-  const bkCount = c.breaking.items.filter((x) => x.on && x.text.trim()).length;
-  const bkHidden = c.breaking.items.filter((x) => !x.on && x.text.trim()).length;
+  const blankBk = (): BkItem => ({ text: '', on: true });
+  const setQ = (p: Partial<LiveCfg['questions']>) => set({ questions: { ...c.questions, ...p } });
+  const setAn = (i: number, p: Partial<Announce>) => set({ announces: c.announces.map((a, j) => (j === i ? { ...a, ...p } : a)) });
+  const setNt = (id: string, p: Partial<Notice>) => set({ notices: c.notices.map((n) => (n.id === id ? { ...n, ...p } : n)) });
+  const setPr = (id: string, p: Partial<Promo>) => set({ promos: c.promos.map((x) => (x.id === id ? { ...x, ...p } : x)) });
+  const setVd = (id: string, p: Partial<Video>) => set({ videos: c.videos.map((x) => (x.id === id ? { ...x, ...p } : x)) });
+  const setTr = (id: string, p: Partial<Track>) => set({ music: { ...c.music, tracks: c.music.tracks.map((x) => (x.id === id ? { ...x, ...p } : x)) } });
   const togglePanel = (k: string) => set({ hide: c.hide.includes(k) ? c.hide.filter((x) => x !== k) : [...c.hide, k] });
   const toggleRotate = (t: Theme) => {
     const has = c.rotate_themes.includes(t);
     if (has && c.rotate_themes.length === 1) return;
     set({ rotate_themes: has ? c.rotate_themes.filter((x) => x !== t) : THEMES.map((x) => x.key).filter((k) => k === t || c.rotate_themes.includes(k)) });
   };
+  async function upload(file: File, folder: string, done: (u: string) => void) {
+    setUpBusy(folder);
+    try { const m = await uploadMedia(file, folder); done(m.url); toast('Uploaded'); } catch (e) { toast(`Upload failed: ${errText(e)}`, false); }
+    setUpBusy('');
+  }
+
+  // what is on screen now
+  const anOn = c.announce_show != null ? c.announces[c.announce_show] : null;
+  const ntOn = c.notices.find((n) => n.id === c.notice_show) ?? null;
+  const qOn = c.questions.show != null ? c.questions.items[c.questions.show] : null;
+  const ready = (k: SceneKey) => (k === 'promo' ? c.promos.some((p) => p.on && p.title.trim()) : k === 'video' ? c.videos.some((v) => v.on && ytId(v.url)) : true);
+  const onAirScene: SceneKey | null = draw && draw.mode !== 'normal' ? null : c.tv.auto ? null : c.tv.pin;
 
   if (!loaded) return <section className="nk-card p-5 text-sm text-emerald-900/60">Loading…</section>;
   return (
-    <div className="grid gap-4">
-      <section className="nk-card p-4 sm:p-5">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h2 className="text-base font-bold text-emerald-950">📺 Live screen for Facebook &amp; YouTube live</h2>
-            <p className="mt-1 max-w-3xl text-sm text-emerald-900/75">
-              A full-screen broadcast page (1920×1080) that updates by itself. Settings below are saved here and the live screen checks them every 10 seconds,
-              so you can change the theme or panels during a live and it changes on the stream. OBS keeps the same link.
-            </p>
+    <div className="grid gap-4 pb-16">
+      {/* ============================================================ studio */}
+      <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_25rem]">
+        <section className="nk-card grid gap-3 p-3 sm:p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="flex items-center gap-2 text-base font-bold text-emerald-950"><Radio className="h-5 w-5 text-red-600" aria-hidden /> Live screen · preview</h2>
+            <div className="flex flex-wrap gap-2">
+              <button type="button" className="nk-btn nk-ghost flex items-center gap-1.5 px-3 py-1.5 text-sm" onClick={async () => { try { await navigator.clipboard.writeText(url); toast('Link copied (paste it in OBS → Browser source)'); } catch { toast(url, false); } }}><Copy className="h-4 w-4" aria-hidden /> Copy OBS link</button>
+              <a href={url} target="_blank" rel="noopener" className="nk-btn nk-ghost flex items-center gap-1.5 px-3 py-1.5 text-sm"><ExternalLink className="h-4 w-4" aria-hidden /> Open</a>
+              <button type="button" className="nk-btn nk-ghost px-3 py-1.5 text-sm" onClick={() => setPreviewKey((k) => k + 1)}>Reload preview</button>
+            </div>
           </div>
-          <button type="button" className="nk-btn nk-green px-4 py-2 text-sm" disabled={busy || !dirty} onClick={() => save()}>{busy ? 'Saving…' : dirty ? 'Save' : 'Saved'}</button>
-        </div>
-        <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_auto]">
-          <input readOnly className="nk-input font-mono text-sm" value={url} onFocus={(e) => e.target.select()} aria-label="Live screen link" />
-          <div className="flex gap-2">
-            <button type="button" className="nk-btn nk-ghost px-4 py-2 text-sm" onClick={async () => { try { await navigator.clipboard.writeText(url); toast('Link copied'); } catch { toast('Copy failed, select the link and copy it', false); } }}>Copy link</button>
-            <a href={url} target="_blank" rel="noopener" className="nk-btn nk-ghost px-4 py-2 text-sm">Open ↗</a>
+          <div className="relative w-full overflow-hidden rounded-xl border border-[#e7e1cf] bg-black" style={{ aspectRatio: '16 / 9' }}>
+            <iframe key={previewKey} src={`${url}?preview=1`} title="Live screen preview" className="absolute inset-0 h-full w-full border-0" />
           </div>
-        </div>
-        <p className="mt-2 text-xs text-emerald-900/60">Use this plain link in OBS. (Older links with ?theme= in them keep their own theme and ignore these settings.)</p>
-      </section>
+          <p className="text-xs text-emerald-900/60">The preview is silent (music and videos play only on the real stream). Changes show here within 5 seconds.</p>
+        </section>
 
-      <section className="nk-card p-4 sm:p-5">
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-base font-bold text-emerald-950">🎨 Theme</h2>
-          <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-900">On screen now: {themeName(current)}</span>
-        </div>
-        <div className="mb-4 grid gap-2 sm:grid-cols-3" role="radiogroup" aria-label="Theme mode">
-          {([
-            ['fixed', 'One theme', 'Always the theme you pick.'],
-            ['schedule', 'By time of day', 'Each theme from a start time you set (Bangladesh time).'],
-            ['rotate', 'Change every…', 'Goes through the themes you tick, every N minutes.'],
-          ] as const).map(([k, t, h]) => (
+        {/* ---------- controller ---------- */}
+        <section className="nk-card grid gap-4 p-4">
+          <div>
+            <div className="mb-1.5 text-xs font-bold tracking-wide text-emerald-900/60 uppercase">Live view</div>
+            <div className="grid grid-cols-3 gap-1 rounded-xl border border-[#e7e1cf] bg-white p-1" role="tablist" aria-label="What the live screen shows">
+              {([['normal', 'Normal'], ['raffle', 'Raffle draw'], ['winner', 'Winner']] as const).map(([k, t]) => (
+                <button key={k} type="button" role="tab" aria-selected={draw?.mode === k} disabled={!draw} onClick={() => draw && draw.mode !== k && setDrawMode(k)}
+                  className={`rounded-lg px-2 py-1.5 text-sm font-semibold ${draw?.mode === k ? (k === 'raffle' ? 'bg-red-600 text-white' : k === 'winner' ? 'bg-gold-500 text-emerald-950' : 'bg-emerald-900 text-white') : 'text-emerald-900 hover:bg-emerald-50'}`}>{t}</button>
+              ))}
+            </div>
+            {draw && draw.mode !== 'normal' && <p className="mt-1 text-xs text-emerald-900/65">{draw.mode === 'raffle' ? `Raffle: ${draw.title || '—'}` : 'Nusuk winner view'} is on. The TV program waits until you go back to Normal.</p>}
+          </div>
+
+          <div className="grid gap-2">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-bold tracking-wide text-emerald-900/60 uppercase">TV program</span>
+              <select className="nk-input w-auto py-1 text-xs" value={c.tv.fx} onChange={(e) => now_({ tv: { ...c.tv, fx: e.target.value as Fx } })} aria-label="Change effect">
+                <option value="fade">Effect: fade</option><option value="slide">Effect: slide</option><option value="zoom">Effect: zoom</option>
+              </select>
+            </div>
+            <div className="grid grid-cols-2 gap-1 rounded-xl border border-[#e7e1cf] bg-white p-1">
+              <button type="button" onClick={() => now_({ tv: { ...c.tv, auto: true } }, 'Auto: the scenes follow one another')} className={`rounded-lg px-2 py-2 text-sm font-bold ${c.tv.auto ? 'bg-emerald-900 text-white' : 'text-emerald-900 hover:bg-emerald-50'}`}>⟳ Auto</button>
+              <button type="button" onClick={() => now_({ tv: { ...c.tv, auto: false } }, 'By hand: press ▶ on a scene')} className={`rounded-lg px-2 py-2 text-sm font-bold ${!c.tv.auto ? 'bg-emerald-900 text-white' : 'text-emerald-900 hover:bg-emerald-50'}`}>✋ By hand</button>
+            </div>
+            <p className="text-xs text-emerald-900/60">{c.tv.auto ? 'Ticked scenes play in this order, each for its seconds, then start again. ▶ switches to By hand on that scene.' : 'The scene with ● stays on screen. Press ▶ to switch.'}</p>
+            <ol className="grid gap-1">
+              {c.tv.scenes.map((s, i) => {
+                const info = sceneInfo(s.key);
+                const air = onAirScene === s.key;
+                return (
+                  <li key={s.key} className={`flex items-center gap-1.5 rounded-xl border px-2 py-1.5 ${air ? 'border-red-500 bg-red-50' : 'border-[#eee7d3]'} ${c.tv.auto && !s.on ? 'opacity-55' : ''}`}>
+                    {c.tv.auto && <input type="checkbox" className="h-4 w-4 accent-emerald-700" checked={s.on} onChange={(e) => setScene(s.key, { on: e.target.checked })} aria-label={`Use ${info.name}`} />}
+                    <div className="min-w-0 flex-1" title={info.hint}>
+                      <div className="truncate text-sm font-semibold">{air && <span className="text-red-600">● </span>}{info.name}</div>
+                      {!ready(s.key) && <div className="text-[11px] text-gold-600">{s.key === 'promo' ? 'Add a promo below' : 'Add a video below'}</div>}
+                    </div>
+                    {c.tv.auto && s.key !== 'video' && <input type="number" min={5} max={3600} className="nk-input w-16 px-1.5 py-1 text-xs" value={s.secs} onChange={(e) => setScene(s.key, { secs: Math.max(5, Math.round(+e.target.value) || 5) })} aria-label="Seconds" title="Seconds" />}
+                    {c.tv.auto && <>
+                      <button type="button" className="nk-btn nk-ghost px-1 py-1" disabled={i === 0} onClick={() => set({ tv: { ...c.tv, scenes: move(c.tv.scenes, i, -1) } })} aria-label="Move up"><ArrowUp className="h-3.5 w-3.5" /></button>
+                      <button type="button" className="nk-btn nk-ghost px-1 py-1" disabled={i === c.tv.scenes.length - 1} onClick={() => set({ tv: { ...c.tv, scenes: move(c.tv.scenes, i, 1) } })} aria-label="Move down"><ArrowDown className="h-3.5 w-3.5" /></button>
+                    </>}
+                    <button type="button" disabled={!ready(s.key)} onClick={() => now_({ tv: { ...c.tv, auto: false, pin: s.key } }, `On screen: ${info.name}`)}
+                      className={`nk-btn px-2 py-1 ${air ? 'bg-red-600 text-white' : 'nk-green'}`} aria-label={`Show ${info.name} now`}><Play className="h-3.5 w-3.5" fill="currentColor" /></button>
+                  </li>
+                );
+              })}
+            </ol>
+          </div>
+
+          <div className="grid gap-1.5 rounded-xl border border-[#e7e1cf] bg-cream/50 p-2.5 text-sm">
+            <div className="text-xs font-bold tracking-wide text-emerald-900/60 uppercase">Pop-ups on screen</div>
+            <div className="flex items-center justify-between gap-2"><span className="min-w-0 truncate">📣 {anOn ? <b>{anOn.title || 'Announcement'}</b> : <span className="text-emerald-900/50">no announcement</span>}</span>{anOn && <button type="button" className="text-xs font-bold text-red-700 underline" onClick={() => now_({ announce_show: null })}>Hide</button>}</div>
+            <div className="flex items-center justify-between gap-2"><span className="min-w-0 truncate">🔔 {ntOn ? <b>{ntOn.title || 'Notice'}</b> : <span className="text-emerald-900/50">no notice</span>}</span>{ntOn && <button type="button" className="text-xs font-bold text-red-700 underline" onClick={() => now_({ notice_show: null })}>Hide</button>}</div>
+            <div className="flex items-center justify-between gap-2"><span className="min-w-0 truncate">💬 {qOn ? <b>{qOn}</b> : <span className="text-emerald-900/50">no question</span>}</span>{qOn && <button type="button" className="text-xs font-bold text-red-700 underline" onClick={() => now_({ questions: { ...c.questions, show: null } })}>Hide</button>}</div>
+            {(anOn || ntOn || qOn) && <button type="button" className="nk-btn mt-1 flex items-center justify-center gap-1.5 border border-red-300 bg-white py-1.5 text-xs text-red-700" onClick={() => now_({ announce_show: null, notice_show: null, questions: { ...c.questions, show: null } }, 'All pop-ups hidden')}><EyeOff className="h-3.5 w-3.5" /> Hide all pop-ups</button>}
+          </div>
+
+          <div className="grid gap-2 rounded-xl border border-[#e7e1cf] p-2.5">
+            <div className="flex items-center justify-between gap-2">
+              <Switch on={c.music.on} set={(v) => now_({ music: { ...c.music, on: v } }, v ? 'Music on' : 'Music off')} label={<span className="flex items-center gap-1.5"><Music2 className="h-4 w-4" aria-hidden /> Background music</span>} />
+              <span className="text-xs text-emerald-900/60">{c.music.tracks.filter((t) => t.on && t.url).length} tracks</span>
+            </div>
+            <label className="flex items-center gap-2 text-xs font-semibold">Volume
+              <input type="range" min={0} max={100} value={c.music.volume} className="flex-1 accent-emerald-700" onChange={(e) => setC((x) => ({ ...x, music: { ...x.music, volume: +e.target.value } }))} onMouseUp={() => now_({})} onTouchEnd={() => now_({})} />
+              <b className="w-8 text-right tabular-nums">{c.music.volume}</b>
+            </label>
+          </div>
+        </section>
+      </div>
+
+      {/* ============================================================ folded sections */}
+      <Sec title="🎨 Theme" badge={<span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-900">now: {themeName(current)}</span>}>
+        <div className="grid gap-2 sm:grid-cols-3" role="radiogroup" aria-label="Theme mode">
+          {([['fixed', 'One theme', 'Always the theme you pick.'], ['schedule', 'By time of day', 'Each theme from a start time (Bangladesh time).'], ['rotate', 'Change every…', 'Goes through the themes you tick.']] as const).map(([k, t, h]) => (
             <button key={k} type="button" role="radio" aria-checked={c.mode === k} onClick={() => set({ mode: k })}
               className={`rounded-xl border p-3 text-left transition ${c.mode === k ? 'border-emerald-600 bg-emerald-50 ring-2 ring-emerald-600/20' : 'border-[#e7e1cf] bg-white hover:border-emerald-600/40'}`}>
-              <div className="font-bold">{t}{c.mode === k ? ' ✓' : ''}</div>
-              <div className="mt-0.5 text-xs text-emerald-900/65">{h}</div>
+              <div className="font-bold">{t}{c.mode === k ? ' ✓' : ''}</div><div className="mt-0.5 text-xs text-emerald-900/65">{h}</div>
             </button>
           ))}
         </div>
-
-        {c.mode === 'fixed' && (
-          <div className="grid max-w-2xl grid-cols-2 gap-2 sm:grid-cols-4" role="radiogroup" aria-label="Theme">
-            {THEMES.map((t) => <ThemeCard key={t.key} t={t.key} on={c.theme === t.key} onClick={() => set({ theme: t.key })} />)}
-          </div>
-        )}
-
+        {c.mode === 'fixed' && <div className="grid max-w-2xl grid-cols-2 gap-2 sm:grid-cols-4" role="radiogroup" aria-label="Theme">{THEMES.map((t) => <ThemeCard key={t.key} t={t.key} on={c.theme === t.key} onClick={() => set({ theme: t.key })} />)}</div>}
         {c.mode === 'schedule' && (
           <div className="grid gap-2">
             {c.schedule.map((s, i) => (
               <div key={i} className="flex flex-wrap items-center gap-3 rounded-xl border border-[#e7e1cf] bg-cream p-2.5">
-                <label className="flex items-center gap-2 text-sm font-semibold">From
-                  <input type="time" className="nk-input w-32 py-1.5! font-normal" value={s.from} onChange={(e) => e.target.value && setSlot(i, { from: e.target.value })} />
-                </label>
-                <div className="grid flex-1 grid-cols-2 gap-2 sm:grid-cols-4" role="radiogroup" aria-label={`Theme from ${s.from}`}>
-                  {THEMES.map((t) => <ThemeCard key={t.key} small t={t.key} on={s.theme === t.key} onClick={() => setSlot(i, { theme: t.key })} />)}
-                </div>
+                <label className="flex items-center gap-2 text-sm font-semibold">From<input type="time" className="nk-input w-32 py-1.5! font-normal" value={s.from} onChange={(e) => e.target.value && setSlot(i, { from: e.target.value })} /></label>
+                <div className="grid flex-1 grid-cols-2 gap-2 sm:grid-cols-4">{THEMES.map((t) => <ThemeCard key={t.key} small t={t.key} on={s.theme === t.key} onClick={() => setSlot(i, { theme: t.key })} />)}</div>
                 {c.schedule.length > 1 && <button type="button" className="nk-btn nk-ghost px-2.5 py-1 text-xs text-red-700" onClick={() => set({ schedule: c.schedule.filter((_, j) => j !== i) })}>Remove</button>}
               </div>
             ))}
             <div className="flex flex-wrap gap-2">
               {c.schedule.length < 8 && <button type="button" className="nk-btn nk-ghost px-3 py-1.5 text-xs" onClick={() => set({ schedule: [...c.schedule, { from: '12:00', theme: 'green' }] })}>+ Add a time</button>}
-              <button type="button" className="nk-btn nk-ghost px-3 py-1.5 text-xs" onClick={() => set({ schedule: defaultLiveCfg().schedule })}>8 hours each (6 AM · 2 PM · 10 PM)</button>
+              <button type="button" className="nk-btn nk-ghost px-3 py-1.5 text-xs" onClick={() => set({ schedule: defaultLiveCfg().schedule })}>8 hours each</button>
             </div>
-            <p className="text-xs text-emerald-900/60">Each theme stays until the next start time; after the last one it continues through the night until the first one the next day.</p>
           </div>
         )}
-
         {c.mode === 'rotate' && (
           <div className="grid gap-3">
             <label className="flex flex-wrap items-center gap-2 text-sm font-semibold">Change every
-              <input type="number" min={1} max={1440} className="nk-input w-24 py-1.5! font-normal" value={c.rotate_min} onChange={(e) => set({ rotate_min: Math.min(1440, Math.max(1, Math.round(+e.target.value) || 1)) })} />
-              minutes
-              <span className="flex gap-1.5">{[5, 15, 30, 60, 480].map((m) => <button key={m} type="button" className="nk-btn nk-ghost px-2 py-1 text-xs" onClick={() => set({ rotate_min: m })}>{m >= 60 ? `${m / 60} h` : `${m} min`}</button>)}</span>
-            </label>
-            <div>
-              <div className="mb-1.5 text-sm font-semibold">Themes to use</div>
-              <div className="grid max-w-2xl grid-cols-2 gap-2 sm:grid-cols-4">
-                {THEMES.map((t) => <ThemeCard key={t.key} t={t.key} on={c.rotate_themes.includes(t.key)} onClick={() => toggleRotate(t.key)} />)}
-              </div>
-            </div>
+              <input type="number" min={1} max={1440} className="nk-input w-24 py-1.5! font-normal" value={c.rotate_min} onChange={(e) => set({ rotate_min: Math.min(1440, Math.max(1, Math.round(+e.target.value) || 1)) })} /> minutes</label>
+            <div className="grid max-w-2xl grid-cols-2 gap-2 sm:grid-cols-4">{THEMES.map((t) => <ThemeCard key={t.key} t={t.key} on={c.rotate_themes.includes(t.key)} onClick={() => toggleRotate(t.key)} />)}</div>
           </div>
         )}
-      </section>
+      </Sec>
 
-      <section className="nk-card p-4 sm:p-5">
-        <h2 className="mb-3 text-base font-bold text-emerald-950">What to show</h2>
+      <Sec title="🧩 Main dashboard: what to show" hint="panels of the main dashboard scene, headline">
         <div className="grid gap-2 sm:grid-cols-2">
-          {PANELS.map((p) => (
-            <label key={p.key} className="flex items-center gap-2.5 text-sm">
-              <input type="checkbox" className="h-4 w-4 accent-emerald-700" checked={!c.hide.includes(p.key)} onChange={() => togglePanel(p.key)} />
-              {p.label}
-            </label>
-          ))}
+          {PANELS.map((p) => <label key={p.key} className="flex items-center gap-2.5 text-sm"><input type="checkbox" className="h-4 w-4 accent-emerald-700" checked={!c.hide.includes(p.key)} onChange={() => togglePanel(p.key)} />{p.label}</label>)}
         </div>
-        <label className="mt-4 grid max-w-xl gap-1 text-sm font-semibold">Headline (optional)
-          <input className="nk-input font-normal" maxLength={80} value={c.title} onChange={(e) => set({ title: e.target.value })} placeholder="নুসুক উমরাহ কোড শেয়ার · লাইভ" />
-        </label>
-      </section>
+        <label className={`${field} max-w-xl`}>Headline (optional)<input className={input} maxLength={80} value={c.title} onChange={(e) => set({ title: e.target.value })} placeholder="নুসুক উমরাহ কোড শেয়ার · লাইভ" /></label>
+      </Sec>
 
-      <section className="nk-card grid gap-3 p-4 sm:p-5">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h2 className="text-base font-bold text-emerald-950">🔴 Breaking news</h2>
-            <p className="mt-0.5 text-sm text-emerald-900/70">A news-channel style bar above the yellow ticker. The headlines run right to left through the bar, one after another, and start again after the last one. Shows on every view (normal, raffle, winner).</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <label className="flex items-center gap-2 text-sm font-semibold">
-              <input type="checkbox" className="h-4 w-4 accent-red-600" checked={c.breaking.on} onChange={(e) => setBk({ on: e.target.checked })} /> Show on the live screen
-            </label>
-            <button type="button" className="nk-btn nk-green px-4 py-2 text-sm" disabled={busy || !dirty} onClick={() => save()}>{busy ? 'Saving…' : dirty ? 'Save' : 'Saved'}</button>
-          </div>
-        </div>
+      <Sec title="🔴 Breaking news" badge={c.breaking.on ? <OnAir /> : undefined} hint="bar above the yellow ticker">
+        <Switch on={c.breaking.on} set={(v) => set({ breaking: { ...c.breaking, on: v } })} label="Show the breaking news bar" />
         <div className="grid gap-2">
           {c.breaking.items.map((t, i) => (
             <div key={i} className={`flex items-center gap-2 ${t.on ? '' : 'opacity-60'}`}>
               <span className="w-6 shrink-0 text-right text-sm font-bold text-red-700">{i + 1}.</span>
-              <input className={`nk-input flex-1 ${t.on ? '' : 'line-through'}`} maxLength={200} value={t.text} placeholder={i === 0 ? 'যেমন: আজ রাত ৯টায় নতুন বিজয়ী ঘোষণা, লাইভে থাকুন!' : 'আরেকটি খবর লিখুন'}
-                onChange={(e) => setBkItem(i, { text: e.target.value })}
-                onKeyDown={(e) => { if (e.key === 'Enter' && c.breaking.items.length < 20) { e.preventDefault(); setBk({ items: [...c.breaking.items.slice(0, i + 1), blank(), ...c.breaking.items.slice(i + 1)] }); } }} />
-              <button type="button" onClick={() => setBkItem(i, { on: !t.on })} aria-pressed={!t.on}
-                className={`nk-btn shrink-0 px-2.5 py-1.5 text-xs ${t.on ? 'nk-ghost' : 'border border-gold-500 bg-gold-400/25 text-emerald-950'}`}>{t.on ? 'Hide' : 'Hidden · show'}</button>
-              <button type="button" className="nk-btn nk-ghost px-2 py-1.5 text-xs" disabled={i === 0} onClick={() => moveBk(i, -1)} aria-label="Move up">↑</button>
-              <button type="button" className="nk-btn nk-ghost px-2 py-1.5 text-xs" disabled={i === c.breaking.items.length - 1} onClick={() => moveBk(i, 1)} aria-label="Move down">↓</button>
-              <button type="button" className="nk-btn nk-ghost px-2 py-1.5 text-xs text-red-700" onClick={() => setBk({ items: c.breaking.items.length > 1 ? c.breaking.items.filter((_, j) => j !== i) : [blank()] })} aria-label="Remove">✕</button>
+              <input className={`nk-input flex-1 ${t.on ? '' : 'line-through'}`} maxLength={200} value={t.text} placeholder="খবর লিখুন" onChange={(e) => setBkItem(i, { text: e.target.value })}
+                onKeyDown={(e) => { if (e.key === 'Enter' && c.breaking.items.length < 20) { e.preventDefault(); setBk({ items: [...c.breaking.items.slice(0, i + 1), blankBk(), ...c.breaking.items.slice(i + 1)] }); } }} />
+              <button type="button" onClick={() => setBkItem(i, { on: !t.on })} className={`nk-btn shrink-0 px-2.5 py-1.5 text-xs ${t.on ? 'nk-ghost' : 'border border-gold-500 bg-gold-400/25'}`}>{t.on ? 'Hide' : 'Hidden · show'}</button>
+              <button type="button" className="nk-btn nk-ghost px-2 py-1.5 text-xs" disabled={i === 0} onClick={() => setBk({ items: move(c.breaking.items, i, -1) })} aria-label="Move up">↑</button>
+              <button type="button" className="nk-btn nk-ghost px-2 py-1.5 text-xs text-red-700" onClick={() => setBk({ items: c.breaking.items.length > 1 ? c.breaking.items.filter((_, j) => j !== i) : [blankBk()] })} aria-label="Remove">✕</button>
             </div>
           ))}
-          {c.breaking.items.length < 20 && (
-            <button type="button" className="nk-btn nk-ghost w-fit px-3 py-1.5 text-sm" onClick={() => setBk({ items: [...c.breaking.items, blank()] })}>+ Add new</button>
-          )}
+          {c.breaking.items.length < 20 && <button type="button" className="nk-btn nk-ghost w-fit px-3 py-1.5 text-sm" onClick={() => setBk({ items: [...c.breaking.items, blankBk()] })}>+ Add new</button>}
         </div>
         <div className="flex flex-wrap items-end gap-4">
-          <label className="grid gap-1 text-sm font-semibold">Label
-            <input className="nk-input w-56 font-normal" maxLength={30} value={c.breaking.label} placeholder={DEFAULT_BREAKING_LABEL} onChange={(e) => setBk({ label: e.target.value })} />
-          </label>
-          <div className="grid gap-1 text-sm font-semibold">Speed
-            <div className="flex gap-1 rounded-xl border border-[#e7e1cf] bg-white p-1" role="radiogroup" aria-label="Speed">
-              {([['slow', 'Slow'], ['normal', 'Normal'], ['fast', 'Fast']] as [BkSpeed, string][]).map(([k, t]) => (
-                <button key={k} type="button" role="radio" aria-checked={c.breaking.speed === k} onClick={() => setBk({ speed: k })}
-                  className={`rounded-lg px-3 py-1.5 text-sm ${c.breaking.speed === k ? 'bg-red-600 font-bold text-white' : 'font-semibold text-emerald-900 hover:bg-emerald-50'}`}>{t}</button>
-              ))}
+          <label className={field}>Label<input className={`${input} w-56`} maxLength={30} value={c.breaking.label} placeholder={DEFAULT_BREAKING_LABEL} onChange={(e) => setBk({ label: e.target.value })} /></label>
+          <div className={field}>Speed
+            <div className="flex gap-1 rounded-xl border border-[#e7e1cf] bg-white p-1">
+              {([['slow', 'Slow'], ['normal', 'Normal'], ['fast', 'Fast']] as [BkSpeed, string][]).map(([k, t]) => <button key={k} type="button" onClick={() => setBk({ speed: k })} className={`rounded-lg px-3 py-1.5 text-sm ${c.breaking.speed === k ? 'bg-red-600 font-bold text-white' : 'font-semibold text-emerald-900 hover:bg-emerald-50'}`}>{t}</button>)}
             </div>
           </div>
-          <p className="text-xs text-emerald-900/60">{bkCount} on the stream{bkHidden ? ` · ${bkHidden} hidden` : ''} · Enter in a box adds a new line · press Save, the stream changes within 10 seconds.</p>
         </div>
-      </section>
+      </Sec>
 
-      <section className={`nk-card grid gap-3 p-4 sm:p-5 ${c.announce.on ? 'ring-2 ring-red-500' : ''}`}>
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h2 className="flex items-center gap-2 text-base font-bold text-emerald-950">📣 Full-screen announcement {c.announce.on ? <span className="rounded-full bg-red-600 px-2 py-0.5 text-[11px] text-white">ON SCREEN</span> : <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] text-emerald-900">Hidden</span>}</h2>
-            <p className="mt-0.5 text-sm text-emerald-900/70">Covers the whole live screen. Edit and <b>Save</b> while hidden; press <b>Show on screen</b> when ready (it appears within 5 seconds), <b>Hide</b> to go back. Empty fields are left out.</p>
-          </div>
-          <div className="flex items-center gap-2">
-            {c.announce.on
-              ? <button type="button" className="nk-btn bg-red-600 px-4 py-2 text-sm text-white" disabled={busy} onClick={() => showAn(false)}>Hide announcement</button>
-              : <button type="button" className="nk-btn nk-green px-4 py-2 text-sm" disabled={busy} onClick={() => showAn(true)}>Show on screen</button>}
-            <button type="button" className="nk-btn nk-ghost px-4 py-2 text-sm" disabled={busy || !dirty} onClick={() => save()}>{busy ? 'Saving…' : dirty ? 'Save' : 'Saved'}</button>
-          </div>
-        </div>
-        <div className="grid gap-3 lg:grid-cols-2">
-          <label className="grid gap-1 text-sm font-semibold">Tag<input className="nk-input font-normal" maxLength={60} value={c.announce.tag} onChange={(e) => setAn({ tag: e.target.value })} /></label>
-          <label className="grid gap-1 text-sm font-semibold">Bottom line<input className="nk-input font-normal" maxLength={80} value={c.announce.footer} onChange={(e) => setAn({ footer: e.target.value })} /></label>
-        </div>
-        <label className="grid gap-1 text-sm font-semibold">Heading<textarea className="nk-input font-normal" rows={2} maxLength={160} value={c.announce.title} onChange={(e) => setAn({ title: e.target.value })} /></label>
-        <label className="grid gap-1 text-sm font-semibold">Text<textarea className="nk-input font-normal" rows={4} maxLength={600} value={c.announce.body} onChange={(e) => setAn({ body: e.target.value })} /></label>
-        <label className="grid gap-1 text-sm font-semibold">Highlights <span className="text-xs font-normal text-emerald-900/60">one per line, up to 6</span>
-          <textarea className="nk-input font-normal" rows={3} value={c.announce.points.join('\n')} onChange={(e) => setAn({ points: e.target.value.split('\n').slice(0, 6) })} /></label>
-        <label className="grid gap-1 text-sm font-semibold">Ask for opinion<input className="nk-input font-normal" maxLength={200} value={c.announce.ask} onChange={(e) => setAn({ ask: e.target.value })} /></label>
-        <label className="grid gap-1 text-sm font-semibold">Choices people answer with a number <span className="text-xs font-normal text-emerald-900/60">one per line, up to 6; empty = no choices</span>
-          <textarea className="nk-input font-normal" rows={3} value={c.announce.choices.join('\n')} onChange={(e) => setAn({ choices: e.target.value.split('\n').slice(0, 6) })} /></label>
-      </section>
-
-      <section className="nk-card grid gap-3 p-4 sm:p-5">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h2 className="text-base font-bold text-emerald-950">💬 Questions for the audience</h2>
-            <p className="mt-0.5 text-sm text-emerald-900/70">Press <b>Show</b> and the question pops up at the top of the live screen (any view) within 5 seconds; <b>Hide</b> takes it down. One question at a time. Edit the text, then Save.</p>
-          </div>
-          <div className="flex items-center gap-2">
-            {c.questions.show != null && <button type="button" className="nk-btn border border-red-300 bg-white px-4 py-2 text-sm text-red-700" disabled={busy} onClick={() => showQ(null)}>Hide question</button>}
-            <button type="button" className="nk-btn nk-green px-4 py-2 text-sm" disabled={busy || !dirty} onClick={() => save()}>{busy ? 'Saving…' : dirty ? 'Save' : 'Saved'}</button>
-          </div>
-        </div>
-        <div className="grid gap-2">
-          {c.questions.items.map((q, i) => {
-            const on = c.questions.show === i;
-            return (
-              <div key={i} className={`flex items-center gap-2 rounded-xl p-1.5 ${on ? 'bg-gold-400/20 ring-2 ring-gold-500' : ''}`}>
-                <span className="w-6 shrink-0 text-right text-sm font-bold text-emerald-800">{i + 1}.</span>
-                <input className="nk-input flex-1" maxLength={200} value={q} onChange={(e) => setQText(i, e.target.value)} placeholder="আপনার প্রশ্ন লিখুন" />
-                <button type="button" disabled={busy} onClick={() => showQ(on ? null : i)}
-                  className={`nk-btn shrink-0 px-3 py-1.5 text-xs ${on ? 'bg-red-600 text-white' : 'nk-green'}`}>{on ? '● On screen · Hide' : 'Show'}</button>
-                <button type="button" className="nk-btn nk-ghost px-2 py-1.5 text-xs text-red-700" onClick={() => removeQ(i)} aria-label="Remove">✕</button>
+      <Sec title="📣 Announcements" badge={anOn ? <OnAir /> : <span className="text-xs text-emerald-900/55">{c.announces.length} draft{c.announces.length === 1 ? '' : 's'}</span>} hint="full screen; keep drafts, show one">
+        {c.announces.map((a, i) => {
+          const on = c.announce_show === i;
+          return (
+            <details key={i} className={`rounded-xl border ${on ? 'border-red-500 ring-2 ring-red-500/20' : 'border-[#e7e1cf]'} bg-white`} open={i === 0 && c.announces.length === 1}>
+              <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2.5 [&::-webkit-details-marker]:hidden">
+                <b className="min-w-0 flex-1 truncate text-sm">{i + 1}. {a.title || 'Untitled'}</b>
+                {on && <OnAir />}
+                <button type="button" onClick={(e) => { e.preventDefault(); if (!on && !a.title.trim()) return toast('Write the heading first', false); now_({ announce_show: on ? null : i }, on ? 'Announcement hidden' : 'Announcement on screen'); }}
+                  className={`nk-btn px-3 py-1 text-xs ${on ? 'bg-red-600 text-white' : 'nk-green'}`}>{on ? 'Hide' : 'Show'}</button>
+              </summary>
+              <div className="grid gap-3 border-t border-[#eee7d3] p-3">
+                <div className="grid gap-3 lg:grid-cols-2">
+                  <label className={field}>Tag<input className={input} maxLength={60} value={a.tag} onChange={(e) => setAn(i, { tag: e.target.value })} /></label>
+                  <label className={field}>Bottom line<input className={input} maxLength={80} value={a.footer} onChange={(e) => setAn(i, { footer: e.target.value })} /></label>
+                </div>
+                <label className={field}>Heading<textarea className={input} rows={2} maxLength={160} value={a.title} onChange={(e) => setAn(i, { title: e.target.value })} /></label>
+                <label className={field}>Text<textarea className={input} rows={3} maxLength={600} value={a.body} onChange={(e) => setAn(i, { body: e.target.value })} /></label>
+                <label className={field}>Highlights <span className="text-xs font-normal text-emerald-900/60">one per line</span><textarea className={input} rows={3} value={a.points.join('\n')} onChange={(e) => setAn(i, { points: e.target.value.split('\n').slice(0, 6) })} /></label>
+                <label className={field}>Ask for opinion<input className={input} maxLength={200} value={a.ask} onChange={(e) => setAn(i, { ask: e.target.value })} /></label>
+                <label className={field}>Choices (answer with a number) <span className="text-xs font-normal text-emerald-900/60">one per line; empty = none</span><textarea className={input} rows={3} value={a.choices.join('\n')} onChange={(e) => setAn(i, { choices: e.target.value.split('\n').slice(0, 6) })} /></label>
+                <div className="flex flex-wrap gap-2">
+                  <button type="button" className="nk-btn nk-ghost px-3 py-1.5 text-xs" onClick={() => set({ announces: [...c.announces.slice(0, i + 1), { ...a, title: `${a.title} (copy)` }, ...c.announces.slice(i + 1)].slice(0, 20) })}>Duplicate</button>
+                  <button type="button" className="nk-btn nk-ghost px-3 py-1.5 text-xs text-red-700" onClick={() => {
+                    if (!confirm('Delete this announcement draft?')) return;
+                    const list = c.announces.filter((_, j) => j !== i);
+                    set({ announces: list.length ? list : [{ ...DEFAULT_ANNOUNCE, points: [], choices: [] }], announce_show: c.announce_show == null || c.announce_show === i ? null : c.announce_show > i ? c.announce_show - 1 : c.announce_show });
+                  }}><Trash2 className="inline h-3.5 w-3.5" /> Delete</button>
+                </div>
               </div>
-            );
-          })}
-          <div className="flex flex-wrap gap-2">
-            {c.questions.items.length < 30 && <button type="button" className="nk-btn nk-ghost w-fit px-3 py-1.5 text-sm" onClick={() => setQ({ items: [...c.questions.items, ''] })}>+ Add question</button>}
-            <button type="button" className="nk-btn nk-ghost w-fit px-3 py-1.5 text-sm" onClick={() => setQ({ items: [...c.questions.items, ...SAMPLE_QUESTIONS.filter((s) => !c.questions.items.includes(s))].slice(0, 30) })}>+ Add the sample questions</button>
-          </div>
-        </div>
-      </section>
+            </details>
+          );
+        })}
+        {c.announces.length < 20 && <button type="button" className="nk-btn nk-ghost flex w-fit items-center gap-1.5 px-3 py-1.5 text-sm" onClick={() => set({ announces: [...c.announces, { ...DEFAULT_ANNOUNCE, title: '', body: '', points: [], ask: '', choices: [], on: false }] })}><Plus className="h-4 w-4" /> New announcement</button>}
+      </Sec>
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_22rem]">
-        <section className="nk-card p-4 sm:p-5">
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-base font-bold text-emerald-950">Preview {dirty && <span className="text-xs font-normal text-gold-600">(save to update)</span>}</h2>
-            {draw && (
-              <div className="flex gap-1 rounded-xl border border-[#e7e1cf] bg-white p-1" role="tablist" aria-label="What the live screen shows">
-                {([['normal', 'Normal live'], ['raffle', 'Raffle draw live'], ['winner', 'Winner live']] as const).map(([k, t]) => (
-                  <button key={k} type="button" role="tab" aria-selected={draw.mode === k} onClick={() => draw.mode !== k && setDrawMode(k)}
-                    className={`rounded-lg px-3.5 py-1.5 text-sm font-semibold ${draw.mode === k ? (k === 'raffle' ? 'bg-red-600 text-white' : k === 'winner' ? 'bg-gold-500 text-emerald-950' : 'bg-emerald-900 text-white') : 'text-emerald-900 hover:bg-emerald-50'}`}>{t}</button>
-                ))}
+      <Sec title="🔔 Notices" badge={ntOn ? <OnAir /> : undefined} hint="a card in the middle over the blurred screen">
+        {c.notices.map((n) => {
+          const on = c.notice_show === n.id;
+          return (
+            <div key={n.id} className={`grid gap-2 rounded-xl border p-3 ${on ? 'border-red-500 ring-2 ring-red-500/20' : 'border-[#e7e1cf]'}`}>
+              <div className="grid gap-2 sm:grid-cols-[12rem_1fr]">
+                <input className={input} maxLength={60} value={n.tag} placeholder="Tag, e.g. 📢 নোটিশ" onChange={(e) => setNt(n.id, { tag: e.target.value })} />
+                <input className={`${input} font-semibold`} maxLength={140} value={n.title} placeholder="Heading" onChange={(e) => setNt(n.id, { title: e.target.value })} />
               </div>
-            )}
+              <textarea className={input} rows={2} maxLength={500} value={n.text} placeholder="Text (optional)" onChange={(e) => setNt(n.id, { text: e.target.value })} />
+              <div className="flex flex-wrap gap-2">
+                <button type="button" onClick={() => { if (!on && !n.title.trim()) return toast('Write the heading first', false); now_({ notice_show: on ? null : n.id }, on ? 'Notice hidden' : 'Notice on screen'); }} className={`nk-btn px-3 py-1.5 text-xs ${on ? 'bg-red-600 text-white' : 'nk-green'}`}>{on ? '● On screen · Hide' : 'Show'}</button>
+                <button type="button" className="nk-btn nk-ghost px-3 py-1.5 text-xs text-red-700" onClick={() => set({ notices: c.notices.filter((x) => x.id !== n.id), notice_show: on ? null : c.notice_show })}><Trash2 className="inline h-3.5 w-3.5" /> Delete</button>
+              </div>
+            </div>
+          );
+        })}
+        {c.notices.length < 20 && <button type="button" className="nk-btn nk-ghost flex w-fit items-center gap-1.5 px-3 py-1.5 text-sm" onClick={() => set({ notices: [...c.notices, { id: uid(), tag: '📢 নোটিশ', title: '', text: '' }] })}><Plus className="h-4 w-4" /> New notice</button>}
+      </Sec>
+
+      <Sec title="💬 Questions for the audience" badge={qOn ? <OnAir /> : undefined} hint="pops up at the top">
+        {c.questions.items.map((q, i) => {
+          const on = c.questions.show === i;
+          return (
+            <div key={i} className={`flex items-center gap-2 rounded-xl p-1.5 ${on ? 'bg-gold-400/20 ring-2 ring-gold-500' : ''}`}>
+              <span className="w-6 shrink-0 text-right text-sm font-bold text-emerald-800">{i + 1}.</span>
+              <input className="nk-input flex-1" maxLength={200} value={q} onChange={(e) => setQ({ items: c.questions.items.map((x, j) => (j === i ? e.target.value : x)) })} placeholder="আপনার প্রশ্ন লিখুন" />
+              <button type="button" onClick={() => { if (!on && !q.trim()) return toast('Write the question first', false); now_({ questions: { ...c.questions, show: on ? null : i } }); }} className={`nk-btn shrink-0 px-3 py-1.5 text-xs ${on ? 'bg-red-600 text-white' : 'nk-green'}`}>{on ? '● Hide' : 'Show'}</button>
+              <button type="button" className="nk-btn nk-ghost px-2 py-1.5 text-xs text-red-700" onClick={() => setQ({ items: c.questions.items.length > 1 ? c.questions.items.filter((_, j) => j !== i) : [''], show: c.questions.show == null || c.questions.show === i ? null : c.questions.show > i ? c.questions.show - 1 : c.questions.show })} aria-label="Remove">✕</button>
+            </div>
+          );
+        })}
+        <div className="flex flex-wrap gap-2">
+          {c.questions.items.length < 30 && <button type="button" className="nk-btn nk-ghost w-fit px-3 py-1.5 text-sm" onClick={() => setQ({ items: [...c.questions.items, ''] })}>+ Add question</button>}
+          <button type="button" className="nk-btn nk-ghost w-fit px-3 py-1.5 text-sm" onClick={() => setQ({ items: [...c.questions.items, ...SAMPLE_QUESTIONS.filter((s) => !c.questions.items.includes(s))].slice(0, 30) })}>+ Sample questions</button>
+        </div>
+      </Sec>
+
+      <Sec title="📢 Promo ads (L-shape)" hint="the screen shrinks; the ad fills the left and bottom">
+        <p className="text-xs text-emerald-900/60">Shown by the <b>Promo ads</b> scene (Auto, or ▶ in the controller). Several promos take turns. Left: tag, heading, picture, text. Bottom: the points and the site link.</p>
+        {c.promos.map((p, i) => (
+          <div key={p.id} className={`grid gap-2 rounded-xl border border-[#e7e1cf] p-3 ${p.on ? '' : 'opacity-60'}`}>
+            <div className="flex flex-wrap items-center gap-2">
+              <Switch on={p.on} set={(v) => setPr(p.id, { on: v })} label={<b>Promo {i + 1}</b>} />
+              <button type="button" className="nk-btn nk-ghost ml-auto px-2 py-1 text-xs" disabled={i === 0} onClick={() => set({ promos: move(c.promos, i, -1) })}>↑</button>
+              <button type="button" className="nk-btn nk-ghost px-2 py-1 text-xs text-red-700" onClick={() => set({ promos: c.promos.filter((x) => x.id !== p.id) })}><Trash2 className="h-3.5 w-3.5" /></button>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-[12rem_1fr]">
+              <input className={input} maxLength={60} value={p.tag} placeholder="Tag, e.g. 🎁 আসছে" onChange={(e) => setPr(p.id, { tag: e.target.value })} />
+              <input className={`${input} font-semibold`} maxLength={140} value={p.title} placeholder="Heading" onChange={(e) => setPr(p.id, { title: e.target.value })} />
+            </div>
+            <textarea className={input} rows={2} maxLength={500} value={p.text} placeholder="Text" onChange={(e) => setPr(p.id, { text: e.target.value })} />
+            <textarea className={input} rows={2} value={p.points.join('\n')} placeholder={'Points for the bottom bar, one per line\nযেমন: আকর্ষণীয় পুরস্কার'} onChange={(e) => setPr(p.id, { points: e.target.value.split('\n').slice(0, 6) })} />
+            <div className="flex flex-wrap items-center gap-2">
+              {p.image && <img src={p.image} alt="" className="h-12 w-12 rounded-lg border border-[#e7e1cf] object-contain" />}
+              <label className="nk-btn nk-ghost flex cursor-pointer items-center gap-1.5 px-3 py-1.5 text-xs"><Upload className="h-3.5 w-3.5" />{upBusy === 'nusuk-promo' ? 'Uploading…' : p.image ? 'Change picture' : 'Picture'}
+                <input type="file" accept="image/*" hidden onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) upload(f, 'nusuk-promo', (u) => setPr(p.id, { image: u })); }} /></label>
+              {p.image && <button type="button" className="text-xs text-red-700 underline" onClick={() => setPr(p.id, { image: '' })}>Remove picture</button>}
+            </div>
           </div>
-          {draw && (
-            <p className="mb-3 text-xs text-emerald-900/65">
-              <b>Winner live:</b> Nusuk's official winner, full screen, with the countdown to the next announcement. Save a new winner in <a href="#/today" className="font-semibold underline">Winners → Today's winner</a> and the live screen announces it (with confetti) within a few seconds.{' '}
-              <b>Raffle draw live:</b> {draw.contest_id ? <><b>{draw.title}</b> · {draw.scope === 'all' ? 'whole competition' : draw.scope}; </> : 'no draw chosen yet; '}
-              set it up in <a href="#/club" className="font-semibold underline">Reward Club → Raffle draw</a>.
-            </p>
-          )}
-          <div className="relative w-full overflow-hidden rounded-xl border border-[#e7e1cf] bg-black" style={{ aspectRatio: '16 / 9' }}>
-            <iframe key={previewKey} src={url} title="Live screen preview" className="absolute inset-0 h-full w-full border-0" />
+        ))}
+        {c.promos.length < 20 && <button type="button" className="nk-btn nk-ghost flex w-fit items-center gap-1.5 px-3 py-1.5 text-sm" onClick={() => set({ promos: [...c.promos, { id: uid(), on: true, tag: '🎁 আসছে', title: '', text: '', points: [], image: '' }] })}><Plus className="h-4 w-4" /> New promo</button>}
+      </Sec>
+
+      <Sec title="▶️ Videos" hint="YouTube tutorials, played one after another">
+        <p className="text-xs text-emerald-900/60">Paste YouTube links (watch, youtu.be or shorts). The <b>Videos</b> scene plays the ticked ones in order; music pauses while a video plays. In Auto it moves on after the last video.</p>
+        {c.videos.map((v, i) => {
+          const id = ytId(v.url);
+          return (
+            <div key={v.id} className={`flex flex-wrap items-center gap-2 rounded-xl border border-[#e7e1cf] p-2 ${v.on ? '' : 'opacity-60'}`}>
+              {id ? <img src={`https://i.ytimg.com/vi/${id}/mqdefault.jpg`} alt="" className="h-12 w-20 rounded-md object-cover" /> : <span className="grid h-12 w-20 place-items-center rounded-md bg-emerald-50 text-xs text-emerald-900/50">no video</span>}
+              <div className="grid min-w-0 flex-1 gap-1.5">
+                <input className={`${input} py-1.5`} maxLength={120} value={v.title} placeholder="Title (shown on screen)" onChange={(e) => setVd(v.id, { title: e.target.value })} />
+                <input className={`${input} py-1.5 font-mono text-xs`} maxLength={300} value={v.url} placeholder="https://www.youtube.com/watch?v=…" onChange={(e) => setVd(v.id, { url: e.target.value })} />
+              </div>
+              <Switch on={v.on} set={(x) => setVd(v.id, { on: x })} label="" />
+              <button type="button" className="nk-btn nk-ghost px-2 py-1 text-xs" disabled={i === 0} onClick={() => set({ videos: move(c.videos, i, -1) })}>↑</button>
+              <button type="button" className="nk-btn nk-ghost px-2 py-1 text-xs text-red-700" onClick={() => set({ videos: c.videos.filter((x) => x.id !== v.id) })}><Trash2 className="h-3.5 w-3.5" /></button>
+            </div>
+          );
+        })}
+        {c.videos.length < 30 && <button type="button" className="nk-btn nk-ghost flex w-fit items-center gap-1.5 px-3 py-1.5 text-sm" onClick={() => set({ videos: [...c.videos, { id: uid(), on: true, title: '', url: '' }] })}><Plus className="h-4 w-4" /> Add video</button>}
+      </Sec>
+
+      <Sec title="🎵 Background music" badge={c.music.on ? <OnAir /> : undefined} hint="instead of OBS; tracks play one after another and loop">
+        <p className="text-xs text-emerald-900/60">Upload MP3 files or paste a direct link to an audio file. In OBS tick <b>Control audio via OBS</b> on the Browser source to set its level there too. Use only music you have the right to play.</p>
+        {c.music.tracks.map((t, i) => (
+          <div key={t.id} className={`flex flex-wrap items-center gap-2 rounded-xl border border-[#e7e1cf] p-2 ${t.on ? '' : 'opacity-60'}`}>
+            <span className="w-6 text-right text-sm font-bold text-emerald-800">{i + 1}.</span>
+            <div className="grid min-w-0 flex-1 gap-1.5">
+              <input className={`${input} py-1.5`} maxLength={120} value={t.title} placeholder="Name" onChange={(e) => setTr(t.id, { title: e.target.value })} />
+              <input className={`${input} py-1.5 font-mono text-xs`} maxLength={500} value={t.url} placeholder="https://…/music.mp3" onChange={(e) => setTr(t.id, { url: e.target.value })} />
+            </div>
+            {t.url && <audio src={t.url} controls preload="none" className="h-8 w-48" />}
+            <Switch on={t.on} set={(x) => setTr(t.id, { on: x })} label="" />
+            <button type="button" className="nk-btn nk-ghost px-2 py-1 text-xs" disabled={i === 0} onClick={() => set({ music: { ...c.music, tracks: move(c.music.tracks, i, -1) } })}>↑</button>
+            <button type="button" className="nk-btn nk-ghost px-2 py-1 text-xs text-red-700" onClick={() => set({ music: { ...c.music, tracks: c.music.tracks.filter((x) => x.id !== t.id) } })}><Trash2 className="h-3.5 w-3.5" /></button>
           </div>
-        </section>
-        <section className="nk-card p-4 sm:p-5">
-          <h2 className="mb-3 text-base font-bold text-emerald-950">Set up in OBS (once)</h2>
-          <ol className="grid list-decimal gap-1.5 pl-5 text-sm text-emerald-950/85">
-            <li>OBS → <b>Sources</b> → <b>+</b> → <b>Browser</b>.</li>
-            <li>Paste the link above in <b>URL</b>.</li>
-            <li><b>Width 1920</b>, <b>Height 1080</b>.</li>
-            <li>Settings → Video: <b>1920×1080</b>.</li>
-            <li>Settings → Stream: <b>Facebook Live</b> or <b>YouTube</b>, paste the stream key.</li>
-            <li>Start Streaming.</li>
-          </ol>
-        </section>
-      </div>
+        ))}
+        <div className="flex flex-wrap gap-2">
+          <label className="nk-btn nk-ghost flex cursor-pointer items-center gap-1.5 px-3 py-1.5 text-sm"><Upload className="h-4 w-4" />{upBusy === 'nusuk-music' ? 'Uploading…' : 'Upload MP3'}
+            <input type="file" accept="audio/*" hidden onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) upload(f, 'nusuk-music', (u) => set({ music: { ...c.music, tracks: [...c.music.tracks, { id: uid(), on: true, title: f.name.replace(/\.[^.]+$/, ''), url: u }] } })); }} /></label>
+          <button type="button" className="nk-btn nk-ghost flex items-center gap-1.5 px-3 py-1.5 text-sm" onClick={() => set({ music: { ...c.music, tracks: [...c.music.tracks, { id: uid(), on: true, title: '', url: '' }] } })}><Plus className="h-4 w-4" /> Add by link</button>
+        </div>
+      </Sec>
+
+      <Sec title="📱 Join scene: QR code + links" hint="the QR opens muhammadfazal.com/nusuk">
+        <label className={field}>Heading<input className={input} maxLength={100} value={c.join.title} onChange={(e) => set({ join: { ...c.join, title: e.target.value } })} /></label>
+        <label className={field}>Text<textarea className={input} rows={2} maxLength={300} value={c.join.text} onChange={(e) => set({ join: { ...c.join, text: e.target.value } })} /></label>
+        <div className="grid gap-1.5">
+          <span className="text-sm font-semibold">Links on screen</span>
+          {c.join.links.map((l, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <input className={`${input} w-40`} maxLength={40} value={l.label} placeholder="Facebook গ্রুপ" onChange={(e) => set({ join: { ...c.join, links: c.join.links.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)) } })} />
+              <input className={`${input} flex-1 font-mono text-xs`} maxLength={200} value={l.url} placeholder="fb.com/groups/…" onChange={(e) => set({ join: { ...c.join, links: c.join.links.map((x, j) => (j === i ? { ...x, url: e.target.value } : x)) } })} />
+              <button type="button" className="nk-btn nk-ghost px-2 py-1.5 text-xs text-red-700" onClick={() => set({ join: { ...c.join, links: c.join.links.filter((_, j) => j !== i) } })}>✕</button>
+            </div>
+          ))}
+          {c.join.links.length < 6 && <button type="button" className="nk-btn nk-ghost w-fit px-3 py-1.5 text-xs" onClick={() => set({ join: { ...c.join, links: [...c.join.links, { label: '', url: '' }] } })}>+ Add link</button>}
+        </div>
+      </Sec>
+
+      <Sec title="🛠 Set up in OBS (once)">
+        <ol className="grid list-decimal gap-1.5 pl-5 text-sm text-emerald-950/85">
+          <li>OBS → <b>Sources</b> → <b>+</b> → <b>Browser</b>; URL: <span className="font-mono">{url}</span></li>
+          <li><b>Width 1920</b>, <b>Height 1080</b>; tick <b>Control audio via OBS</b> (for the music and videos).</li>
+          <li>Settings → Video: <b>1920×1080</b>; Settings → Advanced: <b>Browser Source Hardware Acceleration</b> on.</li>
+          <li>Settings → Stream: <b>Facebook Live</b> or <b>YouTube</b>, paste the stream key, then Start Streaming.</li>
+        </ol>
+      </Sec>
+
+      {/* floating save */}
+      {dirty && (
+        <div className="fixed right-5 bottom-5 z-40 flex items-center gap-3 rounded-2xl border border-gold-500/60 bg-white px-4 py-3 shadow-2xl">
+          <span className="text-sm font-semibold text-emerald-950">Unsaved changes</span>
+          <button type="button" className="nk-btn nk-green px-5 py-2 text-sm" disabled={busy} onClick={() => save()}>{busy ? 'Saving…' : 'Save'}</button>
+        </div>
+      )}
     </div>
   );
 }

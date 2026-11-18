@@ -8,6 +8,7 @@
 import { rpc } from './rpc';
 import { countdownText, countryName, flagUrl, parseToday, prizeLong, winnerDayLabel } from './content';
 import { BK_SPEED, DEFAULT_BREAKING_LABEL, parseLiveCfg, themeAt, type LiveCfg } from './livecfg';
+import { initLiveTv, type TvData } from './livetv';
 
 /* ---- Breaking news bar: headlines run right to left, one after another, looping ---- */
 const bk = { key: '', anim: null as Animation | null };
@@ -94,6 +95,10 @@ export function initLiveScreen() {
   const urlTitle = params.get('title');
   const defaultTitle = $('ls-title').textContent ?? '';
   let cfg: LiveCfg = parseLiveCfg(null);
+  let rawCfg: unknown = null;
+  // the TV program (scenes, promos, notices, music, videos) reads the latest numbers from here
+  const latest: TvData = { screen: null, ins: null };
+  const tv = initLiveTv({ muted: params.get('preview') === '1', data: () => latest });
   let hide = new Set<string>();
   let shownTheme = '';
   function applyCfg() {
@@ -115,13 +120,16 @@ export function initLiveScreen() {
     breaking(cfg);
     question(cfg);
     announce(cfg);
+    tv.apply(cfg, rawCfg);
   }
   // Full-screen announcement (Nusuk Manager → Live screen → Announcement)
   let anShown = '';
   function announce(c: LiveCfg) {
     const box = document.getElementById('ls-an');
     if (!box) return;
-    const a = c.announce;
+    // the draft picked in Nusuk Manager → Live screen → Announcements (null = none on screen)
+    const picked = c.announce_show == null ? null : c.announces[c.announce_show] ?? null;
+    const a = picked ? { ...picked, on: true } : { ...(c.announces[0] ?? { tag: '', title: '', body: '', points: [], ask: '', choices: [], footer: '' }), on: false };
     const key = a.on ? JSON.stringify(a) : '';
     if (key === anShown) return;
     const wasOn = !!anShown;
@@ -160,7 +168,7 @@ export function initLiveScreen() {
     box.classList.remove('lsq-out', 'lsq-in'); void box.offsetWidth; box.classList.add('lsq-in');
   }
   async function loadCfg() {
-    try { cfg = parseLiveCfg(await rpc<unknown>('nusuk_live_screen_cfg')); } catch { /* update 30 not run yet: defaults */ }
+    try { rawCfg = await rpc<unknown>('nusuk_live_screen_cfg'); cfg = parseLiveCfg(rawCfg); } catch { /* update 30 not run yet: defaults */ }
     applyCfg();
   }
 
@@ -278,6 +286,7 @@ export function initLiveScreen() {
     let d: Screen;
     try { d = await rpc<Screen>('nusuk_live_screen'); } catch { return; }
     skew = Date.parse(d.now) - Date.now();
+    latest.screen = d;
     setNum('k-active', Math.max(1, d.active_now));
     $('k-active-s').textContent = `আজ সর্বোচ্চ একসাথে ${bn(d.peak_today)} জন`;
     setNum('k-visitors', d.visitors_today);
@@ -308,6 +317,7 @@ export function initLiveScreen() {
   async function loadCharts() {
     let d: Ins;
     try { d = await rpc<Ins>('nusuk_insights'); } catch { return; }
+    latest.ins = d;
     const css = getComputedStyle($('ls-stage'));
     chart($('c-active'), d.active, 'line', css.getPropertyValue('--line').trim() || '#7ee2b8');
     chart($('c-copies'), last(d.copies, 24), 'bars', css.getPropertyValue('--bar').trim() || '#f2c94c');
