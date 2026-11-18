@@ -396,6 +396,7 @@ export function initLiveTv(opts: { muted: boolean; data: () => TvData }) {
       raw = (r && typeof r === 'object' ? r : {}) as Raw;
       schedule();
       lshape();
+      videoTick();
       music(c);
       notice(c);
     },

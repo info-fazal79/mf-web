@@ -9,6 +9,7 @@ import { rpc } from './rpc';
 import { countdownText, countryName, flagUrl, parseToday, prizeLong, winnerDayLabel } from './content';
 import { BK_SPEED, DEFAULT_BREAKING_LABEL, parseLiveCfg, themeAt, type LiveCfg } from './livecfg';
 import { initLiveTv, type TvData } from './livetv';
+import { listenLive } from './livebus';
 
 /* ---- Breaking news bar: headlines run right to left, one after another, looping ---- */
 const bk = { key: '', anim: null as Animation | null };
@@ -348,7 +349,16 @@ export function initLiveScreen() {
 
   applyCfg();
   loadCfg(); loadScreen(); loadCharts(); loadQuiz(); loadFeatured();
-  setInterval(loadCfg, 5_000); // admin changes (theme, panels, headline, questions) show within 5 s
+  // admin changes arrive at once over Realtime; the database is still checked every 5 s as a safety net
+  listenLive((m) => {
+    if (m.type === 'cfg' && m.cfg && typeof m.cfg === 'object') {
+      const keep = rawCfg && typeof rawCfg === 'object' ? { _winners: (rawCfg as Record<string, unknown>)._winners, _today: (rawCfg as Record<string, unknown>)._today } : {};
+      rawCfg = { ...(m.cfg as object), ...keep };
+      cfg = parseLiveCfg(rawCfg);
+      applyCfg();
+    } else if (m.type === 'draw') document.dispatchEvent(new Event('ls-draw-poll'));
+  });
+  setInterval(loadCfg, 5_000);
   setInterval(applyCfg, 30_000); // scheduled / rotating themes switch on time
   setInterval(loadScreen, 15_000); // the server shares one result for 15 s (update 41)
   setInterval(loadCharts, 30_000);

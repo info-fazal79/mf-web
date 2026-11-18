@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ArrowDown, ArrowUp, ChevronDown, Copy, ExternalLink, EyeOff, Music2, Play, Plus, Radio, Trash2, Upload } from 'lucide-react';
 import { supabase as sb } from '@/lib/supabase';
 import { uploadMedia } from '@/admin/media';
+import { liveSender } from '../_lib/livebus';
 import {
   DEFAULT_ANNOUNCE, DEFAULT_BREAKING_LABEL, LSHAPE_MODES, SAMPLE_QUESTIONS, SCENES, THEMES, defaultLiveCfg, lshapeClashes, parseLiveCfg, themeAt, uid, videoClashes, ytId,
   type Announce, type BkItem, type BkSpeed, type Breaking, type Fx, type LiveCfg, type Notice, type Promo, type Scene, type SceneKey, type Slot, type Theme, type Track, type Video,
@@ -101,6 +102,7 @@ export default function LiveScreenPage({ toast }: { toast: ToastFn }) {
     if (mode === 'raffle' && !draw?.contest_id) return toast('First pick the draw in Reward Club → Raffle draw → "Show this draw on the live screen"', false);
     const { error } = await sb!.from('nusuk_club_draw_state').update({ mode, updated_at: new Date().toISOString() }).eq('id', 1);
     if (error) return toast(errText(error).includes('check') ? 'Run update_40_live_winner.sql in Supabase first' : errText(error), false);
+    bus.current?.send({ type: 'draw' });
     await loadDraw();
     toast(mode === 'raffle' ? 'Live screen: raffle draw' : mode === 'winner' ? 'Live screen: winner announcement' : 'Live screen: normal');
   }
@@ -113,6 +115,9 @@ export default function LiveScreenPage({ toast }: { toast: ToastFn }) {
   }, []);
   // a running save; edits made meanwhile are saved by the next one
   const saving = useRef(false);
+  // instant link to every open live screen (OBS and the preview)
+  const bus = useRef<ReturnType<typeof liveSender> | null>(null);
+  useEffect(() => { bus.current = liveSender(sb); return () => bus.current?.close(); }, []);
   const set = (p: Partial<LiveCfg>) => { setC((x) => ({ ...x, ...p })); setDirty(true); };
   const url = `${typeof location !== 'undefined' ? location.origin : ''}/nusuk/live`;
   const current = useMemo(() => themeAt(c, now), [c, now]);
@@ -120,7 +125,9 @@ export default function LiveScreenPage({ toast }: { toast: ToastFn }) {
   async function save(next: LiveCfg = c, quiet = false) {
     const clash = [...lshapeClashes(next.promos), ...videoClashes(next.videos)];
     if (clash.length) return toast(`Promo times clash: ${clash[0].msg}. Change one of the times first.`, false);
-    if (saving.current) await new Promise((r) => setTimeout(r, 300));
+    // the live screen gets it at once; the database write follows
+    bus.current?.send({ type: 'cfg', cfg: next });
+    if (saving.current) await new Promise((r) => setTimeout(r, 150));
     saving.current = true;
     setBusy(true);
     const { data, error: e1 } = await sb!.from('nusuk_settings').select('content').eq('id', 1).single();

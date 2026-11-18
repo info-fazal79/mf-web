@@ -151,4 +151,5 @@ export function initLiveRaffle(opts: { onMode: (mode: 'normal' | 'raffle' | 'win
   }
   poll();
   setInterval(poll, 2000);
+  document.addEventListener('ls-draw-poll', () => { poll(); }); // Nusuk Manager changed the view: check now
 }
