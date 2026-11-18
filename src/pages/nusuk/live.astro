@@ -325,6 +325,23 @@ import { lucide } from './_lib/lucide';
       <div id="tv-pb" class="tv-pb"></div>
       </div>
 
+      <!-- Live voting (Nusuk Manager → Live screen → Voting): question, live results, QR to /nusuk/vote -->
+      <div id="ls-poll" class="lpl" data-hidden aria-live="polite">
+        <div class="lpl-card">
+          <div class="lpl-main">
+            <div class="lpl-tag"><span class="lpl-dot"></span>লাইভ ভোট চলছে</div>
+            <div id="ls-poll-q" class="lpl-q"></div>
+            <div id="ls-poll-rows" class="lpl-rows"></div>
+          </div>
+          <div class="lpl-side">
+            <div id="ls-poll-qr" class="lpl-qr"></div>
+            <div class="lpl-scan">স্ক্যান করে ভোট দিন</div>
+            <div class="lpl-url">muhammadfazal.com/nusuk/vote</div>
+            <div class="lpl-total-box"><div id="ls-poll-total" class="lpl-total">০</div><div class="lpl-total-l">জন ভোট দিয়েছেন</div></div>
+          </div>
+        </div>
+      </div>
+
       <!-- Notice over the blurred screen (Nusuk Manager → Live screen → Notices) -->
       <div id="ls-nt" class="tvn" data-hidden aria-live="polite">
         <div class="tvn-card">

@@ -43,7 +43,15 @@ export type LiveCfg = {
   join: Join;
   /** Live comments picked in Nusuk Manager and shown as a card over every view */
   cmt: Cmt;
+  /** Voting: viewers scan the QR and vote (update_53); poll_show = id of the poll on screen (voting open) */
+  polls: Poll[];
+  poll_show: string | null;
 };
+
+// ---------------------------------------------------------------- voting
+export type Poll = { id: string; q: string; options: string[] };
+export const VOTE_URL = 'https://muhammadfazal.com/nusuk/vote';
+export const samplePoll = (): Poll => ({ id: Math.random().toString(36).slice(2, 10), q: 'আজ কোন দেশ থেকে বিজয়ী হবেন বলে আপনার মনে হয়?', options: ['বাংলাদেশ', 'পাকিস্তান', 'ইন্দোনেশিয়া', 'মিশর'] });
 
 // ---------------------------------------------------------------- live comments
 /** the comment on screen; at = when Show was pressed (ms) */
@@ -208,6 +216,8 @@ export const defaultLiveCfg = (): LiveCfg => ({
   lshape: { mode: 'off', show: null, gap: 60 },
   notices: [],
   notice_show: null,
+  polls: [samplePoll()],
+  poll_show: null,
   videos: [],
   vplay: { mode: 'off', show: null, at: 0, music: false, music_vol: 30 },
   music: { on: false, volume: 40, tracks: [] },
@@ -246,7 +256,19 @@ export function parseLiveCfg(raw: unknown): LiveCfg {
     music: parseMusic(r.music),
     join: parseJoin(r.join),
     cmt: parseCmt(r.cmt),
+    ...parsePolls(r),
   };
+}
+
+function parsePolls(r: Obj): { polls: Poll[]; poll_show: string | null } {
+  if (!Array.isArray(r.polls)) return { polls: [samplePoll()], poll_show: null };
+  const polls = list(r.polls, 20).map((p) => ({
+    id: str(p.id, 20) || uid(),
+    q: str(p.q, 200),
+    options: (Array.isArray(p.options) ? (p.options as unknown[]) : []).filter((x): x is string => typeof x === 'string').map((x) => x.slice(0, 60)).slice(0, 6),
+  }));
+  const show = typeof r.poll_show === 'string' && polls.some((p) => p.id === r.poll_show) ? r.poll_show : null;
+  return { polls, poll_show: show };
 }
 
 // ---------------------------------------------------------------- helpers for the TV parts

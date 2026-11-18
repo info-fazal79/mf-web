@@ -1,0 +1,167 @@
+---
+// Live voting · muhammadfazal.com/nusuk/vote (opened from the QR code on the live screen, update_53)
+// No account needed: one vote per phone per poll.
+import './_lib/nusuk.css';
+---
+
+<!doctype html>
+<html lang="bn">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no" />
+    <style is:inline>html { touch-action: pan-x pan-y; } html:root { --font-sans: "Noto Sans Bengali", "Hind Siliguri", system-ui, sans-serif; }</style>
+    <script is:inline>document.addEventListener('gesturestart', function (e) { e.preventDefault(); });</script>
+    <title>লাইভ ভোট | Ribatul Ummah</title>
+    <meta name="description" content="রিবাতুল উম্মাহর লাইভে চলমান প্রশ্নে আপনার ভোট দিন।" />
+    <meta name="theme-color" content="#053d2d" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;500;600;700&display=swap" />
+  </head>
+  <body class="min-h-screen bg-[#f7f4ea] font-sans text-emerald-950 antialiased">
+    <header class="nk-quiz-head text-white">
+      <div class="mx-auto flex max-w-lg items-center justify-between gap-3 px-4 py-4">
+        <a href="/nusuk" class="flex items-center gap-2.5">
+          <img src="/nusuk/ribat-logo-96.webp" alt="" width="40" height="40" class="h-10 w-10 rounded-full bg-[#e9ef9f] object-cover ring-2 ring-gold-400/60" />
+          <div class="leading-tight"><div class="font-bold">Ribatul Ummah</div><div class="text-xs text-emerald-100/80">লাইভ ভোট</div></div>
+        </a>
+        <span class="flex items-center gap-1.5 rounded-full bg-red-600 px-3 py-1 text-xs font-bold"><span class="h-2 w-2 animate-pulse rounded-full bg-white"></span>LIVE</span>
+      </div>
+    </header>
+
+    <main class="mx-auto grid max-w-lg gap-4 px-4 py-5">
+      <section id="v-wait" class="nk-card p-6 text-center text-emerald-900/70">লোড হচ্ছে…</section>
+
+      <section id="v-none" class="nk-card hidden p-6 text-center">
+        <div class="text-5xl">🗳️</div>
+        <h1 class="mt-3 text-xl font-bold">এখন কোনো ভোট চলছে না</h1>
+        <p class="mt-1 text-[15px] text-emerald-900/70">লাইভে নতুন ভোট শুরু হলে স্ক্রিনের QR কোড আবার স্ক্যান করুন।</p>
+        <a href="/nusuk" class="nk-btn nk-green mx-auto mt-4 inline-flex px-5 py-2.5">নুসুক কোড পেজে যান</a>
+      </section>
+
+      <form id="v-form" class="nk-card hidden gap-4 p-5">
+        <span class="w-fit rounded-full bg-gold-400 px-3 py-1 text-xs font-bold text-emerald-950">🗳️ লাইভ ভোট</span>
+        <h1 id="v-q" class="text-xl font-bold leading-snug"></h1>
+        <div id="v-opts" class="grid gap-2" role="radiogroup"></div>
+        <button id="v-send" type="submit" disabled class="nk-btn nk-green py-3.5 text-base disabled:opacity-50">ভোট দিন</button>
+        <p id="v-err" class="hidden rounded-xl bg-red-50 px-3 py-2 text-sm text-red-800"></p>
+        <p class="text-center text-xs text-emerald-900/55">একটি ফোন থেকে একবারই ভোট দেওয়া যাবে।</p>
+      </form>
+
+      <section id="v-done" class="nk-card hidden gap-3 p-5">
+        <div class="flex items-center gap-2 rounded-xl bg-emerald-50 px-3 py-2.5 font-bold text-emerald-800">✓ ধন্যবাদ! আপনার ভোট জমা হয়েছে।</div>
+        <h2 id="v-q2" class="text-lg font-bold leading-snug"></h2>
+        <div id="v-res" class="grid gap-2.5"></div>
+        <p id="v-total" class="text-center text-sm text-emerald-900/70"></p>
+        <p class="text-center text-xs text-emerald-900/55">ফলাফল লাইভ স্ক্রিনেও দেখা যাচ্ছে। এই পেজে কয়েক সেকেন্ড পরপর আপডেট হয়।</p>
+      </section>
+
+      <a href="/nusuk" class="text-center text-sm font-semibold text-emerald-800 underline">হাজারো নুসুক কোড পেতে নুসুক কোড পেজে যান</a>
+    </main>
+
+    <script>
+      import { rpc } from './_lib/rpc';
+
+      type Poll = { id: string; q: string; options: string[] };
+      type Results = { poll: string; counts: (number | null)[]; total: number };
+      type Current = { poll: Poll | null; results?: Results; mine?: number | null };
+      type Vote = { ok: boolean; reason?: string; results?: Results; mine?: number };
+
+      const $ = (id: string) => document.getElementById(id)!;
+      const bn = (n: number) => n.toLocaleString('bn-BD');
+      const MARKS = ['ক', 'খ', 'গ', 'ঘ', 'ঙ', 'চ'];
+      const esc = (t: string) => t.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+      function device() {
+        const k = 'nusuk:device:v1';
+        try {
+          let id = localStorage.getItem(k) ?? '';
+          if (!/^[0-9a-f-]{36}$/i.test(id)) { id = crypto.randomUUID(); localStorage.setItem(k, id); }
+          return id;
+        } catch { return crypto.randomUUID(); }
+      }
+      const dev = device();
+      let poll: Poll | null = null;
+      let pick: number | null = null;
+      let mine: number | null = null;
+
+      function view(v: 'wait' | 'none' | 'form' | 'done') {
+        for (const k of ['wait', 'none', 'form', 'done']) {
+          const el = $(`v-${k}`);
+          el.classList.toggle('hidden', k !== v);
+          el.classList.toggle('grid', k === v && (k === 'form' || k === 'done'));
+        }
+      }
+      function results(r?: Results) {
+        if (!poll) return;
+        const counts = poll.options.map((_, i) => Number(r?.counts?.[i] ?? 0));
+        const total = Math.max(0, r?.total ?? counts.reduce((a, b) => a + b, 0));
+        const top = Math.max(...counts);
+        $('v-q2').textContent = poll.q;
+        $('v-res').innerHTML = poll.options.map((o, i) => {
+          const pct = total ? Math.round((counts[i] / total) * 100) : 0;
+          return `<div class="rounded-xl border ${i === mine ? 'border-emerald-700 bg-emerald-50' : 'border-[#e7e1cf] bg-white'} p-3">
+            <div class="flex items-center justify-between gap-2 text-[15px] font-semibold"><span>${MARKS[i]}. ${esc(o)}${i === mine ? ' <span class="text-xs text-emerald-700">(আপনার ভোট)</span>' : ''}</span><span>${bn(pct)}%</span></div>
+            <div class="mt-2 h-2.5 overflow-hidden rounded-full bg-emerald-100"><div class="h-full rounded-full ${counts[i] === top && top > 0 ? 'bg-gold-500' : 'bg-emerald-600'}" style="width:${pct}%"></div></div>
+            <div class="mt-1 text-xs text-emerald-900/60">${bn(counts[i])} ভোট</div>
+          </div>`;
+        }).join('');
+        $('v-total').textContent = `মোট ${bn(total)} জন ভোট দিয়েছেন`;
+      }
+      function form() {
+        if (!poll) return;
+        $('v-q').textContent = poll.q;
+        $('v-opts').innerHTML = poll.options.map((o, i) => `
+          <label class="flex cursor-pointer items-center gap-3 rounded-xl border-2 border-[#e7e1cf] bg-white p-3.5 text-[16px] font-semibold has-[:checked]:border-emerald-700 has-[:checked]:bg-emerald-50">
+            <input type="radio" name="v" value="${i}" class="h-5 w-5 accent-emerald-700" />
+            <span class="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-emerald-900 text-sm font-bold text-white">${MARKS[i]}</span>${esc(o)}
+          </label>`).join('');
+        pick = null;
+        ($('v-send') as HTMLButtonElement).disabled = true;
+      }
+
+      async function load() {
+        try {
+          const c = await rpc<Current>('nusuk_poll_current', { p_device: dev });
+          if (!c?.poll) { poll = null; view('none'); return; }
+          const changed = c.poll.id !== poll?.id;
+          poll = c.poll;
+          mine = c.mine ?? null;
+          if (mine != null) { results(c.results); view('done'); }
+          else if (changed || $('v-form').classList.contains('hidden')) { form(); view('form'); }
+        } catch { if (!poll) { $('v-wait').textContent = 'লোড করা যায়নি। একটু পরে আবার চেষ্টা করুন।'; } }
+      }
+
+      $('v-opts').addEventListener('change', (e) => {
+        pick = Number((e.target as HTMLInputElement).value);
+        ($('v-send') as HTMLButtonElement).disabled = false;
+      });
+      $('v-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (!poll || pick == null) return;
+        const btn = $('v-send') as HTMLButtonElement;
+        btn.disabled = true; btn.textContent = 'জমা হচ্ছে…';
+        $('v-err').classList.add('hidden');
+        try {
+          const r = await rpc<Vote>('nusuk_poll_vote', { p_poll: poll.id, p_choice: pick, p_device: dev });
+          if (r.ok || r.reason === 'voted') { mine = r.mine ?? pick; results(r.results); view('done'); }
+          else {
+            const msg: Record<string, string> = { closed: 'এই ভোট শেষ হয়ে গেছে।', busy: 'এই সংযোগ থেকে অনেক ভোট এসেছে। মোবাইল ডেটা দিয়ে চেষ্টা করুন।', choice: 'একটি অপশন বেছে নিন।' };
+            $('v-err').textContent = msg[r.reason ?? ''] ?? 'একটু পরে আবার চেষ্টা করুন।';
+            $('v-err').classList.remove('hidden');
+            if (r.reason === 'closed') load();
+          }
+        } catch {
+          $('v-err').textContent = 'ভোট পাঠানো যায়নি। ইন্টারনেট দেখে আবার চেষ্টা করুন।';
+          $('v-err').classList.remove('hidden');
+        }
+        btn.textContent = 'ভোট দিন';
+        btn.disabled = pick == null;
+      });
+
+      load();
+      // new results / a new poll while the page is open (only when it is on screen)
+      setInterval(() => { if (document.visibilityState === 'visible') load(); }, 6000);
+    </script>
+  </body>
+</html>

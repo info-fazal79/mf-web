@@ -10,6 +10,7 @@ import { countdownText, countryName, flagUrl, parseToday, prizeLong, winnerDayLa
 import { BK_SPEED, DEFAULT_BREAKING_LABEL, parseLiveCfg, themeAt, type LiveCfg } from './livecfg';
 import { initLiveTv, type TvData } from './livetv';
 import { listenLive } from './livebus';
+import { initLivePoll } from './livepoll';
 
 /* ---- Breaking news bar: headlines run right to left, one after another, looping ---- */
 const bk = { key: '', anim: null as Animation | null };
@@ -100,6 +101,7 @@ export function initLiveScreen() {
   // the TV program (scenes, promos, notices, music, videos) reads the latest numbers from here
   const latest: TvData = { screen: null, ins: null };
   const tv = initLiveTv({ muted: params.get('preview') === '1', data: () => latest });
+  const poll = initLivePoll();
   let hide = new Set<string>();
   let shownTheme = '';
   function applyCfg() {
@@ -122,6 +124,7 @@ export function initLiveScreen() {
     question(cfg);
     announce(cfg);
     tv.apply(cfg, rawCfg);
+    poll.apply(cfg);
   }
   // Full-screen announcement (Nusuk Manager → Live screen → Announcement)
   let anShown = '';

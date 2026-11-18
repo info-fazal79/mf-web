@@ -9,8 +9,8 @@ import { uploadMedia } from '@/admin/media';
 import { liveSender } from '../_lib/livebus';
 import LiveComments from './LiveComments';
 import {
-  DEFAULT_ANNOUNCE, DEFAULT_BREAKING_LABEL, LSHAPE_MODES, SAMPLE_QUESTIONS, SCENES, THEMES, defaultLiveCfg, lshapeClashes, parseLiveCfg, themeAt, uid, videoClashes, ytId,
-  type Announce, type BkItem, type BkSpeed, type Breaking, type Fx, type LiveCfg, type Notice, type Promo, type Scene, type SceneKey, type Slot, type Theme, type Track, type Video,
+  DEFAULT_ANNOUNCE, DEFAULT_BREAKING_LABEL, LSHAPE_MODES, SAMPLE_QUESTIONS, SCENES, THEMES, VOTE_URL, defaultLiveCfg, lshapeClashes, parseLiveCfg, samplePoll, themeAt, uid, videoClashes, ytId,
+  type Announce, type BkItem, type BkSpeed, type Breaking, type Fx, type LiveCfg, type Notice, type Poll, type Promo, type Scene, type SceneKey, type Slot, type Theme, type Track, type Video,
 } from '../_lib/livecfg';
 
 type ToastFn = (t: string, ok?: boolean) => void;
@@ -67,6 +67,33 @@ function Sec({ id, title, badge, hint, children }: { id?: string; title: ReactNo
       </summary>
       <div className="grid gap-3 border-t border-[#eee7d3] px-4 py-4 sm:px-5">{children}</div>
     </details>
+  );
+}
+/** Live results of the vote on screen (one small row read every 3 s) */
+function PollLive({ id, options }: { id: string; options: string[] }) {
+  const [r, setR] = useState<{ counts: (number | null)[]; total: number } | null>(null);
+  useEffect(() => {
+    let off = false;
+    const load = () => sb!.rpc('nusuk_poll_results', { p_poll: id }).then(({ data }) => { if (!off && data) setR(data as { counts: (number | null)[]; total: number }); });
+    load();
+    const t = setInterval(load, 3000);
+    return () => { off = true; clearInterval(t); };
+  }, [id]);
+  const total = r?.total ?? 0;
+  return (
+    <div className="grid gap-1.5 rounded-lg bg-emerald-50 p-2.5 text-sm">
+      <div className="text-xs font-bold text-emerald-900/70">Live results · {total} votes</div>
+      {options.map((o, i) => {
+        const n = Number(r?.counts?.[i] ?? 0);
+        const pct = total ? Math.round((n / total) * 100) : 0;
+        return (
+          <div key={i}>
+            <div className="flex justify-between gap-2"><span>{o}</span><b>{n} · {pct}%</b></div>
+            <div className="h-2 overflow-hidden rounded-full bg-white"><div className="h-full rounded-full bg-emerald-600 transition-all" style={{ width: `${pct}%` }} /></div>
+          </div>
+        );
+      })}
+    </div>
   );
 }
 const OnAir = () => <span className="rounded-full bg-red-600 px-2 py-0.5 text-[11px] font-bold text-white">● ON SCREEN</span>;
@@ -177,6 +204,8 @@ export default function LiveScreenPage({ toast }: { toast: ToastFn }) {
   const anOn = c.announce_show != null ? c.announces[c.announce_show] : null;
   const ntOn = c.notices.find((n) => n.id === c.notice_show) ?? null;
   const qOn = c.questions.show != null ? c.questions.items[c.questions.show] : null;
+  const pollOn = c.polls.find((x) => x.id === c.poll_show) ?? null;
+  const setPl = (id: string, p: Partial<Poll>) => set({ polls: c.polls.map((x) => (x.id === id ? { ...x, ...p } : x)) });
   const ready = (k: SceneKey) => (k === 'video' ? c.videos.some((v) => v.on && ytId(v.url)) : true);
   const clashes = lshapeClashes(c.promos);
   const promoList = c.promos.filter((p) => p.on && (p.title.trim() || p.text.trim()));
@@ -354,8 +383,9 @@ export default function LiveScreenPage({ toast }: { toast: ToastFn }) {
             <div className="text-xs font-bold tracking-wide text-emerald-900/60 uppercase">Pop-ups on screen</div>
             <div className="flex items-center justify-between gap-2"><span className="min-w-0 truncate">📣 {anOn ? <b>{anOn.title || 'Announcement'}</b> : <span className="text-emerald-900/50">no announcement</span>}</span>{anOn && <button type="button" className="text-xs font-bold text-red-700 underline" onClick={() => now_({ announce_show: null })}>Hide</button>}</div>
             <div className="flex items-center justify-between gap-2"><span className="min-w-0 truncate">🔔 {ntOn ? <b>{ntOn.title || 'Notice'}</b> : <span className="text-emerald-900/50">no notice</span>}</span>{ntOn && <button type="button" className="text-xs font-bold text-red-700 underline" onClick={() => now_({ notice_show: null })}>Hide</button>}</div>
+            <div className="flex items-center justify-between gap-2"><span className="min-w-0 truncate">🗳️ {pollOn ? <b>{pollOn.q || 'Vote'}</b> : <span className="text-emerald-900/50">no vote</span>}</span>{pollOn && <button type="button" className="text-xs font-bold text-red-700 underline" onClick={() => now_({ poll_show: null })}>Hide</button>}</div>
             <div className="flex items-center justify-between gap-2"><span className="min-w-0 truncate">💬 {qOn ? <b>{qOn}</b> : <span className="text-emerald-900/50">no question</span>}</span>{qOn && <button type="button" className="text-xs font-bold text-red-700 underline" onClick={() => now_({ questions: { ...c.questions, show: null } })}>Hide</button>}</div>
-            {(anOn || ntOn || qOn) && <button type="button" className="nk-btn mt-1 flex items-center justify-center gap-1.5 border border-red-300 bg-white py-1.5 text-xs text-red-700" onClick={() => now_({ announce_show: null, notice_show: null, questions: { ...c.questions, show: null } }, 'All pop-ups hidden')}><EyeOff className="h-3.5 w-3.5" /> Hide all pop-ups</button>}
+            {(anOn || ntOn || qOn || pollOn) && <button type="button" className="nk-btn mt-1 flex items-center justify-center gap-1.5 border border-red-300 bg-white py-1.5 text-xs text-red-700" onClick={() => now_({ announce_show: null, notice_show: null, poll_show: null, questions: { ...c.questions, show: null } }, 'All pop-ups hidden')}><EyeOff className="h-3.5 w-3.5" /> Hide all pop-ups</button>}
           </div>
 
           <div className="grid gap-2 rounded-xl border border-[#e7e1cf] p-2.5">
@@ -472,6 +502,33 @@ export default function LiveScreenPage({ toast }: { toast: ToastFn }) {
           );
         })}
         {c.announces.length < 20 && <button type="button" className="nk-btn nk-ghost flex w-fit items-center gap-1.5 px-3 py-1.5 text-sm" onClick={() => set({ announces: [...c.announces, { ...DEFAULT_ANNOUNCE, title: '', body: '', points: [], ask: '', choices: [], on: false }] })}><Plus className="h-4 w-4" /> New announcement</button>}
+      </Sec>
+
+      <Sec title="🗳️ Voting" badge={pollOn ? <OnAir /> : undefined} hint="viewers scan the QR and vote, results move live">
+        <p className="text-xs text-emerald-900/65">Write a question and 2–6 options, then <b>Show</b>: the live screen shows the question, live results and a QR code to <a href={VOTE_URL} target="_blank" rel="noopener" className="font-semibold underline">{VOTE_URL.replace('https://', '')}</a>. Anyone can vote (no account), once per phone. Voting is open only while it is on screen.</p>
+        {c.polls.map((pl) => {
+          const on = c.poll_show === pl.id;
+          const ok = pl.q.trim() && pl.options.filter((o) => o.trim()).length >= 2;
+          return (
+            <div key={pl.id} className={`grid gap-2 rounded-xl border p-3 ${on ? 'border-red-500 ring-2 ring-red-500/20' : 'border-[#e7e1cf]'}`}>
+              <input className={`${input} font-semibold`} maxLength={200} value={pl.q} placeholder="প্রশ্ন, যেমন: আজ কোন দেশ থেকে বিজয়ী হবেন?" onChange={(e) => setPl(pl.id, { q: e.target.value })} />
+              <label className="grid gap-1 text-xs font-semibold">Options (one per line, 2 to 6)
+                <textarea className={input} rows={4} value={pl.options.join('\n')} onChange={(e) => setPl(pl.id, { options: e.target.value.split('\n').slice(0, 6) })} /></label>
+              {on && <PollLive id={pl.id} options={pl.options.filter((o) => o.trim())} />}
+              <div className="flex flex-wrap gap-2">
+                <button type="button" onClick={() => { if (!on && !ok) return toast('Write the question and at least 2 options', false); now_({ poll_show: on ? null : pl.id }, on ? 'Voting closed' : 'Voting on screen'); }} className={`nk-btn px-3 py-1.5 text-xs ${on ? 'bg-red-600 text-white' : 'nk-green'}`}>{on ? '● On screen · Close voting' : 'Show and open voting'}</button>
+                <button type="button" className="nk-btn nk-ghost px-3 py-1.5 text-xs" onClick={async () => {
+                  if (!confirm('Start this vote again from zero? All its votes are deleted.')) return;
+                  const { error } = await sb!.rpc('nusuk_admin_poll_reset', { p_poll: pl.id });
+                  toast(error ? (error.message.includes('nusuk_admin_poll_reset') ? 'Run update_53_live_polls.sql in Supabase first' : error.message) : 'Votes cleared', !error);
+                }}>Clear votes</button>
+                <button type="button" className="nk-btn nk-ghost px-3 py-1.5 text-xs" onClick={() => set({ polls: [...c.polls, { ...pl, id: uid() }] })}><Copy className="inline h-3.5 w-3.5" /> Copy</button>
+                <button type="button" className="nk-btn nk-ghost px-3 py-1.5 text-xs text-red-700" onClick={() => set({ polls: c.polls.filter((x) => x.id !== pl.id), poll_show: on ? null : c.poll_show })}><Trash2 className="inline h-3.5 w-3.5" /> Delete</button>
+              </div>
+            </div>
+          );
+        })}
+        {c.polls.length < 20 && <button type="button" className="nk-btn nk-ghost flex w-fit items-center gap-1.5 px-3 py-1.5 text-sm" onClick={() => set({ polls: [...c.polls, { ...samplePoll(), q: '', options: ['', ''] }] })}><Plus className="h-4 w-4" /> New vote</button>}
       </Sec>
 
       <Sec title="🔔 Notices" badge={ntOn ? <OnAir /> : undefined} hint="a card in the middle over the blurred screen">
