@@ -43,7 +43,7 @@ export type LiveCfg = {
 // ---------------------------------------------------------------- TV program
 export type SceneKey = 'home' | 'stats' | 'winners' | 'lastwin' | 'join' | 'promo' | 'video';
 export const SCENES: { key: SceneKey; name: string; hint: string; secs: number }[] = [
-  { key: 'home', name: 'Main dashboard', hint: 'Numbers, charts, activity feed, quiz and winner cards', secs: 60 },
+  { key: 'home', name: 'Main screen', hint: 'The normal dashboard, or the winner view when Live view is on Winner', secs: 60 },
   { key: 'stats', name: 'Live numbers + active users chart', hint: 'Big numbers and the active-users graph', secs: 25 },
   { key: 'winners', name: 'Bangladeshi Umrah winners', hint: 'One winner at a time, big', secs: 30 },
   { key: 'lastwin', name: 'Latest Nusuk winner', hint: "Today's / yesterday's winner, big", secs: 20 },

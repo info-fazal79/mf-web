@@ -5,7 +5,7 @@
  *     join (QR + links), promo ads in an "L" around the shrunk screen, YouTube videos
  *   • short notices over the blurred screen
  *   • background music (a playlist that loops), paused while a video plays
- * The raffle / winner views (Reward Club draw, Winner live) take over the screen while they are on.
+ * In the Winner view the program runs too (its main screen is the winner view); only a Reward Club raffle draw stops it.
  * ?preview=1 (the preview in Nusuk Manager) keeps music and videos silent.
  */
 import qrcode from 'qrcode-generator';
@@ -73,7 +73,7 @@ export function initLiveTv(opts: { muted: boolean; data: () => TvData }) {
   // ------------------------------------------------------------ program
   function schedule() {
     if (!cfg) return;
-    if (mode !== 'normal') { clearTimeout(timer); plan = 'off'; show('home'); return; } // a draw / winner view is on screen
+    if (mode === 'raffle') { clearTimeout(timer); plan = 'off'; show('home'); return; } // a raffle draw has the whole screen
     const key = JSON.stringify([cfg.tv, promos().length, vids().length, umrah().length, !!today()]);
     if (key === plan) return;
     plan = key;
@@ -93,7 +93,7 @@ export function initLiveTv(opts: { muted: boolean; data: () => TvData }) {
   }
   function next() {
     clearTimeout(timer);
-    if (!cfg?.tv.auto || mode !== 'normal') return;
+    if (!cfg?.tv.auto || mode === 'raffle') return;
     order = scenes();
     run(idx + 1);
   }

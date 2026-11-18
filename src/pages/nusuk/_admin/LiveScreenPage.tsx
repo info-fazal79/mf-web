@@ -157,7 +157,7 @@ export default function LiveScreenPage({ toast }: { toast: ToastFn }) {
   const ntOn = c.notices.find((n) => n.id === c.notice_show) ?? null;
   const qOn = c.questions.show != null ? c.questions.items[c.questions.show] : null;
   const ready = (k: SceneKey) => (k === 'promo' ? c.promos.some((p) => p.on && p.title.trim()) : k === 'video' ? c.videos.some((v) => v.on && ytId(v.url)) : true);
-  const onAirScene: SceneKey | null = draw && draw.mode !== 'normal' ? null : c.tv.auto ? null : c.tv.pin;
+  const onAirScene: SceneKey | null = draw?.mode === 'raffle' ? null : c.tv.auto ? null : c.tv.pin;
 
   if (!loaded) return <section className="nk-card p-5 text-sm text-emerald-900/60">Loading…</section>;
   return (
@@ -189,7 +189,8 @@ export default function LiveScreenPage({ toast }: { toast: ToastFn }) {
                   className={`rounded-lg px-2 py-1.5 text-sm font-semibold ${draw?.mode === k ? (k === 'raffle' ? 'bg-red-600 text-white' : k === 'winner' ? 'bg-gold-500 text-emerald-950' : 'bg-emerald-900 text-white') : 'text-emerald-900 hover:bg-emerald-50'}`}>{t}</button>
               ))}
             </div>
-            {draw && draw.mode !== 'normal' && <p className="mt-1 text-xs text-emerald-900/65">{draw.mode === 'raffle' ? `Raffle: ${draw.title || '—'}` : 'Nusuk winner view'} is on. The TV program waits until you go back to Normal.</p>}
+            {draw?.mode === 'raffle' && <p className="mt-1 rounded-lg bg-red-50 px-2 py-1.5 text-xs font-semibold text-red-800">Raffle draw "{draw.title || '—'}" has the whole screen. The TV program below waits until you go back to Normal or Winner.</p>}
+            {draw?.mode === 'winner' && <p className="mt-1 text-xs text-emerald-900/65">Winner view is the <b>Main screen</b>; the TV program below runs over it.</p>}
           </div>
 
           <div className="grid gap-2">
@@ -203,7 +204,7 @@ export default function LiveScreenPage({ toast }: { toast: ToastFn }) {
               <button type="button" onClick={() => now_({ tv: { ...c.tv, auto: true } }, 'Auto: the scenes follow one another')} className={`rounded-lg px-2 py-2 text-sm font-bold ${c.tv.auto ? 'bg-emerald-900 text-white' : 'text-emerald-900 hover:bg-emerald-50'}`}>⟳ Auto</button>
               <button type="button" onClick={() => now_({ tv: { ...c.tv, auto: false } }, 'By hand: press ▶ on a scene')} className={`rounded-lg px-2 py-2 text-sm font-bold ${!c.tv.auto ? 'bg-emerald-900 text-white' : 'text-emerald-900 hover:bg-emerald-50'}`}>✋ By hand</button>
             </div>
-            <p className="text-xs text-emerald-900/60">{c.tv.auto ? 'Ticked scenes play in this order, each for its seconds, then start again. ▶ switches to By hand on that scene.' : 'The scene with ● stays on screen. Press ▶ to switch.'}</p>
+            <p className="text-xs text-emerald-900/60">{c.tv.auto ? <>Ticked scenes play from top to bottom, then start again. The number next to each scene = <b>how many seconds that scene stays on screen</b>. Press <b>Save</b> after changing them. ▶ = show that scene now (switches to By hand).</> : 'The scene with ● stays on screen until you press ▶ on another one.'}</p>
             <ol className="grid gap-1">
               {c.tv.scenes.map((s, i) => {
                 const info = sceneInfo(s.key);
@@ -215,7 +216,9 @@ export default function LiveScreenPage({ toast }: { toast: ToastFn }) {
                       <div className="truncate text-sm font-semibold">{air && <span className="text-red-600">● </span>}{info.name}</div>
                       {!ready(s.key) && <div className="text-[11px] text-gold-600">{s.key === 'promo' ? 'Add a promo below' : 'Add a video below'}</div>}
                     </div>
-                    {c.tv.auto && s.key !== 'video' && <input type="number" min={5} max={3600} className="nk-input w-16 px-1.5 py-1 text-xs" value={s.secs} onChange={(e) => setScene(s.key, { secs: Math.max(5, Math.round(+e.target.value) || 5) })} aria-label="Seconds" title="Seconds" />}
+                    {c.tv.auto && (s.key !== 'video'
+                      ? <label className="flex shrink-0 items-center gap-1 text-[11px] text-emerald-900/60" title="How long this scene stays on screen"><input type="number" min={5} max={3600} className="rounded-md border border-[#d9d2bd] bg-white px-1 py-0.5 text-right text-xs font-semibold text-emerald-950" style={{ width: 52 }} value={s.secs} onChange={(e) => setScene(s.key, { secs: Math.max(5, Math.round(+e.target.value) || 5) })} aria-label={`Seconds for ${info.name}`} />s</label>
+                      : <span className="shrink-0 text-[11px] text-emerald-900/50">till end</span>)}
                     {c.tv.auto && <>
                       <button type="button" className="nk-btn nk-ghost px-1 py-1" disabled={i === 0} onClick={() => set({ tv: { ...c.tv, scenes: move(c.tv.scenes, i, -1) } })} aria-label="Move up"><ArrowUp className="h-3.5 w-3.5" /></button>
                       <button type="button" className="nk-btn nk-ghost px-1 py-1" disabled={i === c.tv.scenes.length - 1} onClick={() => set({ tv: { ...c.tv, scenes: move(c.tv.scenes, i, 1) } })} aria-label="Move down"><ArrowDown className="h-3.5 w-3.5" /></button>
