@@ -23,9 +23,6 @@ const tabs = [
   { id: 't3', title: c.tab3_title, body: c.tab3_body, tk: 'tab3_title', bk: 'tab3_body' },
 ];
 const desc = c.subtitle;
-import { defaultBonus, defaultCommunity } from './_lib/bonus';
-const bonus0 = defaultBonus();
-const cm0 = defaultCommunity();
 ---
 
 <!doctype html>
@@ -133,7 +130,6 @@ const cm0 = defaultCommunity();
             <li><a href="#submit" data-menu="submit" class="flex items-center gap-3 rounded-xl px-3 py-2.5 font-semibold text-emerald-950 hover:bg-emerald-50"><span class="text-emerald-700"><Fragment set:html={lucide('send', 'h-5 w-5')} /></span>কোড জমা দিন</a></li>
             <li><a href="#feedback" data-menu="feedback" class="flex items-center gap-3 rounded-xl px-3 py-2.5 font-semibold text-emerald-950 hover:bg-emerald-50"><span class="text-emerald-700"><Fragment set:html={lucide('messageSquareWarning', 'h-5 w-5')} /></span>পরামর্শ / অভিযোগ</a></li>
             <li><a href="#nk-rv" data-menu="nk-rv" class="flex items-center gap-3 rounded-xl px-3 py-2.5 font-semibold text-emerald-950 hover:bg-emerald-50"><span class="text-emerald-700"><Fragment set:html={lucide('quote', 'h-5 w-5')} /></span>ভিজিটরদের মতামত</a></li>
-            <li><a href="#nk-cm" data-menu="nk-cm" class="flex items-center gap-3 rounded-xl px-3 py-2.5 font-semibold text-emerald-950 hover:bg-emerald-50"><span class="text-emerald-700"><Fragment set:html={lucide('usersRound', 'h-5 w-5')} /></span>কমিউনিটি</a></li>
         </ul>
       </nav>
     </div>
@@ -202,11 +198,6 @@ const cm0 = defaultCommunity();
             <span id="nk-fl-count" class="hidden rounded-full bg-emerald-900 px-1.5 text-xs leading-5 text-gold-100"></span>
           </button>
         </div>
-        <button id="nk-cp-open" type="button" style="display:none" class="nk-cp-cta mt-2 flex w-full items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-bold text-gold-100">
-          <span aria-hidden="true">🏆</span>
-          <span class="whitespace-nowrap">শেয়ার প্রতিযোগিতায় অংশ নিন</span>
-          <span id="nk-cp-badge" style="display:none" class="rounded-full bg-gold-500 px-2 py-0.5 text-[11px] text-emerald-950">শুধু আপনি দেখছেন</span>
-        </button>
       </section>
 
       <!-- ===== Today's winner (Nusuk Manager → Today's winner) ===== -->
@@ -493,26 +484,6 @@ const cm0 = defaultCommunity();
         <div id="nk-rv-dots" class="mt-4 flex flex-wrap justify-center gap-1.5"></div>
       </section>
 
-      <section id="nk-cm" class="nk-card mt-4 hidden overflow-hidden p-0" aria-labelledby="nk-cm-h">
-        <div class="nk-cm-head p-5 sm:p-6">
-          <h2 id="nk-cm-h" class="text-lg font-bold text-emerald-950">{cm0.title}</h2>
-          <p id="nk-cm-text" class="nk-pre mt-1.5 text-sm leading-relaxed text-emerald-900/75">{cm0.text}</p>
-        </div>
-        <div id="nk-cm-links" class="grid gap-2.5 px-5 pb-5 sm:grid-cols-3 sm:px-6 sm:pb-6">
-          <a id="nk-cm-page" href="#" target="_blank" rel="noopener" style="display:none" class="nk-cm-btn flex items-center gap-3 rounded-xl px-3.5 py-3 text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md bg-[#1877f2]">
-            <span class="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white/20"><svg viewBox="0 0 24 24" class="h-5 w-5" fill="currentColor" aria-hidden="true"><path d="M14 8.5V6.8c0-.8.5-1 .9-1H17V2.1L14.1 2C10.9 2 10.2 4.4 10.2 6v2.5H8V12h2.2v10H14V12h2.7l.4-3.5z"/></svg></span>
-            <span class="min-w-0 text-left leading-tight"><span class="block text-sm font-bold">ফেসবুক পেজ</span><span class="block text-xs text-white/80">ফলো করুন</span></span>
-          </a>
-          <a id="nk-cm-group" href="#" target="_blank" rel="noopener" style="display:none" class="nk-cm-btn flex items-center gap-3 rounded-xl px-3.5 py-3 text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md bg-[#0b5fcf]">
-            <span class="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white/20"><Fragment set:html={lucide('users', 'h-5 w-5', 2)} /></span>
-            <span class="min-w-0 text-left leading-tight"><span class="block text-sm font-bold">কমিউনিটি গ্রুপ</span><span class="block text-xs text-white/80">যুক্ত হোন</span></span>
-          </a>
-          <a id="nk-cm-wa" href="#" target="_blank" rel="noopener" style="display:none" class="nk-cm-btn flex items-center gap-3 rounded-xl px-3.5 py-3 text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md bg-[#1fa855]">
-            <span class="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white/20"><svg viewBox="0 0 24 24" class="h-5 w-5" fill="currentColor" aria-hidden="true"><path d="M17.5 14.4c-.3-.1-1.8-.9-2-1-.3-.1-.5-.1-.7.1-.2.3-.8 1-.9 1.2-.2.2-.3.2-.6.1-.3-.1-1.3-.5-2.4-1.5-.9-.8-1.5-1.8-1.7-2.1-.2-.3 0-.5.1-.6l.4-.5c.2-.2.2-.3.3-.5.1-.2 0-.4 0-.5l-.9-2.2c-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.1.2 2.1 3.2 5.1 4.5.7.3 1.3.5 1.7.6.7.2 1.4.2 1.9.1.6-.1 1.8-.7 2-1.4.2-.7.2-1.3.2-1.4-.1-.1-.3-.2-.6-.3zM12 21.8c-1.8 0-3.5-.5-5-1.4l-.4-.2-3.7 1 1-3.6-.2-.4C2.7 15.6 2.2 13.8 2.2 12 2.2 6.6 6.6 2.2 12 2.2c2.6 0 5.1 1 6.9 2.9 1.8 1.8 2.9 4.3 2.9 6.9 0 5.4-4.4 9.8-9.8 9.8zM20.5 3.5C18.2 1.2 15.2 0 12 0 5.4 0 0 5.4 0 12c0 2.1.6 4.2 1.6 6L0 24l6.2-1.6c1.8 1 3.8 1.5 5.8 1.5 6.6 0 12-5.4 12-12 0-3.2-1.2-6.2-3.5-8.4z"/></svg></span>
-            <span class="min-w-0 text-left leading-tight"><span class="block text-sm font-bold">হোয়াটসঅ্যাপ</span><span class="block text-xs text-white/80">যুক্ত হোন</span></span>
-          </a>
-        </div>
-      </section>
 
     </main>
 
@@ -696,69 +667,6 @@ const cm0 = defaultCommunity();
       </div>
     </dialog>
 
-    <dialog id="nk-cp" class="m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-md overflow-y-auto rounded-[1.25rem] p-0 shadow-2xl backdrop:bg-emerald-950/60" aria-labelledby="nk-cp-title">
-      <div class="relative">
-        <button type="button" id="nk-cp-close" class="absolute top-3 right-3 z-10 grid h-9 w-9 place-items-center rounded-full bg-white/80 text-xl text-emerald-900/60 hover:bg-emerald-50" aria-label="বন্ধ করুন">×</button>
-        <div id="nk-cp-body" class="grid gap-3.5 p-5 pt-6"></div>
-      </div>
-    </dialog>
-
-    <dialog id="nk-bn" class="m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-md overflow-y-auto rounded-[1.25rem] p-0 shadow-2xl backdrop:bg-emerald-950/60" aria-labelledby="nk-bn-title">
-      <div class="grid gap-3.5 p-5">
-        <div class="flex items-start gap-3">
-          <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-emerald-100 text-lg font-bold text-emerald-700" aria-hidden="true">✓</span>
-          <div class="min-w-0 flex-1">
-            <p class="font-bold text-emerald-900">আপনার আবেদন পৌঁছেছে!</p>
-            <p class="text-sm text-emerald-900/70">যাচাই করে অনুমোদন দিলে আপনার কোড সবার উপরে দেখানো হবে।</p>
-          </div>
-          <button type="button" id="nk-bn-close" class="grid h-9 w-9 shrink-0 place-items-center rounded-full text-xl text-emerald-900/60 hover:bg-emerald-50" aria-label="বন্ধ করুন">×</button>
-        </div>
-
-        <div class="nk-ad-social grid gap-2.5 rounded-2xl p-4 text-white">
-          <h2 id="nk-bn-title" class="text-lg font-bold leading-tight">{bonus0.title}</h2>
-          <p id="nk-bn-text" class="nk-pre text-sm leading-relaxed text-white/90">{bonus0.text}</p>
-          <div id="nk-bn-page" class="rounded-xl bg-white p-2.5 shadow-sm">
-            <div class="flex items-center gap-3">
-              <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#1877f2] text-white"><svg viewBox="0 0 24 24" class="h-5 w-5" fill="currentColor" aria-hidden="true"><path d="M14 8.5V6.8c0-.8.5-1 .9-1H17V2.1L14.1 2C10.9 2 10.2 4.4 10.2 6v2.5H8V12h2.2v10H14V12h2.7l.4-3.5z"/></svg></span>
-              <span class="min-w-0 flex-1">
-                <span class="block text-sm font-bold leading-tight text-emerald-950">আমাদের ফেসবুক পেজ</span>
-                <span id="nk-bn-page-reward" class="mt-1 inline-block rounded-full bg-gold-100 px-2 py-0.5 text-xs font-bold whitespace-nowrap text-emerald-950 ring-1 ring-gold-500/50"></span>
-              </span>
-              <a id="nk-bn-page-link" href="#" target="_blank" rel="noopener" class="shrink-0 rounded-lg bg-[#1877f2] px-3 py-2 text-xs font-bold whitespace-nowrap text-white hover:bg-[#166fe5]">ফলো করুন</a>
-            </div>
-            <label class="mt-2 flex cursor-pointer items-center gap-2 rounded-lg bg-emerald-50 px-2.5 py-1.5 text-sm font-semibold text-emerald-900">
-              <input type="checkbox" id="nk-bn-page-done" class="h-4 w-4 accent-emerald-700" /> আমি পেজটি ফলো করেছি
-            </label>
-          </div>
-          <div id="nk-bn-group" class="rounded-xl bg-white p-2.5 shadow-sm">
-            <div class="flex items-center gap-3">
-              <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#1877f2] text-white"><Fragment set:html={lucide('users', 'h-5 w-5', 2)} /></span>
-              <span class="min-w-0 flex-1">
-                <span class="block text-sm font-bold leading-tight text-emerald-950">কমিউনিটি গ্রুপ</span>
-                <span id="nk-bn-group-reward" class="mt-1 inline-block rounded-full bg-gold-100 px-2 py-0.5 text-xs font-bold whitespace-nowrap text-emerald-950 ring-1 ring-gold-500/50"></span>
-              </span>
-              <a id="nk-bn-group-link" href="#" target="_blank" rel="noopener" class="shrink-0 rounded-lg bg-[#1877f2] px-3 py-2 text-xs font-bold whitespace-nowrap text-white hover:bg-[#166fe5]">যুক্ত হোন</a>
-            </div>
-            <label class="mt-2 flex cursor-pointer items-center gap-2 rounded-lg bg-emerald-50 px-2.5 py-1.5 text-sm font-semibold text-emerald-900">
-              <input type="checkbox" id="nk-bn-group-done" class="h-4 w-4 accent-emerald-700" /> আমি গ্রুপে যুক্ত হয়েছি
-            </label>
-          </div>
-          <div id="nk-bn-both" class="rounded-xl bg-gold-100 px-3 py-2 text-center text-sm font-bold text-emerald-950"></div>
-        </div>
-
-        <form id="nk-bn-form" class="grid gap-3" novalidate>
-          <div>
-            <label for="nk-bn-name" class="mb-1 block text-sm font-semibold">আপনার ফেসবুক প্রোফাইলের নাম *</label>
-            <input id="nk-bn-name" name="fbname" maxlength="120" autocomplete="off" class="nk-input" placeholder="যে নামে ফলো বা যুক্ত হয়েছেন" />
-            <p class="mt-1 text-xs text-emerald-900/65">এই নাম দেখে আমরা মিলিয়ে নেব, তারপর আপনার কোডের সাথে বাড়তি Key যোগ করে দেব।</p>
-          </div>
-          <p id="nk-bn-msgbox" class="hidden rounded-xl px-3.5 py-2.5 text-sm" role="alert"></p>
-          <button type="submit" class="nk-btn nk-green py-3 text-base">জানিয়ে দিন</button>
-          <button type="button" id="nk-bn-later" class="text-sm font-semibold text-emerald-900/60 underline underline-offset-2">এখন না, ধন্যবাদ</button>
-        </form>
-      </div>
-    </dialog>
-
     <dialog id="nk-pc" class="nk-scroll m-auto max-h-[calc(100dvh-1.5rem)] w-[calc(100%-1.5rem)] max-w-md overflow-y-auto overflow-x-hidden rounded-[1.25rem] p-0 shadow-2xl backdrop:bg-emerald-950/60" aria-labelledby="nk-pc-title">
       <form id="nk-pc-form" method="dialog" class="grid gap-3 p-5" novalidate>
         <div class="flex items-start justify-between gap-3">
@@ -866,8 +774,7 @@ const cm0 = defaultCommunity();
       import { clubOf, hasMemberSession, isJoinedMember, memberToken, rememberRef, DEFAULT_NOTICE, DEFAULT_NOTICE_BTN, QUIZ_RULES } from './_lib/club';
       import { initInsights, insightsOn } from './_lib/insights';
       import { adHtml, defaultAds, liveAds, parseAds, sampleDuaAd } from './_lib/ads';
-      import { bonusReady, parseBonus, parseCommunity } from './_lib/bonus';
-      import { initCampaign } from './_lib/campaign';
+      import { parseBonus } from './_lib/bonus';
       import { parsePopup, popupRunning } from './_lib/popup';
       import { initLive } from './_lib/live';
       import { initPhotoCard, setPhotoCardLinks } from './_lib/photocard';
@@ -1310,22 +1217,10 @@ const cm0 = defaultCommunity();
       adsSec.addEventListener('pointerleave', adAuto);
       addEventListener('resize', () => adGo(adIndex, false));
 
+      // Facebook page / group links (Nusuk Manager → Settings) for the photo card caption
       function renderCommunity(content: unknown) {
-        const cm = parseCommunity(content);
         const bo = parseBonus(content);
-        const links = { 'nk-cm-page': bo.page_url, 'nk-cm-group': bo.group_url, 'nk-cm-wa': cm.whatsapp_url };
         setPhotoCardLinks({ group: bo.group_url, page: bo.page_url });
-        let any = false;
-        for (const [id, url] of Object.entries(links)) {
-          const a = $<HTMLAnchorElement>(id);
-          a.style.display = url ? '' : 'none';
-          if (url) { a.href = url; any = true; }
-        }
-        const n = Object.values(links).filter(Boolean).length;
-        $('nk-cm-links').className = `grid gap-2.5 px-5 pb-5 sm:px-6 sm:pb-6 ${n === 3 ? 'sm:grid-cols-3' : n === 2 ? 'sm:grid-cols-2' : ''}`;
-        $('nk-cm-h').textContent = cm.title;
-        $('nk-cm-text').textContent = cm.text;
-        $('nk-cm').classList.toggle('hidden', !(cm.on && any));
       }
       // ---- "Already a member" memory (this browser): offers for a page/group they joined are not shown again ----
       const joinKey = (url: string) => {
@@ -1800,77 +1695,10 @@ const cm0 = defaultCommunity();
           if (r.ok) {
             ftForm.reset();
             ftSay('ধন্যবাদ! আপনার আবেদন পৌঁছেছে। যাচাই করে অনুমোদন দিলে আপনার কোডটি সবার উপরে দেখানো হবে।', true);
-            // Offer the page/group bonus right away (needs update 16, which returns the request id)
-            if (r.id && openBonus(r.id, code)) ftDialog.close();
           } else ftSay(ftReasons[r.reason ?? ''] ?? 'আবেদন পাঠানো যায়নি।', false);
         } catch (err) {
           console.error(err);
           ftSay('পাঠানো যায়নি। ইন্টারনেট সংযোগ দেখে আবার চেষ্টা করুন।', false);
-        }
-        btn.disabled = false;
-      });
-
-      // ---- Bonus popup after a feature request: follow page / join group for extra Keys ----
-      const bnDialog = $<HTMLDialogElement>('nk-bn');
-      const bnForm = $<HTMLFormElement>('nk-bn-form');
-      const bnMsg = $('nk-bn-msgbox');
-      const bnSay = (t: string, ok: boolean) => {
-        bnMsg.textContent = t;
-        bnMsg.className = `rounded-xl px-3.5 py-2.5 text-sm ${ok ? 'bg-emerald-100 text-emerald-900' : 'bg-red-50 text-red-800'}`;
-      };
-      let bnReq: { id: number; code: string } | null = null;
-      function openBonus(id: number, code: string): boolean {
-        const b = parseBonus(lastContent);
-        if (!bonusReady(b)) return false;
-        bnReq = { id, code };
-        $('nk-bn-title').textContent = b.title;
-        $('nk-bn-text').textContent = b.text;
-        for (const [kind, url, r] of [['page', b.page_url, b.page_keys], ['group', b.group_url, b.group_keys]] as const) {
-          $(`nk-bn-${kind}`).style.display = url ? '' : 'none';
-          $<HTMLAnchorElement>(`nk-bn-${kind}-link`).href = url || '#';
-          $(`nk-bn-${kind}-reward`).textContent = b.show_numbers && r ? `+${bn(r)} বাড়তি Key` : '🎁 বাড়তি Key';
-        }
-        const both = $('nk-bn-both');
-        both.textContent = b.show_numbers && b.both_keys ? `🎁 দুটোই করলে মোট +${bn(b.both_keys)} বাড়তি Key` : '🎁 দুটোই করলে আরও বেশি বাড়তি Key';
-        both.style.display = b.page_url && b.group_url ? '' : 'none';
-        bnForm.reset();
-        bnMsg.className = 'hidden';
-        bnForm.querySelector<HTMLButtonElement>('button[type="submit"]')!.disabled = false;
-        bnDialog.showModal();
-        bnDialog.scrollTop = 0;
-        return true;
-      }
-      // Opening a link ticks its box (they can untick it)
-      for (const kind of ['page', 'group']) {
-        $(`nk-bn-${kind}-link`).addEventListener('click', () => { $<HTMLInputElement>(`nk-bn-${kind}-done`).checked = true; });
-      }
-      $('nk-bn-close').addEventListener('click', () => bnDialog.close());
-      $('nk-bn-later').addEventListener('click', () => bnDialog.close());
-      bnDialog.addEventListener('click', (e) => { if (e.target === bnDialog) bnDialog.close(); });
-      bnForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        if (!bnReq) return bnDialog.close();
-        const page = $<HTMLInputElement>('nk-bn-page-done').checked && $('nk-bn-page').style.display !== 'none';
-        const group = $<HTMLInputElement>('nk-bn-group-done').checked && $('nk-bn-group').style.display !== 'none';
-        const fbName = $<HTMLInputElement>('nk-bn-name').value.trim();
-        if (!page && !group) return bnSay('পেজ ফলো বা গ্রুপে যুক্ত হওয়ার পর পাশের বক্সে টিক দিন।', false);
-        if (!fbName) return bnSay('আপনার ফেসবুক প্রোফাইলের নাম লিখুন, যাতে আমরা মিলিয়ে নিতে পারি।', false);
-        const btn = bnForm.querySelector<HTMLButtonElement>('button[type="submit"]')!;
-        btn.disabled = true;
-        try {
-          const r = await rpc<{ ok: boolean; reason?: string }>('nusuk_feature_bonus', { p_id: bnReq.id, p_code: bnReq.code, p_page: page, p_group: group, p_fb_name: fbName });
-          if (r.ok) {
-            const bb = parseBonus(lastContent);
-            if (page) markJoined(bb.page_url);
-            if (group) markJoined(bb.group_url);
-            bnSay('জাযাকাল্লাহু খাইরান! 🤍 যাচাই করে অনুমোদনের সময় আপনার কোডের সাথে বাড়তি Key যোগ করে দেওয়া হবে।', true);
-            setTimeout(() => bnDialog.close(), 3500);
-            return;
-          }
-          bnSay('তথ্যটি সেভ করা যায়নি। আবার চেষ্টা করুন।', false);
-        } catch (err) {
-          console.error(err);
-          bnSay('পাঠানো যায়নি। ইন্টারনেট সংযোগ দেখে আবার চেষ্টা করুন।', false);
         }
         btn.disabled = false;
       });
@@ -2145,7 +1973,6 @@ const cm0 = defaultCommunity();
         if (document.visibilityState === 'visible' && !busy && Date.now() - lastBoot > 60_000) boot(true);
       });
       // Share campaign: only visible once published (or to a signed-in admin)
-      initCampaign({ device: () => device, content: () => lastContent });
       initLive({ device });
       initQuiz();
       setInterval(() => { if (document.visibilityState === 'visible' && !busy) boot(true); }, jitter(60_000));

@@ -1,16 +1,13 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
-import { CircleHelp, ClipboardCheck, ClipboardPaste, Crown, Dices, ExternalLink, Gift, ImageDown, LayoutDashboard, MapPin, ListChecks, LogOut, Megaphone, MessageSquare, MessageSquareMore, MonitorPlay, PanelTop, PenLine, Play, Rocket, Settings, Share2, Sparkles, Star, Tags, Ticket, Trophy, Video, type LucideIcon } from 'lucide-react';
+import { CircleHelp, ClipboardCheck, ClipboardPaste, Crown, ExternalLink, Gift, ImageDown, LayoutDashboard, MapPin, ListChecks, LogOut, Megaphone, MessageSquare, MessageSquareMore, MonitorPlay, PanelTop, PenLine, Play, Settings, Share2, Sparkles, Star, Tags, Ticket, Trophy, Video, type LucideIcon } from 'lucide-react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import AdsPage from './AdsPage';
 import LiveScreenPage from './LiveScreenPage';
 import ClubPage from './ClubPage';
 import QuizPage from './QuizPage';
-import BonusPage from './BonusPage';
-import CampaignPage from './CampaignPage';
 import PopupPage from './PopupPage';
 import { GiveawayCard, PollCard } from './LiveCards';
-import RafflePage from './RafflePage';
 import PhotoCardsPage from './PhotoCardsPage';
 import MapPage from './MapPage';
 import SocialPage from './SocialPage';
@@ -18,7 +15,7 @@ import BuilderPage from './BuilderPage';
 import QuizCompPage from './QuizCompPage';
 import ShareCardDialog from './ShareCard';
 import { extractCodes } from '../_lib/extract';
-import { bonusFor, parseBonus } from '../_lib/bonus';
+import { bonusFor, isFbUrl, isWaUrl, parseBonus, parseCommunity } from '../_lib/bonus';
 import { CODE_RE, COUNTRY_CODES, PINNED_COUNT, contentFields, countryName, defaultContent, flagUrl, mergeContent, parseToday, parseTopBar, parseVideo, parseWinners, youtubeId, subscribeUrl, defaultVideoLabel, defaultTopBarText, defaultTopBarDoneText, countdownText, prizeLabel, type NusukContent, type Prize, type TodayWinner, type TopBar, type VideoMode, type Winner } from '../_lib/content';
 
 /* =====================================================================
@@ -387,8 +384,6 @@ function Dashboard({ toast, go }: { toast: ToastFn; go: (r: Route) => void }) {
   const perVisitor = v.unique_today ? (d.copies.today / v.unique_today).toFixed(1) : '—';
   const cutoff = Date.now() - (range === '24h' ? 24 : 168) * 3600e3;
   const activePts = range === '2h' ? finePts(fine?.active) : d.active_log.filter((p) => Date.parse(p.t) >= cutoff);
-  const days14 = d.daily.slice(-14);
-  const tracked = d.tracked_from;
 
   return (
     <div className="grid gap-4">
@@ -422,77 +417,13 @@ function Dashboard({ toast, go }: { toast: ToastFn; go: (r: Route) => void }) {
       </div>
       {fine ? <InsightsSwitch toast={toast} /> : <p className="rounded-xl bg-gold-100 p-3 text-sm">For per-minute charts and the live charts card on /nusuk, run <code className="font-mono">src/pages/nusuk/_sql/update_27_live_insights.sql</code> in Supabase, then refresh.</p>}
 
-      <Card title="Visitors per day (30 days)">
-        <p className="-mt-2 mb-3 text-xs text-emerald-900/60">New = first visit ever. Returning = came before. Returning visitors are counted from {shortDay(tracked)}; earlier days show new visitors only.</p>
-        <Bars label="Visitors per day" series={[{ name: 'New', color: C1 }, { name: 'Returning', color: C2 }]}
-          rows={d.daily.map((x) => ({ key: x.day, tick: shortDay(x.day), tip: shortDay(x.day), values: [x.new, x.unique === null ? null : Math.max(0, x.unique - x.new)] }))} />
+      <Card title="Copies per day (30 days)">
+        <Bars label="Copies per day" series={[{ name: 'Copies', color: C1 }]} rows={d.daily.map((x) => ({ key: x.day, tick: shortDay(x.day), tip: shortDay(x.day), values: [x.copies] }))} />
       </Card>
 
-      <div className="grid gap-4 xl:grid-cols-2">
-        <Card title="Copies per day (30 days)">
-          <Bars label="Copies per day" series={[{ name: 'Copies', color: C1 }]} rows={d.daily.map((x) => ({ key: x.day, tick: shortDay(x.day), tip: shortDay(x.day), values: [x.copies] }))} />
-        </Card>
-        <Card title="Submissions (14 days)" actions={<Btn kind="ghost" onClick={() => go('review')}>Review →</Btn>}>
-          <Bars grouped label="Submitted and approved codes per day" series={[{ name: 'Submitted', color: C2 }, { name: 'Approved', color: C1 }]}
-            rows={days14.map((x) => ({ key: x.day, tick: shortDay(x.day), tip: shortDay(x.day), values: [x.submitted, x.approved] }))} />
-        </Card>
-      </div>
-
-      {/* Codes, review, featured */}
-      <div className="grid gap-4 lg:grid-cols-3">
-        <Card title="Codes">
-          <dl className="grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
-            <dt className="text-emerald-900/70">Active</dt><dd className="text-right font-bold tabular-nums">{fmt(d.codes.active)}</dd>
-            <dt className="text-emerald-900/70">Inactive</dt><dd className="text-right font-bold tabular-nums">{fmt(d.codes.inactive)}</dd>
-            <dt className="text-emerald-900/70">Uploaded by you</dt><dd className="text-right font-bold tabular-nums">{fmt(d.codes.from_admin)}</dd>
-            <dt className="text-emerald-900/70">From visitors (approved)</dt><dd className="text-right font-bold tabular-nums">{fmt(d.codes.from_users)}</dd>
-            <dt className="text-emerald-900/70">Never copied yet</dt><dd className="text-right font-bold tabular-nums">{fmt(d.codes.never_used)}</dd>
-          </dl>
-          <h3 className="mt-4 mb-2 text-xs font-bold text-emerald-900/70">Active codes by number of copies</h3>
-          <div className="grid gap-1.5">
-            {d.codes.buckets.map((b) => {
-              const max = Math.max(1, ...d.codes.buckets.map((x) => x.n));
-              return (
-                <div key={b.label} className="grid grid-cols-[3.5rem_1fr_3.5rem] items-center gap-2 text-xs">
-                  <span className="text-emerald-900/70">{b.label}</span>
-                  <span className="h-2.5 rounded-full bg-emerald-50"><span className="block h-2.5 rounded-full" style={{ width: `${b.n ? Math.max(2, (b.n / max) * 100) : 0}%`, background: C1 }} /></span>
-                  <span className="text-right font-semibold tabular-nums">{fmt(b.n)}</span>
-                </div>
-              );
-            })}
-          </div>
-        </Card>
-        <Card title="Review" actions={d.review.pending ? <Btn onClick={() => go('review')}>{fmt(d.review.pending)} waiting →</Btn> : undefined}>
-          <dl className="grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
-            <dt className="text-emerald-900/70">Submitted by visitors</dt><dd className="text-right font-bold tabular-nums">{fmt(d.review.submitted)}</dd>
-            <dt className="text-emerald-900/70">Approved (added)</dt><dd className="text-right font-bold tabular-nums">{fmt(d.review.approved)}</dd>
-            <dt className="text-emerald-900/70">Rejected</dt><dd className="text-right font-bold tabular-nums">{fmt(d.review.rejected)}</dd>
-            <dt className="text-emerald-900/70">Waiting</dt><dd className="text-right font-bold tabular-nums">{fmt(d.review.pending)}</dd>
-            <dt className="text-emerald-900/70">Submitted today</dt><dd className="text-right font-bold tabular-nums">{fmt(d.review.submitted_today)}</dd>
-            <dt className="text-emerald-900/70">Approved today</dt><dd className="text-right font-bold tabular-nums">{fmt(d.review.approved_today)}</dd>
-          </dl>
-        </Card>
-        <Card title="Featured" actions={d.featured.req_pending ? <Btn onClick={() => go('features')}>{fmt(d.featured.req_pending)} requests →</Btn> : undefined}>
-          <dl className="grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
-            <dt className="text-emerald-900/70">Featured right now</dt><dd className="text-right font-bold tabular-nums">{fmt(d.featured.running)}</dd>
-            <dt className="text-emerald-900/70">Featured today</dt><dd className="text-right font-bold tabular-nums">{fmt(d.featured.today)}</dd>
-            <dt className="text-emerald-900/70">Featured, all time</dt><dd className="text-right font-bold tabular-nums">{fmt(d.featured.ever)}</dd>
-            <dt className="text-emerald-900/70">Requests today</dt><dd className="text-right font-bold tabular-nums">{fmt(d.featured.req_today)}</dd>
-            <dt className="text-emerald-900/70">Requests approved</dt><dd className="text-right font-bold tabular-nums">{fmt(d.featured.req_approved)}</dd>
-            <dt className="text-emerald-900/70">Requests rejected</dt><dd className="text-right font-bold tabular-nums">{fmt(d.featured.req_rejected)}</dd>
-          </dl>
-          <div className="mt-4 border-t border-[#e7e1cf] pt-3">
-            <button type="button" onClick={() => go('feedback')} className="flex w-full items-center justify-between text-sm">
-              <span className="text-emerald-900/70">Feedback: {fmt(d.feedback.total)} total, {fmt(d.feedback.today)} today</span>
-              {d.feedback.new > 0 && <span className="rounded-full bg-red-600 px-2 text-xs font-bold leading-5 text-white">{d.feedback.new} new</span>}
-            </button>
-          </div>
-        </Card>
-      </div>
-
       <div className="grid gap-4 lg:grid-cols-2">
-        <Card title="Most copied codes (top 10)"><CodeList rows={d.codes.top} empty="No copies yet." /></Card>
-        <Card title="Least copied codes (bottom 10)"><CodeList rows={d.codes.bottom} empty="No active codes." /></Card>
+        <Card title="Most copied codes (top 5)"><CodeList rows={d.codes.top.slice(0, 5)} empty="No copies yet." /></Card>
+        <Card title="Least copied codes (bottom 5)"><CodeList rows={d.codes.bottom.slice(0, 5)} empty="No active codes." /></Card>
       </div>
     </div>
   );
@@ -828,6 +759,44 @@ function Upload({ toast, defaultMax }: { toast: ToastFn; defaultMax: number }) {
 }
 
 /* ---------------- Settings ---------------- */
+/** Facebook page / group and WhatsApp links (were in Community & bonus). Used by the photo card caption,
+ *  the popup notice button, the feedback "group" button and the giveaway tasks. */
+function LinksCard({ toast, settings, reload }: { toast: ToastFn; settings: Settings; reload: () => void }) {
+  const b0 = parseBonus(settings.content);
+  const c0 = parseCommunity(settings.content);
+  const [f, setF] = useState({ page: b0.page_url, group: b0.group_url, wa: c0.whatsapp_url });
+  const [busy, setBusy] = useState(false);
+  useEffect(() => { const b = parseBonus(settings.content), c = parseCommunity(settings.content); setF({ page: b.page_url, group: b.group_url, wa: c.whatsapp_url }); }, [settings]);
+  const bad = (f.page && !isFbUrl(f.page)) || (f.group && !isFbUrl(f.group)) || (f.wa && !isWaUrl(f.wa));
+  async function save() {
+    if (bad) return toast('Check the links: Facebook links start with https://www.facebook.com/…, WhatsApp with https://chat.whatsapp.com/…', false);
+    setBusy(true);
+    const { data: cur, error: e1 } = await sb!.from('nusuk_settings').select('content').eq('id', 1).single();
+    if (e1) { setBusy(false); return toast(errText(e1), false); }
+    const content = (cur?.content as Record<string, unknown>) ?? {};
+    const bonus = { ...((content.bonus as object) ?? {}), page_url: f.page.trim(), group_url: f.group.trim() };
+    const community = { ...((content.community as object) ?? {}), whatsapp_url: f.wa.trim() };
+    const { error } = await sb!.from('nusuk_settings').update({ content: { ...content, bonus, community }, updated_at: new Date().toISOString() }).eq('id', 1);
+    setBusy(false);
+    if (error) return toast(errText(error), false);
+    toast('Links saved');
+    reload();
+  }
+  return (
+    <Card title="Facebook & WhatsApp links" actions={<Btn onClick={save} disabled={busy}>{busy ? 'Saving…' : 'Save links'}</Btn>}>
+      <p className="-mt-2 mb-3 text-xs text-emerald-900/60">Used by the photo card caption, the popup notice button, the feedback "group" button and the giveaway tasks.</p>
+      <div className="grid gap-3 sm:grid-cols-3">
+        <label className="grid gap-1 text-sm font-semibold">Facebook page
+          <input className="nk-input font-normal" value={f.page} placeholder="https://www.facebook.com/ribatulummah/" onChange={(e) => setF({ ...f, page: e.target.value })} /></label>
+        <label className="grid gap-1 text-sm font-semibold">Community group
+          <input className="nk-input font-normal" value={f.group} placeholder="https://www.facebook.com/groups/…" onChange={(e) => setF({ ...f, group: e.target.value })} /></label>
+        <label className="grid gap-1 text-sm font-semibold">WhatsApp
+          <input className="nk-input font-normal" value={f.wa} placeholder="https://chat.whatsapp.com/…" onChange={(e) => setF({ ...f, wa: e.target.value })} /></label>
+      </div>
+    </Card>
+  );
+}
+
 function SettingsPage({ toast, settings, reload }: { toast: ToastFn; settings: Settings; reload: () => void }) {
   const [s, setS] = useState<Settings>(settings);
   const [content, setContent] = useState<NusukContent>(mergeContent(settings.content));
@@ -872,6 +841,7 @@ function SettingsPage({ toast, settings, reload }: { toast: ToastFn; settings: S
 
   return (
     <div className="grid gap-4">
+      <LinksCard toast={toast} settings={settings} reload={reload} />
       <Card title="Module status">
         <div className="grid gap-3">
           <Toggle on={s.enabled} onChange={(v) => { setS({ ...s, enabled: v }); save({ enabled: v }); }} label="Nusuk page is ON" hint="Turn off to pause the whole page. Visitors see the notice below instead of codes." />
@@ -1562,7 +1532,7 @@ function WinnersPage({ toast, settings, reload }: { toast: ToastFn; settings: Se
 }
 
 /* ---------------- Shell ---------------- */
-type Route = 'dashboard' | 'live' | 'codes' | 'review' | 'features' | 'bonus' | 'campaign' | 'quiz' | 'popup' | 'raffle' | 'upload' | 'notice' | 'video' | 'ads' | 'today' | 'winners' | 'feedback' | 'club' | 'clubquiz' | 'photocards' | 'map' | 'social' | 'socialgive' | 'socialgen' | 'socialwin' | 'socialbuild' | 'settings';
+type Route = 'dashboard' | 'live' | 'codes' | 'review' | 'features' | 'quiz' | 'popup' | 'upload' | 'notice' | 'video' | 'ads' | 'today' | 'winners' | 'feedback' | 'club' | 'clubquiz' | 'photocards' | 'map' | 'social' | 'socialgive' | 'socialgen' | 'socialwin' | 'socialbuild' | 'settings';
 type NavItem = { r: Route; label: string; Icon: LucideIcon };
 const nav: NavItem[] = [
   { r: 'dashboard', label: 'Dashboard', Icon: LayoutDashboard },
@@ -1571,14 +1541,11 @@ const nav: NavItem[] = [
   { r: 'review', label: 'Review', Icon: ClipboardCheck },
   { r: 'features', label: 'Feature requests', Icon: Star },
   { r: 'quiz', label: 'Quiz', Icon: CircleHelp },
-  { r: 'campaign', label: 'Campaign', Icon: Rocket },
   { r: 'club', label: 'Reward Club', Icon: Ticket },
   { r: 'photocards', label: 'Photo cards', Icon: ImageDown },
   { r: 'map', label: 'Map', Icon: MapPin },
   { r: 'social', label: 'Social media', Icon: Share2 },
-  { r: 'bonus', label: 'Community & bonus', Icon: Gift },
   { r: 'notice', label: 'Notice', Icon: Megaphone },
-  { r: 'raffle', label: 'Raffle draw', Icon: Dices },
   { r: 'ads', label: 'Ads', Icon: Tags },
   { r: 'video', label: 'Video', Icon: Video },
   { r: 'winners', label: 'Winners', Icon: Trophy },
@@ -1726,11 +1693,8 @@ export default function NusukAdmin() {
         {route === 'codes' && <CodesPage key="codes" toast={toast} settings={settings} />}
         {route === 'review' && <CodesPage key="review" toast={toast} reviewMode settings={settings} />}
         {route === 'upload' && <Upload toast={toast} defaultMax={settings?.default_max_uses ?? 1} />}
-        {route === 'campaign' && <CampaignPage toast={toast} />}
         {route === 'quiz' && <QuizPage toast={toast} />}
-        {route === 'raffle' && <RafflePage toast={toast} />}
         {route === 'popup' && settings && <PopupPage toast={toast} settings={settings} reload={loadSettings} />}
-        {route === 'bonus' && settings && <BonusPage toast={toast} settings={settings} reload={loadSettings} />}
         {route === 'ads' && settings && <AdsPage toast={toast} settings={settings} reload={loadSettings} />}
         {route === 'video' && settings && <VideoPage toast={toast} settings={settings} reload={loadSettings} />}
         {route === 'notice' && settings && <TopNoticePage toast={toast} settings={settings} reload={loadSettings} />}

@@ -5,7 +5,7 @@
  */
 import { rpc as rpcAnon } from './rpc';
 import { CODE_RE, countdownText } from './content';
-import { adminToken } from './campaign';
+import { adminToken } from './admintoken';
 
 // While the quiz is in preview, only a signed-in admin may see and play it: send the admin session if there is one
 let adminTok: string | null = null;
