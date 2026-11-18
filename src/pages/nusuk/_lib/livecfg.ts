@@ -34,8 +34,9 @@ export type LiveCfg = {
   /** Short notices: a card in the middle over the blurred screen; notice_show = id on screen */
   notices: Notice[];
   notice_show: string | null;
-  /** YouTube videos played in the video scene */
+  /** YouTube videos: they cut in over any scene, by hand or at their set times, and play to the end */
   videos: Video[];
+  vplay: VPlay;
   /** Background music played by the live page (instead of OBS) */
   music: Music;
   /** The "join" scene: QR code to the site + your links */
@@ -50,20 +51,19 @@ export const SCENES: { key: SceneKey; name: string; hint: string; secs: number }
   { key: 'winners', name: 'Bangladeshi Umrah winners', hint: 'One winner at a time, big', secs: 30 },
   { key: 'lastwin', name: 'Latest Nusuk winner', hint: "Today's / yesterday's winner, big", secs: 20 },
   { key: 'join', name: 'Join: QR code + links', hint: 'Scan to open the site, with your links', secs: 20 },
-  { key: 'video', name: 'Videos', hint: 'YouTube videos from the list, one after another', secs: 0 },
 ];
 export type Scene = { key: SceneKey; on: boolean; secs: number };
 export type Fx = 'fade' | 'slide' | 'zoom';
 export type Tv = { auto: boolean; pin: SceneKey; fx: Fx; scenes: Scene[] };
 /** secs = how long this promo stays on screen; times = "HH:MM" (Bangladesh) when it opens in the schedule */
-export type Promo = { id: string; on: boolean; tag: string; title: string; text: string; points: string[]; image: string; secs: number; times: string[] };
+export type Promo = { id: string; on: boolean; tag: string; title: string; text: string; points: string[]; image: string; secs: number; times: string[]; qr: string };
 export type LShapeMode = 'off' | 'manual' | 'rotate' | 'schedule';
 /** gap = seconds of full screen between two promos when they take turns */
 export type LShape = { mode: LShapeMode; show: string | null; gap: number };
 export const LSHAPE_MODES: { key: LShapeMode; name: string; hint: string }[] = [
   { key: 'off', name: 'Off', hint: 'Full screen, no L-shape' },
   { key: 'manual', name: 'By hand', hint: 'Press Show on a promo; Hide brings the full screen back' },
-  { key: 'rotate', name: 'Take turns', hint: 'Each ticked promo for its seconds, then full screen for the gap, then the next' },
+  { key: 'rotate', name: 'Take turns', hint: 'Promo 1 shows for its seconds, then the full screen for the gap seconds, then promo 2, and so on, over and over' },
   { key: 'schedule', name: 'At set times', hint: 'Each promo opens at its own times (Bangladesh time) for its seconds' },
 ];
 /** Two schedule times clash when one promo would open while another is still on screen */
@@ -81,10 +81,28 @@ export function lshapeClashes(promos: Promo[]) {
   return out;
 }
 export type Notice = { id: string; tag: string; title: string; text: string };
-export type Video = { id: string; on: boolean; title: string; url: string };
+/** times = "HH:MM" (Bangladesh) when this video starts by itself (mode "At set times") */
+export type Video = { id: string; on: boolean; title: string; url: string; times: string[] };
+/** off · manual: show = video started by hand at `at` (plays once to the end) · schedule: each video at its own times */
+export type VPlay = { mode: 'off' | 'manual' | 'schedule'; show: string | null; at: number };
+/** the same start time on two videos */
+export function videoClashes(videos: Video[]) {
+  const seen = new Map<string, number>();
+  const out: { id: string; t: string; msg: string }[] = [];
+  videos.forEach((v, i) => {
+    if (!v.on) return;
+    for (const t of v.times) {
+      if (seen.has(t)) out.push({ id: v.id, t, msg: `Video ${i + 1} at ${t} has the same time as video ${seen.get(t)}` });
+      else seen.set(t, i + 1);
+    }
+  });
+  return out;
+}
 export type Track = { id: string; on: boolean; title: string; url: string };
 export type Music = { on: boolean; volume: number; tracks: Track[] };
-export type Join = { title: string; text: string; links: { label: string; url: string }[] };
+/** qr = the link inside the QR code (empty = muhammadfazal.com/nusuk) */
+export type Join = { title: string; text: string; qr: string; links: { label: string; url: string }[] };
+export const SITE_URL = 'https://muhammadfazal.com/nusuk';
 export const uid = () => Math.random().toString(36).slice(2, 10);
 export const defaultTv = (): Tv => ({
   auto: false, pin: 'home', fx: 'fade',
@@ -92,6 +110,7 @@ export const defaultTv = (): Tv => ({
 });
 export const DEFAULT_JOIN: Join = {
   title: 'আপনিও যুক্ত হোন!',
+  qr: '',
   text: 'ফোনের ক্যামেরায় QR কোডটি স্ক্যান করুন: হাজারো নুসুক কোড, দৈনিক কুইজ আর পুরস্কার জেতার সুযোগ।',
   links: [{ label: 'ওয়েবসাইট', url: 'muhammadfazal.com/nusuk' }],
 };
@@ -149,6 +168,7 @@ export const defaultLiveCfg = (): LiveCfg => ({
   notices: [],
   notice_show: null,
   videos: [],
+  vplay: { mode: 'off', show: null, at: 0 },
   music: { on: false, volume: 40, tracks: [] },
   join: { ...DEFAULT_JOIN, links: DEFAULT_JOIN.links.map((l) => ({ ...l })) },
 });
@@ -179,7 +199,8 @@ export function parseLiveCfg(raw: unknown): LiveCfg {
     promos: parsePromos(r.promos),
     lshape: parseLShape(r.lshape),
     ...parseNotices(r),
-    videos: list(r.videos, 30).map((v) => ({ id: str(v.id, 20) || uid(), on: v.on !== false, title: str(v.title, 120), url: str(v.url, 300) })),
+    videos: list(r.videos, 30).map((v) => ({ id: str(v.id, 20) || uid(), on: v.on !== false, title: str(v.title, 120), url: str(v.url, 300), times: hhmm(v.times) })),
+    vplay: parseVPlay(r.vplay),
     music: parseMusic(r.music),
     join: parseJoin(r.join),
   };
@@ -225,8 +246,16 @@ function parsePromos(raw: unknown): Promo[] {
     id: str(p.id, 20) || uid(), on: p.on !== false, tag: str(p.tag, 60), title: str(p.title, 140), text: str(p.text, 500),
     points: lines(p.points, 6), image: str(p.image, 500),
     secs: Math.min(3600, Math.max(5, Math.round(Number(p.secs) || 30))),
-    times: (Array.isArray(p.times) ? (p.times as unknown[]) : []).filter((t): t is string => typeof t === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(t)).slice(0, 24),
+    times: hhmm(p.times),
+    qr: str(p.qr, 500),
   }));
+}
+function hhmm(v: unknown) {
+  return (Array.isArray(v) ? (v as unknown[]) : []).filter((t): t is string => typeof t === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(t)).slice(0, 24);
+}
+function parseVPlay(raw: unknown): VPlay {
+  const v = (raw && typeof raw === 'object' ? raw : {}) as Obj;
+  return { mode: v.mode === 'manual' || v.mode === 'schedule' ? v.mode : 'off', show: typeof v.show === 'string' ? v.show : null, at: Number(v.at) || 0 };
 }
 function parseLShape(raw: unknown): LShape {
   const l = (raw && typeof raw === 'object' ? raw : {}) as Obj;
@@ -252,6 +281,7 @@ function parseJoin(raw: unknown): Join {
   return {
     title: str(j.title, 100) || DEFAULT_JOIN.title,
     text: str(j.text, 300),
+    qr: str(j.qr, 500),
     links: list(j.links, 6).map((l) => ({ label: str(l.label, 40), url: str(l.url, 200) })),
   };
 }

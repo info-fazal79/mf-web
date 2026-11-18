@@ -12,7 +12,7 @@
 import qrcode from 'qrcode-generator';
 import { countryName, flagUrl, parseToday, parseWinners, prizeLong, winnerDayLabel } from './content';
 import { lucide } from './lucide';
-import { ytId, type LiveCfg, type Promo, type Scene, type SceneKey } from './livecfg';
+import { SITE_URL, ytId, type LiveCfg, type Promo, type Scene, type SceneKey, type Video } from './livecfg';
 
 type Series = { start: string; step: number; values: number[] };
 export type TvData = {
@@ -68,14 +68,15 @@ export function initLiveTv(opts: { muted: boolean; data: () => TvData }) {
   const today = () => parseToday({ today_winner: raw._today });
   const promos = () => (cfg?.promos ?? []).filter((p) => p.on && (p.title.trim() || p.text.trim()));
   const vids = () => (cfg?.videos ?? []).filter((v) => v.on && ytId(v.url));
-  const ok = (k: SceneKey) => (k === 'video' ? vids().length > 0 : k === 'winners' ? umrah().length > 0 : k === 'lastwin' ? !!today() : true);
+  const ok = (k: SceneKey) => (k === 'video' ? false : k === 'winners' ? umrah().length > 0 : k === 'lastwin' ? !!today() : true);
   const scenes = () => { const s = (cfg?.tv.scenes ?? []).filter((x) => x.on && ok(x.key)); return s.length ? s : [{ key: 'home' as SceneKey, on: true, secs: 60 }]; };
 
   // ------------------------------------------------------------ program
   function schedule() {
     if (!cfg) return;
-    if (mode === 'raffle') { clearTimeout(timer); plan = 'off'; show('home'); return; } // a raffle draw has the whole screen
-    const key = JSON.stringify([cfg.tv, vids().length, umrah().length, !!today()]);
+    if (mode === 'raffle') { clearTimeout(timer); plan = 'off'; stopCut(); show('home'); return; } // a raffle draw has the whole screen
+    if (cutting) return; // a video is playing; the scenes go on when it ends
+    const key = JSON.stringify([cfg.tv, umrah().length, !!today()]);
     if (key === plan) return;
     plan = key;
     clearTimeout(timer);
@@ -89,7 +90,6 @@ export function initLiveTv(opts: { muted: boolean; data: () => TvData }) {
     idx = ((i % order.length) + order.length) % order.length;
     const s = order[idx];
     if (!keep || s.key !== cur) show(s.key);
-    if (s.key === 'video') return; // the video scene moves on when the videos end
     // winners: the seconds are for each winner, so the scene lasts seconds × winners
     const secs = s.key === 'winners' ? Math.max(3, s.secs || 8) * Math.max(1, umrah().length) : Math.max(5, s.secs || 20);
     timer = setTimeout(next, secs * 1000);
@@ -174,7 +174,7 @@ export function initLiveTv(opts: { muted: boolean; data: () => TvData }) {
     const j = cfg!.join;
     const links = j.links.filter((l) => l.url.trim() || l.label.trim());
     el.innerHTML = `<div class="tv-join tv-pop">
-        <div class="tv-join-qr">${qrSvg(SITE)}</div>
+        <div class="tv-join-qr">${qrSvg(j.qr.trim() || SITE_URL)}</div>
         <div class="min-w-0">
           <div class="tv-join-scan">${lucide('smartphone', 'h-8 w-8', 2.2)} ক্যামেরায় স্ক্যান করুন</div>
           <div class="tv-join-title">${esc(j.title)}</div>
@@ -224,6 +224,7 @@ export function initLiveTv(opts: { muted: boolean; data: () => TvData }) {
         <div class="tv-pl-title">${esc(p.title)}</div>
         ${p.image ? `<img class="tv-pl-img" src="${esc(p.image)}" alt="" />` : ''}
         ${p.text.trim() ? `<p class="tv-pl-text">${esc(p.text)}</p>` : ''}
+        ${p.qr.trim() ? `<div class="tv-pl-qr"><div class="tv-pl-qr-box">${qrSvg(p.qr.trim())}</div><span>${lucide('smartphone', 'h-6 w-6', 2.2)} স্ক্যান করে যুক্ত হোন</span></div>` : ''}
       </div>`;
     const pts = p.points.map((x) => x.trim()).filter(Boolean);
     $('tv-pb').innerHTML = `<div class="tv-pb-in tv-pop">
@@ -246,8 +247,50 @@ export function initLiveTv(opts: { muted: boolean; data: () => TvData }) {
     });
     return ytReady;
   }
+  // ------------------------------------------------------------ videos cut in (by hand or at their set times) and play to the end
+  let cutting = false;
+  let cutQueue: Video[] = [];
+  let resumeAt = -1;
+  const played = new Set<string>();
+  const dayKey = () => new Date(Date.now() + 6 * 3600e3).toISOString().slice(0, 10);
+  function videoTick() {
+    if (!cfg || mode === 'raffle' || cutting) return;
+    const V = cfg.vplay;
+    let v: Video | undefined;
+    let key = '';
+    if (V.mode === 'manual' && V.show) {
+      key = `m:${V.show}:${V.at}`;
+      // a press older than 10 minutes is not replayed when the page is opened later
+      if (Date.now() - V.at < 10 * 60e3) v = vids().find((x) => x.id === V.show);
+    } else if (V.mode === 'schedule') {
+      const now = dhakaSec();
+      for (const x of vids()) for (const t of x.times) {
+        const a = Number(t.slice(0, 2)) * 3600 + Number(t.slice(3, 5)) * 60;
+        if (now >= a && now < a + 90) { v = x; key = `s:${x.id}:${dayKey()}:${t}`; break; }
+      }
+    }
+    if (!v || played.has(key)) return;
+    played.add(key);
+    cutting = true;
+    cutQueue = [v];
+    clearTimeout(timer);
+    resumeAt = idx;
+    cur = '';
+    show('video');
+  }
+  function cutDone() {
+    if (!cutting) return;
+    cutting = false;
+    cur = '';
+    plan = '';
+    if (cfg?.tv.auto) { order = scenes(); run(resumeAt + 1); plan = JSON.stringify([cfg.tv, umrah().length, !!today()]); }
+    else schedule();
+  }
+  function stopCut() { if (cutting) { cutting = false; cutQueue = []; } }
+  setInterval(videoTick, 1000);
+
   async function video(el: HTMLElement) {
-    const list = vids();
+    const list = cutQueue.length ? cutQueue : vids().slice(0, 1);
     el.innerHTML = `<div class="tv-head"><span class="tv-head-ico">${lucide('play', 'h-8 w-8', 2.2)}</span><span id="tv-vt" class="min-w-0 truncate"></span><span id="tv-vn" class="tv-head-r"></span></div><div class="tv-video" id="tv-vwrap"><div class="tv-video-box" id="tv-vbox"><div id="tv-yt"></div></div></div>`;
     // the frame is exactly 16:9 and as big as fits, so there is no black band around the video
     const wrap = $('tv-vwrap'), box = $('tv-vbox');
@@ -259,7 +302,7 @@ export function initLiveTv(opts: { muted: boolean; data: () => TvData }) {
     if (cur !== 'video') return;
     duck(true);
     let i = 0;
-    const done = () => { if (cfg?.tv.auto) next(); else { i = 0; play(); } }; // picked by hand: play the list again
+    const done = () => cutDone();
     const play = () => {
       const v = list[i];
       $('tv-vt').textContent = v.title || 'ভিডিও';

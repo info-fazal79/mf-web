@@ -33,6 +33,9 @@ body.ls-squeeze .tv-pl, body.ls-squeeze .tv-pb { opacity: 1; transform: none; }
 .tv-pl-title { font-size: 44px; font-weight: 800; line-height: 1.2; color: var(--hero-accent, var(--accent)); }
 .tv-pl-img { width: 100%; max-height: 300px; object-fit: contain; border-radius: 18px; background: rgba(255, 255, 255, 0.92); padding: 8px; }
 .tv-pl-text { font-size: 26px; line-height: 1.55; opacity: 0.92; }
+.tv-pl-qr { margin-top: auto; display: flex; align-items: center; gap: 18px; }
+.tv-pl-qr-box { width: 190px; height: 190px; flex-shrink: 0; padding: 8px; border-radius: 18px; background: #fff; box-shadow: 0 0 0 4px var(--hero-pill); }
+.tv-pl-qr span { display: inline-flex; align-items: center; gap: 8px; font-size: 26px; font-weight: 700; color: var(--hero-pill); }
 .tv-pb-in { height: 100%; display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 0 32px; border-radius: 26px;
   background: var(--panel); border: 2px solid var(--hero-border); box-shadow: 0 20px 40px -24px rgba(0, 0, 0, 0.6); }
 .tv-pb-pts { display: flex; flex-wrap: wrap; gap: 12px 26px; min-width: 0; }

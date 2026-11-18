@@ -7,7 +7,7 @@ import { ArrowDown, ArrowUp, ChevronDown, Copy, ExternalLink, EyeOff, Music2, Pl
 import { supabase as sb } from '@/lib/supabase';
 import { uploadMedia } from '@/admin/media';
 import {
-  DEFAULT_ANNOUNCE, DEFAULT_BREAKING_LABEL, LSHAPE_MODES, SAMPLE_QUESTIONS, SCENES, THEMES, defaultLiveCfg, lshapeClashes, parseLiveCfg, themeAt, uid, ytId,
+  DEFAULT_ANNOUNCE, DEFAULT_BREAKING_LABEL, LSHAPE_MODES, SAMPLE_QUESTIONS, SCENES, THEMES, defaultLiveCfg, lshapeClashes, parseLiveCfg, themeAt, uid, videoClashes, ytId,
   type Announce, type BkItem, type BkSpeed, type Breaking, type Fx, type LiveCfg, type Notice, type Promo, type Scene, type SceneKey, type Slot, type Theme, type Track, type Video,
 } from '../_lib/livecfg';
 
@@ -118,7 +118,7 @@ export default function LiveScreenPage({ toast }: { toast: ToastFn }) {
   const current = useMemo(() => themeAt(c, now), [c, now]);
 
   async function save(next: LiveCfg = c, quiet = false) {
-    const clash = lshapeClashes(next.promos);
+    const clash = [...lshapeClashes(next.promos), ...videoClashes(next.videos)];
     if (clash.length) return toast(`Promo times clash: ${clash[0].msg}. Change one of the times first.`, false);
     if (saving.current) await new Promise((r) => setTimeout(r, 300));
     saving.current = true;
@@ -172,6 +172,24 @@ export default function LiveScreenPage({ toast }: { toast: ToastFn }) {
   const ready = (k: SceneKey) => (k === 'video' ? c.videos.some((v) => v.on && ytId(v.url)) : true);
   const clashes = lshapeClashes(c.promos);
   const promoList = c.promos.filter((p) => p.on && (p.title.trim() || p.text.trim()));
+  const vClashes = videoClashes(c.videos);
+  const vidList = c.videos.filter((v) => v.on && ytId(v.url));
+  /** a time picker row used by promos and videos */
+  const timesRow = (times: string[], setTimes: (t: string[]) => void, bad: (t: string) => boolean) => (
+    <div className="flex flex-wrap items-center gap-1.5 text-sm">
+      {times.map((t, k) => (
+        <span key={k} className={`flex items-center gap-0.5 rounded-lg border px-1 ${bad(t) ? 'border-red-500 bg-red-50' : 'border-[#d9d2bd] bg-white'}`}>
+          <input type="time" className="bg-transparent py-0.5 text-sm" value={t} onChange={(e) => e.target.value && setTimes(times.map((x, j) => (j === k ? e.target.value : x)).sort())} />
+          <button type="button" className="px-1 text-red-700" onClick={() => setTimes(times.filter((_, j) => j !== k))} aria-label="Remove time">✕</button>
+        </span>
+      ))}
+      {times.length < 24 && <button type="button" className="nk-btn nk-ghost px-2 py-1 text-xs" onClick={() => {
+        const h = new Date(Date.now() + 6 * 3600e3).getUTCHours() + 1;
+        for (let k = 0; k < 24; k++) { const t = `${String((h + k) % 24).padStart(2, '0')}:00`; if (!times.includes(t)) { setTimes([...times, t].sort()); break; } }
+      }}>+ time</button>}
+      <span className="text-[11px] text-emerald-900/55">(Bangladesh time)</span>
+    </div>
+  );
   const onAirScene: SceneKey | null = draw?.mode === 'raffle' ? null : c.tv.auto ? null : c.tv.pin;
 
   if (!loaded) return <section className="nk-card p-5 text-sm text-emerald-900/60">Loading…</section>;
@@ -280,6 +298,34 @@ export default function LiveScreenPage({ toast }: { toast: ToastFn }) {
               </label>
             )}
             {c.lshape.mode === 'schedule' && <p className="text-xs text-emerald-900/70">Times are set on each promo below (Bangladesh time). {clashes.length ? <b className="text-red-700">{clashes.length} clash{clashes.length === 1 ? '' : 'es'} to fix.</b> : 'No clashes.'}</p>}
+          </div>
+
+          <div className={`grid gap-2 rounded-xl border p-2.5 ${c.vplay.mode !== 'off' ? 'border-sky-400 bg-sky-50/60' : 'border-[#e7e1cf]'}`}>
+            <div className="flex items-center justify-between gap-2">
+              <button type="button" className="text-xs font-bold tracking-wide text-emerald-900/60 uppercase hover:underline" onClick={() => jump('sec-videos')}>Videos ↓</button>
+              <span className="text-[11px] text-emerald-900/55">{vidList.length} video{vidList.length === 1 ? '' : 's'} ready</span>
+            </div>
+            <div className="grid grid-cols-3 gap-1 rounded-xl border border-[#e7e1cf] bg-white p-1">
+              {([['off', 'Off', 'Videos never cut in'], ['manual', 'By hand', 'Press Play on a video: it cuts in over the screen and plays to the end'], ['schedule', 'At set times', 'Each video starts at its own times and plays to the end']] as const).map(([k, t, h]) => (
+                <button key={k} type="button" title={h} onClick={() => {
+                  if (k === 'schedule' && vClashes.length) return toast(`Fix the video times first: ${vClashes[0].msg}`, false);
+                  now_({ vplay: { ...c.vplay, mode: k } }, `Videos: ${t}`);
+                }} className={`rounded-lg px-1 py-1.5 text-xs font-bold ${c.vplay.mode === k ? (k === 'off' ? 'bg-emerald-900 text-white' : 'bg-sky-600 text-white') : 'text-emerald-900 hover:bg-emerald-50'}`}>{t}</button>
+              ))}
+            </div>
+            <p className="text-[11px] text-emerald-900/60">A video cuts in over whatever is on screen, plays to the end, then the scenes go on where they were. Music pauses meanwhile.</p>
+            {c.vplay.mode === 'manual' && (vidList.length ? (
+              <ul className="grid gap-1">
+                {vidList.map((v) => (
+                  <li key={v.id} className="flex items-center gap-2 rounded-lg px-1 py-0.5">
+                    <span className="min-w-0 flex-1 truncate text-sm">{v.title || v.url}</span>
+                    {c.vplay.show === v.id && Date.now() - c.vplay.at < 10 * 60e3 && <span className="text-[11px] text-sky-700">started {new Date(c.vplay.at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</span>}
+                    <button type="button" onClick={() => now_({ vplay: { mode: 'manual', show: v.id, at: Date.now() } }, 'Video starts within 5 seconds')} className="nk-btn flex items-center gap-1 bg-sky-600 px-2.5 py-1 text-xs text-white"><Play className="h-3 w-3" fill="currentColor" /> Play</button>
+                  </li>
+                ))}
+              </ul>
+            ) : <p className="text-xs text-gold-600">Add a video below first.</p>)}
+            {c.vplay.mode === 'schedule' && <p className="text-xs text-emerald-900/70">Times are set on each video below. {vClashes.length ? <b className="text-red-700">{vClashes.length} clash{vClashes.length === 1 ? '' : 'es'} to fix.</b> : 'No clashes.'}</p>}
           </div>
 
           <div className="grid gap-1.5 rounded-xl border border-[#e7e1cf] bg-cream/50 p-2.5 text-sm">
@@ -460,6 +506,8 @@ export default function LiveScreenPage({ toast }: { toast: ToastFn }) {
             </div>
             <textarea className={input} rows={2} maxLength={500} value={p.text} placeholder="Text" onChange={(e) => setPr(p.id, { text: e.target.value })} />
             <textarea className={input} rows={2} value={p.points.join('\n')} placeholder={'Points for the bottom bar, one per line\nযেমন: আকর্ষণীয় পুরস্কার'} onChange={(e) => setPr(p.id, { points: e.target.value.split('\n').slice(0, 6) })} />
+            <label className={field}>QR code link <span className="text-xs font-normal text-emerald-900/60">optional · e.g. your Facebook group; a QR code appears on the ad</span>
+              <input className={`${input} font-mono text-xs`} maxLength={500} value={p.qr} placeholder="https://www.facebook.com/groups/…" onChange={(e) => setPr(p.id, { qr: e.target.value })} /></label>
             <div className="grid gap-2 rounded-lg bg-cream/60 p-2.5 sm:grid-cols-[auto_1fr] sm:items-start">
               <label className="flex items-center gap-2 text-sm font-semibold">Stays on screen
                 <input type="number" min={5} max={3600} className="rounded-md border border-[#d9d2bd] bg-white px-1.5 py-1 text-right text-sm" style={{ width: 70 }} value={p.secs} onChange={(e) => setPr(p.id, { secs: Math.max(5, Math.round(+e.target.value) || 5) })} />s</label>
@@ -493,11 +541,12 @@ export default function LiveScreenPage({ toast }: { toast: ToastFn }) {
             </div>
           </div>
         ))}
-        {c.promos.length < 20 && <button type="button" className="nk-btn nk-ghost flex w-fit items-center gap-1.5 px-3 py-1.5 text-sm" onClick={() => set({ promos: [...c.promos, { id: uid(), on: true, tag: '🎁 আসছে', title: '', text: '', points: [], image: '', secs: 30, times: [] }] })}><Plus className="h-4 w-4" /> New promo</button>}
+        {c.promos.length < 20 && <button type="button" className="nk-btn nk-ghost flex w-fit items-center gap-1.5 px-3 py-1.5 text-sm" onClick={() => set({ promos: [...c.promos, { id: uid(), on: true, tag: '🎁 আসছে', title: '', text: '', points: [], image: '', secs: 30, times: [], qr: '' }] })}><Plus className="h-4 w-4" /> New promo</button>}
       </Sec>
 
       <Sec id="sec-videos" title="▶️ Videos" hint="YouTube tutorials, played one after another">
-        <p className="text-xs text-emerald-900/60">Paste YouTube links (watch, youtu.be or shorts). The <b>Videos</b> scene plays the ticked ones in order; music pauses while a video plays. In Auto it moves on after the last video.</p>
+        <p className="text-xs text-emerald-900/60">Paste YouTube links (watch, youtu.be or shorts). When a video plays is set in the controller: <b>By hand</b> (Play) or <b>At set times</b> (the times on each video below). A video always plays to the end, then the scenes go on.</p>
+        {vClashes.length > 0 && <div className="rounded-xl border border-red-300 bg-red-50 p-3 text-sm text-red-800"><b>Two videos have the same time.</b> Saving is blocked until it is fixed:<ul className="mt-1 list-disc pl-5">{vClashes.map((x, k) => <li key={k}>{x.msg}</li>)}</ul></div>}
         {c.videos.map((v, i) => {
           const id = ytId(v.url);
           return (
@@ -510,10 +559,11 @@ export default function LiveScreenPage({ toast }: { toast: ToastFn }) {
               <Switch on={v.on} set={(x) => setVd(v.id, { on: x })} label="" />
               <button type="button" className="nk-btn nk-ghost px-2 py-1 text-xs" disabled={i === 0} onClick={() => set({ videos: move(c.videos, i, -1) })}>↑</button>
               <button type="button" className="nk-btn nk-ghost px-2 py-1 text-xs text-red-700" onClick={() => set({ videos: c.videos.filter((x) => x.id !== v.id) })}><Trash2 className="h-3.5 w-3.5" /></button>
+              <div className="flex w-full flex-wrap items-center gap-2 rounded-lg bg-cream/60 px-2 py-1.5"><span className="text-sm font-semibold">Plays at</span>{timesRow(v.times, (t) => setVd(v.id, { times: t }), (t) => vClashes.some((x) => x.id === v.id && x.t === t))}</div>
             </div>
           );
         })}
-        {c.videos.length < 30 && <button type="button" className="nk-btn nk-ghost flex w-fit items-center gap-1.5 px-3 py-1.5 text-sm" onClick={() => set({ videos: [...c.videos, { id: uid(), on: true, title: '', url: '' }] })}><Plus className="h-4 w-4" /> Add video</button>}
+        {c.videos.length < 30 && <button type="button" className="nk-btn nk-ghost flex w-fit items-center gap-1.5 px-3 py-1.5 text-sm" onClick={() => set({ videos: [...c.videos, { id: uid(), on: true, title: '', url: '', times: [] }] })}><Plus className="h-4 w-4" /> Add video</button>}
       </Sec>
 
       <Sec title="🎵 Background music" badge={c.music.on ? <OnAir /> : undefined} hint="instead of OBS; tracks play one after another and loop">
@@ -538,9 +588,11 @@ export default function LiveScreenPage({ toast }: { toast: ToastFn }) {
         </div>
       </Sec>
 
-      <Sec id="sec-join" title="📱 Join scene: QR code + links" hint="the QR opens muhammadfazal.com/nusuk">
+      <Sec id="sec-join" title="📱 Join scene: QR code + links" hint="your own QR link, heading, text and links">
         <label className={field}>Heading<input className={input} maxLength={100} value={c.join.title} onChange={(e) => set({ join: { ...c.join, title: e.target.value } })} /></label>
         <label className={field}>Text<textarea className={input} rows={2} maxLength={300} value={c.join.text} onChange={(e) => set({ join: { ...c.join, text: e.target.value } })} /></label>
+        <label className={field}>QR code link <span className="text-xs font-normal text-emerald-900/60">the QR on screen opens this (empty = muhammadfazal.com/nusuk), e.g. your group</span>
+          <input className={`${input} font-mono text-xs`} maxLength={500} value={c.join.qr} placeholder="https://muhammadfazal.com/nusuk" onChange={(e) => set({ join: { ...c.join, qr: e.target.value } })} /></label>
         <div className="grid gap-1.5">
           <span className="text-sm font-semibold">Links on screen</span>
           {c.join.links.map((l, i) => (
