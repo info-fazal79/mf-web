@@ -46,7 +46,16 @@ export type LiveCfg = {
   /** Voting: viewers scan the QR and vote (update_53); poll_show = id of the poll on screen (voting open) */
   polls: Poll[];
   poll_show: string | null;
+  /** Comment draw: one Nusuk code from the live comments wins Keys (Nusuk Manager → Live comments) */
+  cdraw: CDraw;
 };
+
+// ---------------------------------------------------------------- comment draw
+export type CDrawScope = 'first' | 'all' | 'time';
+export type CDrawWinner = { code: string; name: string; text: string; at: number; keys: number; given: boolean; scope: string };
+/** keys = prize per winner · scope = first N codes / every code / codes commented between from and to (Bangladesh time) */
+export type CDraw = { keys: number; scope: CDrawScope; n: number; from: string; to: string; winners: CDrawWinner[] };
+export const defaultCDraw = (): CDraw => ({ keys: 50, scope: 'first', n: 100, from: '20:00', to: '21:00', winners: [] });
 
 // ---------------------------------------------------------------- voting
 export type Poll = { id: string; q: string; options: string[] };
@@ -218,6 +227,7 @@ export const defaultLiveCfg = (): LiveCfg => ({
   notice_show: null,
   polls: [samplePoll()],
   poll_show: null,
+  cdraw: defaultCDraw(),
   videos: [],
   vplay: { mode: 'off', show: null, at: 0, music: false, music_vol: 30 },
   music: { on: false, volume: 40, tracks: [] },
@@ -257,6 +267,26 @@ export function parseLiveCfg(raw: unknown): LiveCfg {
     join: parseJoin(r.join),
     cmt: parseCmt(r.cmt),
     ...parsePolls(r),
+    cdraw: parseCDraw(r.cdraw),
+  };
+}
+
+function parseCDraw(raw: unknown): CDraw {
+  const d = defaultCDraw();
+  if (!raw || typeof raw !== 'object') return d;
+  const m = raw as Obj;
+  const num = (v: unknown, lo: number, hi: number, f: number) => (v === undefined || v === null || v === '' || isNaN(Number(v)) ? f : Math.min(hi, Math.max(lo, Math.round(Number(v)))));
+  const t = (v: unknown, f: string) => (typeof v === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(v) ? v : f);
+  return {
+    keys: num(m.keys, 1, 1000, d.keys),
+    scope: m.scope === 'all' || m.scope === 'time' ? m.scope : 'first',
+    n: num(m.n, 2, 100000, d.n),
+    from: t(m.from, d.from),
+    to: t(m.to, d.to),
+    winners: list(m.winners, 200).map((w) => ({
+      code: str(w.code, 20), name: str(w.name, 80), text: str(w.text, 300), at: Number(w.at) || 0,
+      keys: num(w.keys, 0, 1000, 0), given: w.given === true, scope: str(w.scope, 80),
+    })).filter((w) => w.code),
   };
 }
 

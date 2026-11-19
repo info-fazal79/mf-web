@@ -87,6 +87,27 @@ export async function fbComments(objectId: string, token: string): Promise<FbCom
     .map((x) => ({ id: x.id, name: x.from?.name ?? '', text: (x.message ?? '').trim(), time: x.created_time ? Date.parse(x.created_time) : Date.now() }));
 }
 
+/**
+ * Every comment of a live video or a video, oldest first (pages of 100, at most `max`),
+ * for the comment draw and for collecting the Nusuk codes.
+ */
+export async function fbAllComments(objectId: string, token: string, max = 6000, onPage?: (n: number) => void): Promise<FbComment[]> {
+  const out: FbComment[] = [];
+  let after = '';
+  for (let page = 0; page < 80 && out.length < max; page++) {
+    const p: Record<string, string> = { fields: 'id,message,created_time,from{id,name}', order: 'chronological', filter: 'stream', limit: '100', access_token: token };
+    if (after) p.after = after;
+    const r = await get<{ data: RawComment[]; paging?: { cursors?: { after?: string }; next?: string } }>(`${objectId}/comments`, p);
+    for (const x of r.data) {
+      if ((x.message ?? '').trim()) out.push({ id: x.id, name: x.from?.name ?? '', text: (x.message ?? '').trim(), time: x.created_time ? Date.parse(x.created_time) : Date.now() });
+    }
+    onPage?.(out.length);
+    after = r.paging?.cursors?.after ?? '';
+    if (!r.paging?.next || !after || !r.data.length) break;
+  }
+  return out;
+}
+
 // ---------------------------------------------------------------- filter
 const BN = /[ঀ-৿]/;
 const LINK = /(https?:\/\/|www\.|\b[\w-]+\.(com|net|org|me|ly|io|xyz|bd|link)\b|wa\.me|t\.me)/i;

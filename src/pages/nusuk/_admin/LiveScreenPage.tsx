@@ -250,7 +250,14 @@ export default function LiveScreenPage({ toast }: { toast: ToastFn }) {
           <p className="text-xs text-emerald-900/60">The preview is silent (music and videos play only on the real stream). Changes show here at once.</p>
         </section>
         {/* Facebook live comments: pick one, it shows on screen over every view */}
-        <LiveComments cmt={c.cmt} setCmt={(p, msg) => now_({ cmt: { ...c.cmt, ...p } }, msg)} toast={toast} />
+        <LiveComments cmt={c.cmt} setCmt={(p, msg) => now_({ cmt: { ...c.cmt, ...p } }, msg)} toast={toast}
+          cdraw={c.cdraw} setCdraw={(p, msg) => now_({ cdraw: { ...c.cdraw, ...p } }, msg)}
+          makeNotice={(tag, title, text) => {
+            const id = 'cmt-gift';
+            const n = { id, tag, title, text };
+            const notices = c.notices.some((x) => x.id === id) ? c.notices.map((x) => (x.id === id ? n : x)) : [n, ...c.notices];
+            now_({ notices, notice_show: id }, 'Notice on the live screen (Notices → Hide to take it down)');
+          }} />
         </div>
 
         {/* ---------- controller ---------- */}

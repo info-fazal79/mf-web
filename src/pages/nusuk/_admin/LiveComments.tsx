@@ -5,7 +5,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { EyeOff, MessageSquareText, Pause, Pencil, Play, RefreshCw, Settings, X } from 'lucide-react';
 import { supabase as sb } from '@/lib/supabase';
-import { CMT_POS, type Cmt, type CmtShow } from '../_lib/livecfg';
+import { CMT_POS, type CDraw, type Cmt, type CmtShow } from '../_lib/livecfg';
+import CommentDraw from './CommentDraw';
 import {
   FbError, NEEDED_PERMS, fbComments, fbConnect, fbCurrentLive, fbVideoId, hideReason, initial, nameHue,
   type FbComment, type FbConn, type FbLive, type FbPage,
@@ -29,7 +30,10 @@ function Avatar({ name, size = 36 }: { name: string; size?: number }) {
   return <span className="grid shrink-0 place-items-center rounded-full font-bold text-white" style={{ width: size, height: size, fontSize: size * 0.45, background: `linear-gradient(135deg,hsl(${h} 65% 48%),hsl(${(h + 40) % 360} 70% 38%))` }}>{initial(name)}</span>;
 }
 
-export default function LiveComments({ cmt, setCmt, toast }: { cmt: Cmt; setCmt: (p: Partial<Cmt>, msg?: string) => void; toast: ToastFn }) {
+export default function LiveComments({ cmt, setCmt, toast, cdraw, setCdraw, makeNotice }: {
+  cmt: Cmt; setCmt: (p: Partial<Cmt>, msg?: string) => void; toast: ToastFn;
+  cdraw: CDraw; setCdraw: (p: Partial<CDraw>, msg?: string) => void; makeNotice: (tag: string, title: string, text: string) => void;
+}) {
   const [conn, setConn] = useState<FbConn | null>(null);
   const [connErr, setConnErr] = useState('');
   const [list, setList] = useState<FbComment[]>([]);
@@ -198,6 +202,9 @@ export default function LiveComments({ cmt, setCmt, toast }: { cmt: Cmt; setCmt:
           })}
         </ul>
       </>}
+
+      {ready && <CommentDraw objectId={cmt.video.trim() ? fbVideoId(cmt.video) || null : live?.id ?? null} token={conn!.page_token} d={cdraw} setD={setCdraw}
+        showCard={(name, text) => show({ id: `draw-${Date.now()}`, name, text })} makeNotice={makeNotice} toast={toast} />}
 
       {open && <CommentSettings cmt={cmt} conn={conn} toast={toast} onClose={() => setOpen(false)} onConn={(c) => { setConn(c); setPaused(false); }} save={(p) => setCmt(p, 'Comment settings saved')} />}
     </section>
