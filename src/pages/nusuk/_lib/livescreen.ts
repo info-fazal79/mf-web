@@ -11,6 +11,7 @@ import { BK_SPEED, DEFAULT_BREAKING_LABEL, parseLiveCfg, themeAt, type LiveCfg }
 import { initLiveTv, type TvData } from './livetv';
 import { listenLive } from './livebus';
 import { initLivePoll } from './livepoll';
+import { initLiveCDraw } from './livecdraw';
 
 /* ---- Breaking news bar: headlines run right to left, one after another, looping ---- */
 const bk = { key: '', anim: null as Animation | null };
@@ -102,6 +103,7 @@ export function initLiveScreen() {
   const latest: TvData = { screen: null, ins: null };
   const tv = initLiveTv({ muted: params.get('preview') === '1', data: () => latest });
   const poll = initLivePoll();
+  const cdraw = initLiveCDraw();
   let hide = new Set<string>();
   let shownTheme = '';
   function applyCfg() {
@@ -125,6 +127,7 @@ export function initLiveScreen() {
     announce(cfg);
     tv.apply(cfg, rawCfg);
     poll.apply(cfg);
+    cdraw.apply(cfg);
   }
   // Full-screen announcement (Nusuk Manager → Live screen → Announcement)
   let anShown = '';

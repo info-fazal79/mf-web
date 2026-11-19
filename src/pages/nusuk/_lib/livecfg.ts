@@ -51,11 +51,21 @@ export type LiveCfg = {
 };
 
 // ---------------------------------------------------------------- comment draw
-export type CDrawScope = 'first' | 'all' | 'time';
+export type CDrawScope = 'first' | 'all' | 'time' | 'recent';
 export type CDrawWinner = { code: string; name: string; text: string; at: number; keys: number; given: boolean; scope: string };
-/** keys = prize per winner · scope = first N codes / every code / codes commented between from and to (Bangladesh time) */
-export type CDraw = { keys: number; scope: CDrawScope; n: number; from: string; to: string; winners: CDrawWinner[] };
-export const defaultCDraw = (): CDraw => ({ keys: 50, scope: 'first', n: 100, from: '20:00', to: '21:00', winners: [] });
+/**
+ * The draw on the live screen: 'count' = countdown running (secs from when the screen got it),
+ * 'win' = the winner is known (the screen rolls the codes, then shows it), 'off' = nothing.
+ * id changes with every draw, so a screen opened later does not play an old one again.
+ */
+export type CDrawLive = { phase: 'off' | 'count' | 'win'; id: string; secs: number; title: string; prize: string; rule: string; count: number; pool: string[]; winner: { code: string; name: string } | null };
+export const offLive = (): CDrawLive => ({ phase: 'off', id: '', secs: 0, title: '', prize: '', rule: '', count: 0, pool: [], winner: null });
+/**
+ * keys = prize per winner · scope = first N codes / every code / codes between from and to (Bangladesh time) /
+ * codes shared in the last `mins` minutes
+ */
+export type CDraw = { keys: number; scope: CDrawScope; n: number; from: string; to: string; mins: number; winners: CDrawWinner[]; live: CDrawLive };
+export const defaultCDraw = (): CDraw => ({ keys: 50, scope: 'first', n: 100, from: '20:00', to: '21:00', mins: 10, winners: [], live: offLive() });
 
 // ---------------------------------------------------------------- voting
 export type Poll = { id: string; q: string; options: string[] };
@@ -271,6 +281,18 @@ export function parseLiveCfg(raw: unknown): LiveCfg {
   };
 }
 
+function parseCDrawLive(raw: unknown): CDrawLive {
+  if (!raw || typeof raw !== 'object') return offLive();
+  const l = raw as Obj;
+  const w = l.winner && typeof l.winner === 'object' ? (l.winner as Obj) : null;
+  return {
+    phase: l.phase === 'count' || l.phase === 'win' ? l.phase : 'off',
+    id: str(l.id, 30), secs: Math.min(3600, Math.max(0, Math.round(Number(l.secs) || 0))),
+    title: str(l.title, 80), prize: str(l.prize, 80), rule: str(l.rule, 160), count: Math.max(0, Math.round(Number(l.count) || 0)),
+    pool: (Array.isArray(l.pool) ? (l.pool as unknown[]) : []).filter((x): x is string => typeof x === 'string').map((x) => x.slice(0, 20)).slice(0, 60),
+    winner: w && typeof w.code === 'string' ? { code: str(w.code, 20), name: str(w.name, 80) } : null,
+  };
+}
 function parseCDraw(raw: unknown): CDraw {
   const d = defaultCDraw();
   if (!raw || typeof raw !== 'object') return d;
@@ -279,7 +301,9 @@ function parseCDraw(raw: unknown): CDraw {
   const t = (v: unknown, f: string) => (typeof v === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(v) ? v : f);
   return {
     keys: num(m.keys, 1, 1000, d.keys),
-    scope: m.scope === 'all' || m.scope === 'time' ? m.scope : 'first',
+    scope: m.scope === 'all' || m.scope === 'time' || m.scope === 'recent' ? m.scope : 'first',
+    mins: num(m.mins, 1, 1440, d.mins),
+    live: parseCDrawLive(m.live),
     n: num(m.n, 2, 100000, d.n),
     from: t(m.from, d.from),
     to: t(m.to, d.to),
