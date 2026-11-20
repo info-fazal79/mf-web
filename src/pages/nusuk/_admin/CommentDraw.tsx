@@ -3,7 +3,7 @@
       to the site in one click (nusuk_admin_add_codes; codes already there are skipped).
    2. Draw: one code wins N Keys - among the first N people who shared a code, everyone, or the
       codes shared between two times. Each code counts once (many comments = one chance) and a code
-      that already won is left out. The winner can be shown on the live screen and get the Keys at
+      that already won today is left out until the next day. The winner can be shown on the live screen and get the Keys at
       once (nusuk_admin_award).
    3. Notice: makes the "share your code" notice with the prize and shows it on the live screen.
    4. Draw on the live screen: a countdown on the live screen; when it ends this page loads every
@@ -40,7 +40,11 @@ function entriesOf(list: FbComment[]): Entry[] {
   return [...seen.values()];
 }
 
-/** who is in the draw right now (each code once, past winners left out) */
+/** Bangladesh date (YYYY-MM-DD) of a time */
+const dhakaDay = (t: number) => new Date(t + 6 * 3600e3).toISOString().slice(0, 10);
+/** codes that already won a comment draw TODAY (Bangladesh time): they sit out the rest of the day */
+const wonToday = (ws: CDrawWinner[]) => { const t = dhakaDay(Date.now()); return new Set(ws.filter((w) => dhakaDay(w.at) === t).map((w) => w.code.toLowerCase())); };
+/** who is in the draw right now (each code once, today's winners left out) */
 function poolOf(list: FbComment[], d: CDraw, won: Set<string>, now: number): Entry[] {
   let p: Entry[];
   if (d.scope === 'during') p = d.live.at ? entriesOf(list.filter((c) => c.time >= d.live.at - 3000 && c.time <= d.live.at + d.live.secs * 1000 + 3000)) : []; // while the countdown ran
@@ -80,7 +84,7 @@ export default function CommentDraw({ objectId, token, d, setD, showCard, makeNo
   latest.current = { d, setD };
 
   const entries = useMemo(() => (all ? entriesOf(all) : []), [all]);
-  const won = useMemo(() => new Set(d.winners.map((w) => w.code.toLowerCase())), [d.winners]);
+  const won = useMemo(() => wonToday(d.winners), [d.winners, nowT]);
   const pool = useMemo(() => (all ? poolOf(all, d, won, nowT) : []), [all, d, won, nowT]);
   // "last N minutes" moves with the clock
   useEffect(() => { if (d.scope !== 'recent') return; const t = setInterval(() => setNowT(Date.now()), 10_000); return () => clearInterval(t); }, [d.scope]);
@@ -130,7 +134,7 @@ export default function CommentDraw({ objectId, token, d, setD, showCard, makeNo
     const { d: cur, setD: set } = latest.current;
     if (cur.live.phase !== 'count') return;
     if (!list) return set({ live: offLive() }, 'Could not load the comments, the draw is off. Try again.');
-    const p = poolOf(list, cur, new Set(cur.winners.map((w) => w.code.toLowerCase())), Date.now());
+    const p = poolOf(list, cur, wonToday(cur.winners), Date.now());
     if (!p.length) { toast('Nobody shared a code for this draw. The draw is off.', false); return set({ live: offLive() }); }
     const w = pickOne(p);
     const win: CDrawWinner = { code: w.code, name: w.name, text: w.text, at: Date.now(), keys: cur.keys, given: false, scope: scopeShort };
@@ -159,7 +163,7 @@ export default function CommentDraw({ objectId, token, d, setD, showCard, makeNo
       busyNow = false;
       const { d: now2, setD: set } = latest.current;
       if (!list || now2.live.phase !== 'count' || now2.live.id !== cur.live.id) return;
-      const p = poolOf(list, now2, new Set(now2.winners.map((w) => w.code.toLowerCase())), Date.now());
+      const p = poolOf(list, now2, wonToday(now2.winners), Date.now());
       if (p.length !== now2.live.count) set({ live: { ...now2.live, count: p.length, pool: sample(p) } });
     }, 8000);
     return () => clearInterval(t);
@@ -243,7 +247,7 @@ export default function CommentDraw({ objectId, token, d, setD, showCard, makeNo
 
       {/* who is in the draw */}
       <div className="grid gap-2 rounded-lg bg-white p-2.5">
-        <span className="text-xs font-bold text-emerald-900/70">Who is in the draw (each code once; past winners left out)</span>
+        <span className="text-xs font-bold text-emerald-900/70">Who is in the draw (each code once; today's winners sit out until tomorrow)</span>
         <div className="flex flex-wrap gap-1.5">
           {([['during', 'During the countdown'], ['recent', 'Last N minutes'], ['first', 'First N people'], ['all', 'Everyone'], ['time', 'Between two times']] as const).map(([k, l]) => (
             <button key={k} type="button" onClick={() => setD({ scope: k })} className={`nk-btn px-2.5 py-1 text-xs ${d.scope === k ? 'nk-green' : 'nk-ghost'}`}>{l}</button>
