@@ -439,6 +439,7 @@ function CodesPage({ toast, reviewMode = false, settings = null }: { toast: Toas
   const [filter, setFilter] = useState<'all' | 'featured' | Status>(reviewMode ? 'pending' : 'all');
   const [sel, setSel] = useState<Set<number>>(new Set());
   const [edit, setEdit] = useState<Code | null>(null);
+  const [gift, setGift] = useState<string | null>(null); // the code to give Keys to ('' = type one)
   const [loading, setLoading] = useState(false);
 
   const load = useCallback(async () => {
@@ -495,6 +496,7 @@ function CodesPage({ toast, reviewMode = false, settings = null }: { toast: Toas
               <Btn kind="danger" onClick={() => bulk('delete')}>Delete</Btn>
             </>
           ))}
+          {!reviewMode && <Btn kind="gold" onClick={() => setGift(CODE_RE.test(q.trim()) ? q.trim() : '')} className="inline-flex items-center gap-1.5"><Gift className="h-4 w-4" aria-hidden /> Give Keys</Btn>}
           <Btn kind="ghost" onClick={load}>{loading ? 'Loading…' : 'Refresh'}</Btn>
         </>
       }
@@ -551,6 +553,7 @@ function CodesPage({ toast, reviewMode = false, settings = null }: { toast: Toas
                     <>
                       {(() => { const on = boostOf(r, settings)?.tier === 1; return <Btn kind="ghost" className={`px-2.5! py-1! ${on ? 'text-amber-600' : ''}`} title={on ? 'Unfeature' : r.featured_at ? 'Feature again (restarts quota and timer)' : 'Feature: show this code first'} aria-label={on ? `Unfeature ${r.code}` : `Feature ${r.code}`} onClick={() => bulk(on ? { featured_at: null, boost_quota: null, boost_hours: null } : { featured_at: new Date().toISOString(), status: 'active', boost_quota: null, boost_hours: null }, [r.id])}>{on ? '★' : '☆'}</Btn>; })()}{' '}
                       <Btn kind="ghost" className="px-2.5! py-1!" onClick={() => bulk({ status: r.status === 'active' ? 'inactive' : 'active' }, [r.id])}>{r.status === 'active' ? 'Disable' : 'Enable'}</Btn>{' '}
+                      <Btn kind="ghost" className="px-2.5! py-1! text-amber-700" onClick={() => setGift(r.code)} title="Give this code Keys" aria-label={`Give Keys to ${r.code}`}>🎁 Keys</Btn>{' '}
                       <Btn kind="ghost" className="px-2.5! py-1!" onClick={() => setEdit(r)}>Edit</Btn>{' '}
                       <Btn kind="ghost" className="px-2.5! py-1! text-red-700" onClick={() => bulk('delete', [r.id])} aria-label={`Delete ${r.code}`}>✕</Btn>
                     </>
@@ -572,6 +575,7 @@ function CodesPage({ toast, reviewMode = false, settings = null }: { toast: Toas
         </div>
       )}
       {edit && <EditDialog code={edit} onClose={() => setEdit(null)} onSaved={() => { setEdit(null); load(); toast('Saved'); }} toast={toast} />}
+      {gift !== null && <GiveKeysDialog code={gift} onClose={() => setGift(null)} onDone={() => { setGift(null); load(); }} toast={toast} />}
     </Card>
   );
 }
@@ -602,6 +606,75 @@ function EditDialog({ code, onClose, onSaved, toast }: { code: Code; onClose: ()
         </div>
         <label className="grid gap-1 text-sm font-semibold">Note<input className="nk-input" value={f.note} maxLength={300} onChange={(e) => setF({ ...f, note: e.target.value })} /></label>
         <div className="mt-2 flex justify-end gap-2"><Btn kind="ghost" onClick={onClose}>Cancel</Btn><button type="submit" className="nk-btn nk-green px-4 py-2 text-sm">Save</button></div>
+      </form>
+    </div>
+  );
+}
+
+/**
+ * Codes → 🎁 Keys: give one code N Keys by hand (nusuk_admin_award, the same engine as the raffle and
+ * Reward Club gifts). "As fast as possible" puts the code on top until it got N copies; "within N hours"
+ * spreads the N copies evenly over that time. A code that is not on the site yet is added.
+ */
+function GiveKeysDialog({ code, onClose, onDone, toast }: { code: string; onClose: () => void; onDone: () => void; toast: ToastFn }) {
+  const [c, setC] = useState(code);
+  const [keys, setKeys] = useState(50);
+  const [mode, setMode] = useState<'now' | 'hours'>('now');
+  const [hours, setHours] = useState(6);
+  const [busy, setBusy] = useState(false);
+  const v = c.replace(/\s/g, '');
+  const ok = CODE_RE.test(v) && keys >= 1 && keys <= 1000 && (mode === 'now' || (hours >= 1 && hours <= 720));
+  async function give(e: FormEvent) {
+    e.preventDefault();
+    if (!CODE_RE.test(v)) return toast('Code must be NG- followed by exactly 8 letters/digits, e.g. NG-y3JkB7lU', false);
+    const when = mode === 'now' ? 'as fast as possible' : `within ${hours} hour${hours > 1 ? 's' : ''}`;
+    if (!confirm(`Give ${keys} Nusuk Keys to ${v}, ${when}?`)) return;
+    setBusy(true);
+    const { data, error } = await sb!.rpc('nusuk_admin_award', { p_code: v, p_keys: keys, p_hours: mode === 'now' ? null : hours });
+    setBusy(false);
+    if (error) return toast(errText(error), false);
+    const r = data as { ok: boolean; reason?: string };
+    if (!r.ok) return toast(r.reason === 'rejected' ? 'This code is rejected on the site. Change its status first.' : 'Could not give the Keys', false);
+    toast(`🎁 ${keys} Keys are on their way to ${v} (${when})`);
+    onDone();
+  }
+  const chip = (on: boolean) => `nk-btn px-2.5 py-1 text-xs ${on ? 'nk-green' : 'nk-ghost'}`;
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-emerald-950/50 p-4" onClick={onClose}>
+      <form onSubmit={give} onClick={(e) => e.stopPropagation()} className="nk-card grid w-full max-w-md gap-3 p-5" role="dialog" aria-modal="true" aria-label="Give Keys">
+        <h3 className="flex items-center gap-2 text-lg font-bold"><Gift className="h-5 w-5 text-amber-600" aria-hidden /> Give Keys to a code</h3>
+        <label className="grid gap-1 text-sm font-semibold">Nusuk code
+          <input className="nk-input font-mono" value={c} onChange={(e) => setC(e.target.value)} placeholder="NG-y3JkB7lU" autoFocus={!code} />
+        </label>
+        <div className="grid gap-1.5 text-sm font-semibold">How many Keys
+          <div className="flex flex-wrap items-center gap-1.5">
+            {[10, 25, 50, 100, 200].map((n) => <button key={n} type="button" onClick={() => setKeys(n)} className={chip(keys === n)}>{n}</button>)}
+            <input type="number" min={1} max={1000} className="nk-input py-1 text-xs" style={{ width: 90 }} value={keys} onChange={(e) => setKeys(Math.min(1000, Math.max(1, Number(e.target.value) || 1)))} aria-label="Keys" />
+          </div>
+        </div>
+        <div className="grid gap-1.5 text-sm font-semibold">When
+          <div className="flex flex-wrap gap-1.5">
+            <button type="button" onClick={() => setMode('now')} className={chip(mode === 'now')}>⚡ As fast as possible</button>
+            <button type="button" onClick={() => setMode('hours')} className={chip(mode === 'hours')}>⏱ Within a set time</button>
+          </div>
+          {mode === 'hours' && (
+            <div className="flex flex-wrap items-center gap-1.5">
+              {[1, 3, 6, 12, 24, 48].map((h) => <button key={h} type="button" onClick={() => setHours(h)} className={chip(hours === h)}>{h < 24 ? `${h} h` : `${h / 24} day${h > 24 ? 's' : ''}`}</button>)}
+              <input type="number" min={1} max={720} className="nk-input py-1 text-xs" style={{ width: 80 }} value={hours} onChange={(e) => setHours(Math.min(720, Math.max(1, Number(e.target.value) || 1)))} aria-label="Hours" />
+              <span className="text-xs font-normal text-emerald-900/60">hours</span>
+            </div>
+          )}
+          <p className="text-xs font-normal text-emerald-900/60">
+            {mode === 'now'
+              ? 'The code goes to the top and is shown first until it got all its Keys.'
+              : `The Keys arrive evenly over ${hours} hour${hours > 1 ? 's' : ''} (about one every ${Math.max(1, Math.round((hours * 60) / keys))} min).`}
+            {' '}A new gift of the same kind replaces the one still running.
+          </p>
+        </div>
+        <div className="mt-2 flex justify-end gap-2">
+          <Btn kind="ghost" onClick={onClose}>Cancel</Btn>
+          <button type="submit" disabled={!ok || busy} className="nk-btn nk-gold px-4 py-2 text-sm disabled:opacity-50">{busy ? 'Giving…' : `🎁 Give ${keys} Keys`}</button>
+        </div>
       </form>
     </div>
   );
