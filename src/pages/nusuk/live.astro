@@ -397,7 +397,8 @@ import { lucide } from './_lib/lucide';
       </div>
 
       <!-- Bottom: breaking news (Nusuk Manager → Live screen → Breaking news) + ticker -->
-      <div class="-mx-8 -mb-8 flex shrink-0 flex-col">
+      <!-- z 65: stays sharp above notices, voting, the comment draw and announcements (they blur only the screen above it); live comments (z 70) still go over it -->
+      <div class="relative z-[65] -mx-8 -mb-8 flex shrink-0 flex-col">
         <div id="ls-bk" class="ls-bk" data-hidden>
           <div class="ls-bk-label">
             <span class="ls-bk-dot"></span>
