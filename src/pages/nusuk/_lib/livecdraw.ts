@@ -34,6 +34,15 @@ export function initLiveCDraw() {
   };
   const randCode = () => (pool.length ? pool[Math.floor(Math.random() * pool.length)] : '••••••');
 
+  let shownCount = -1;
+  function setCount(n: number, quiet = false) {
+    if (n === shownCount) return;
+    const grew = n > shownCount && shownCount >= 0 && !quiet;
+    shownCount = n;
+    const el = $('ls-cd-count');
+    el.textContent = bn(n);
+    if (grew) { el.classList.remove('lcd-bump'); void el.offsetWidth; el.classList.add('lcd-bump'); }
+  }
   function stopAll() { clearInterval(tick); clearTimeout(roll); rolling = false; tick = undefined; }
   function setMode(m: 'count' | 'roll' | 'win') { box.dataset.mode = m; }
 
@@ -41,7 +50,7 @@ export function initLiveCDraw() {
     $('ls-cd-title').textContent = l.title || '🎁 কমেন্ট ড্র';
     $('ls-cd-prize').textContent = l.prize;
     $('ls-cd-rule').textContent = l.rule;
-    $('ls-cd-count').textContent = bn(l.count);
+    setCount(l.count, true);
     pool = l.pool.length ? l.pool : pool;
     if (box.hasAttribute('data-hidden')) {
       box.removeAttribute('data-hidden');
@@ -100,8 +109,9 @@ export function initLiveCDraw() {
         setTimeout(() => { if (phase === 'off') { box.setAttribute('data-hidden', ''); $('ls-cd-conf').innerHTML = ''; } }, 600);
         return;
       }
-      if (l.id === id && l.phase === phase) { // same draw: only the text may have changed
-        $('ls-cd-count').textContent = bn(l.count);
+      if (l.id === id && l.phase === phase) { // same draw: the number of people grows while the countdown runs
+        setCount(l.count);
+        if (l.pool.length) pool = l.pool;
         return;
       }
       const fresh = l.id !== id;

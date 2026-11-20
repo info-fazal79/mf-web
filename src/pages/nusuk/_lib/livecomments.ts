@@ -88,6 +88,29 @@ export async function fbComments(objectId: string, token: string): Promise<FbCom
 }
 
 /**
+ * Every comment made since `since` (ms), newest first: pages back until it reaches an older comment
+ * (at most 30 pages = 3000 comments). Used to count the comment draw live while its countdown runs.
+ */
+export async function fbCommentsSince(objectId: string, token: string, since: number): Promise<FbComment[]> {
+  const out: FbComment[] = [];
+  let after = '';
+  for (let page = 0; page < 30; page++) {
+    const p: Record<string, string> = { fields: 'id,message,created_time,from{id,name}', order: 'reverse_chronological', filter: 'stream', limit: '100', access_token: token };
+    if (after) p.after = after;
+    const r = await get<{ data: RawComment[]; paging?: { cursors?: { after?: string }; next?: string } }>(`${objectId}/comments`, p);
+    let older = false;
+    for (const x of r.data) {
+      const time = x.created_time ? Date.parse(x.created_time) : Date.now();
+      if (time < since) { older = true; continue; }
+      if ((x.message ?? '').trim()) out.push({ id: x.id, name: x.from?.name ?? '', text: (x.message ?? '').trim(), time });
+    }
+    after = r.paging?.cursors?.after ?? '';
+    if (older || !r.paging?.next || !after || !r.data.length) break;
+  }
+  return out;
+}
+
+/**
  * Every comment of a live video or a video, oldest first (pages of 100, at most `max`),
  * for the comment draw and for collecting the Nusuk codes.
  */

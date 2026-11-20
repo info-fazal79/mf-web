@@ -12,7 +12,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Download, Gift, Megaphone, MonitorPlay, RefreshCw, Shuffle, Square, Trophy, Upload } from 'lucide-react';
 import { supabase as sb } from '@/lib/supabase';
 import { extractCodes } from '../_lib/extract';
-import { fbAllComments, type FbComment } from '../_lib/livecomments';
+import { fbAllComments, fbCommentsSince, type FbComment } from '../_lib/livecomments';
 import { offLive, type CDraw, type CDrawWinner } from '../_lib/livecfg';
 
 type ToastFn = (t: string, ok?: boolean) => void;
@@ -43,7 +43,8 @@ function entriesOf(list: FbComment[]): Entry[] {
 /** who is in the draw right now (each code once, past winners left out) */
 function poolOf(list: FbComment[], d: CDraw, won: Set<string>, now: number): Entry[] {
   let p: Entry[];
-  if (d.scope === 'recent') p = entriesOf(list.filter((c) => c.time >= now - d.mins * 60e3)); // anyone who shared a code in the last N minutes
+  if (d.scope === 'during') p = d.live.at ? entriesOf(list.filter((c) => c.time >= d.live.at - 3000 && c.time <= d.live.at + d.live.secs * 1000 + 3000)) : []; // while the countdown ran
+  else if (d.scope === 'recent') p = entriesOf(list.filter((c) => c.time >= now - d.mins * 60e3)); // anyone who shared a code in the last N minutes
   else {
     p = entriesOf(list);
     if (d.scope === 'first') p = p.slice(0, d.n);
@@ -84,11 +85,11 @@ export default function CommentDraw({ objectId, token, d, setD, showCard, makeNo
   // "last N minutes" moves with the clock
   useEffect(() => { if (d.scope !== 'recent') return; const t = setInterval(() => setNowT(Date.now()), 10_000); return () => clearInterval(t); }, [d.scope]);
 
-  const scopeText = d.scope === 'first' ? `প্রথম ${bn(d.n)} জন কোড শেয়ারকারীর মধ্য থেকে`
+  const scopeText = d.scope === 'during' ? 'কাউন্টডাউন চলাকালে কমেন্টে কোড দেওয়া সবার মধ্য থেকে' : d.scope === 'first' ? `প্রথম ${bn(d.n)} জন কোড শেয়ারকারীর মধ্য থেকে`
     : d.scope === 'time' ? `${bnT(d.from)} থেকে ${bnT(d.to)}-এর মধ্যে যারা কমেন্টে কোড দেবেন, তাদের মধ্য থেকে`
     : d.scope === 'recent' ? `শেষ ${bn(d.mins)} মিনিটে কমেন্টে কোড দেওয়া সবার মধ্য থেকে`
     : 'কমেন্টে কোড দেওয়া সবার মধ্য থেকে';
-  const scopeShort = d.scope === 'first' ? `first ${d.n}` : d.scope === 'time' ? `${d.from}–${d.to}` : d.scope === 'recent' ? `last ${d.mins} min` : 'all';
+  const scopeShort = d.scope === 'during' ? 'during the countdown' : d.scope === 'first' ? `first ${d.n}` : d.scope === 'time' ? `${d.from}–${d.to}` : d.scope === 'recent' ? `last ${d.mins} min` : 'all';
 
   async function load() {
     if (!objectId) return toast('No live video found. Start the live or put the video link in Settings.', false);
@@ -102,19 +103,30 @@ export default function CommentDraw({ objectId, token, d, setD, showCard, makeNo
 
   // ---- the draw on the live screen
   const liveOn = d.live.phase !== 'off';
+  /** comments the draw needs: only the recent ones for "during the countdown" / "last N minutes" (fast), else all */
+  async function fetchFor(cur: CDraw): Promise<FbComment[] | null> {
+    if (!objectId) return null;
+    if (cur.scope !== 'during' && cur.scope !== 'recent') return (await load()) ?? null;
+    try { return await fbCommentsSince(objectId, token, cur.scope === 'during' ? cur.live.at - 3000 : Date.now() - cur.mins * 60e3); }
+    catch (e) { toast(errText(e), false); return null; }
+  }
   async function startLive() {
     if (!objectId) return toast('No live video found. Start the live or put the video link in Settings.', false);
-    const list = all ?? (await load());
+    const at = Date.now();
+    const list = d.scope === 'during' ? [] : await fetchFor(d);
     if (!list) return;
-    const p = poolOf(list, d, won, Date.now());
+    const p = d.scope === 'during' ? [] : poolOf(list, d, won, at);
     setPick(null);
-    setEndAt(Date.now() + secs * 1000);
-    setD({ live: { phase: 'count', id: `cd${Date.now().toString(36)}`, secs, title: '🎁 কমেন্ট ড্র', prize: `${bn(d.keys)}টি Nusuk Key`, rule: scopeText, count: p.length, pool: sample(p), winner: null } },
+    setEndAt(at + secs * 1000);
+    setD({ live: { phase: 'count', id: `cd${at.toString(36)}`, at, secs, title: '🎁 কমেন্ট ড্র', prize: `${bn(d.keys)}টি Nusuk Key`, rule: scopeText, count: p.length, pool: sample(p), winner: null } },
       'Countdown on the live screen. Keep this page open: the winner is picked here at the end.');
   }
   async function finishLive() {
     setEndAt(0);
-    const list = await load(); // every comment up to this moment
+    const { d: cur0 } = latest.current;
+    setLoading(1);
+    const list = await fetchFor(cur0); // every comment up to this moment
+    setLoading(0);
     const { d: cur, setD: set } = latest.current;
     if (cur.live.phase !== 'count') return;
     if (!list) return set({ live: offLive() }, 'Could not load the comments, the draw is off. Try again.');
@@ -135,6 +147,24 @@ export default function CommentDraw({ objectId, token, d, setD, showCard, makeNo
     return () => clearInterval(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [endAt]);
+  // while the countdown runs: count the people again every 8 s, so the number on the screen grows
+  useEffect(() => {
+    if (!endAt || (d.scope !== 'during' && d.scope !== 'recent')) return;
+    let busyNow = false;
+    const t = setInterval(async () => {
+      const { d: cur } = latest.current;
+      if (busyNow || cur.live.phase !== 'count' || Date.now() > endAt - 1500) return;
+      busyNow = true;
+      const list = await fetchFor(cur).catch(() => null);
+      busyNow = false;
+      const { d: now2, setD: set } = latest.current;
+      if (!list || now2.live.phase !== 'count' || now2.live.id !== cur.live.id) return;
+      const p = poolOf(list, now2, new Set(now2.winners.map((w) => w.code.toLowerCase())), Date.now());
+      if (p.length !== now2.live.count) set({ live: { ...now2.live, count: p.length, pool: sample(p) } });
+    }, 8000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [endAt, d.scope]);
   // the page was opened again while a countdown was on (its end time is unknown here): offer to finish it
   const stuck = d.live.phase === 'count' && !endAt;
   async function addCodes() {
@@ -215,7 +245,7 @@ export default function CommentDraw({ objectId, token, d, setD, showCard, makeNo
       <div className="grid gap-2 rounded-lg bg-white p-2.5">
         <span className="text-xs font-bold text-emerald-900/70">Who is in the draw (each code once; past winners left out)</span>
         <div className="flex flex-wrap gap-1.5">
-          {([['recent', 'Last N minutes'], ['first', 'First N people'], ['all', 'Everyone'], ['time', 'Between two times']] as const).map(([k, l]) => (
+          {([['during', 'During the countdown'], ['recent', 'Last N minutes'], ['first', 'First N people'], ['all', 'Everyone'], ['time', 'Between two times']] as const).map(([k, l]) => (
             <button key={k} type="button" onClick={() => setD({ scope: k })} className={`nk-btn px-2.5 py-1 text-xs ${d.scope === k ? 'nk-green' : 'nk-ghost'}`}>{l}</button>
           ))}
         </div>
@@ -226,6 +256,7 @@ export default function CommentDraw({ objectId, token, d, setD, showCard, makeNo
             <span className="text-emerald-900/60">people who shared a code first</span>
           </div>
         )}
+        {d.scope === 'during' && <p className="text-xs text-emerald-900/65">Everyone who comments a code while the countdown runs on the live screen (below). The number on the screen grows as people join; each code counts once.</p>}
         {d.scope === 'recent' && (
           <div className="flex flex-wrap items-center gap-1.5 text-xs">
             {[5, 10, 15, 30].map((n) => <button key={n} type="button" onClick={() => setD({ mins: n })} className={`nk-btn px-2.5 py-1 ${d.mins === n ? 'nk-green' : 'nk-ghost'}`}>{n} min</button>)}
@@ -247,7 +278,7 @@ export default function CommentDraw({ objectId, token, d, setD, showCard, makeNo
           <span>Nusuk Keys for the winner</span>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button type="button" onClick={draw} disabled={!pool.length || !!spin} className="nk-btn flex items-center gap-1.5 bg-gradient-to-br from-[#f7d76a] to-[#e0b93a] px-4 py-2 text-sm font-bold text-emerald-950 disabled:opacity-50"><Shuffle className="h-4 w-4" /> {spin ? 'Drawing…' : `Draw a winner (${pool.length})`}</button>
+          <button type="button" onClick={draw} disabled={!pool.length || !!spin || d.scope === 'during'} className="nk-btn flex items-center gap-1.5 bg-gradient-to-br from-[#f7d76a] to-[#e0b93a] px-4 py-2 text-sm font-bold text-emerald-950 disabled:opacity-50"><Shuffle className="h-4 w-4" /> {spin ? 'Drawing…' : `Draw a winner (${pool.length})`}</button>
           <button type="button" onClick={() => makeNotice('🎁 কমেন্ট গিফট', 'কমেন্টে আপনার নুসুক কোড দিন',
             `লাইভে কমেন্টে আপনার নুসুক রেফারেল কোড লিখুন। আপনার কোডটি আমাদের ওয়েবসাইটে যোগ করে দেওয়া হবে, আর ${scopeText} ড্রয়ের মাধ্যমে একজন পাবেন ${bn(d.keys)}টি Nusuk Key একদম ফ্রি!`)}
             className="nk-btn nk-ghost flex items-center gap-1.5 px-3 py-2 text-xs"><Megaphone className="h-3.5 w-3.5" /> Make the notice &amp; show it</button>
@@ -259,7 +290,9 @@ export default function CommentDraw({ objectId, token, d, setD, showCard, makeNo
             <>
               <div className="flex flex-wrap items-center gap-1.5 text-xs">
                 <span className="font-semibold">Countdown:</span>
-                {[10, 30, 60, 120, 300].map((s) => <button key={s} type="button" onClick={() => setSecs(s)} className={`nk-btn px-2.5 py-1 ${secs === s ? 'nk-green' : 'nk-ghost'}`}>{s < 60 ? `${s} s` : `${s / 60} min`}</button>)}
+                {[30, 60, 120, 300, 600, 900].map((s) => <button key={s} type="button" onClick={() => setSecs(s)} className={`nk-btn px-2.5 py-1 ${secs === s ? 'nk-green' : 'nk-ghost'}`}>{s < 60 ? `${s} s` : `${s / 60} min`}</button>)}
+                <input type="number" min={1} max={60} className="nk-input py-1 text-xs" style={{ width: 70 }} value={Math.max(1, Math.round(secs / 60))} onChange={(e) => setSecs(Math.min(60, Math.max(1, Number(e.target.value) || 1)) * 60)} aria-label="Minutes" />
+                <span className="text-emerald-900/60">min</span>
               </div>
               <button type="button" disabled={!objectId || !!loading} onClick={startLive} className="nk-btn flex items-center justify-center gap-1.5 bg-gradient-to-br from-[#f7d76a] to-[#e0b93a] px-4 py-2 text-sm font-bold text-emerald-950 disabled:opacity-50">
                 <MonitorPlay className="h-4 w-4" /> Start the draw on the live screen
@@ -269,7 +302,7 @@ export default function CommentDraw({ objectId, token, d, setD, showCard, makeNo
           )}
           {d.live.phase === 'count' && (
             <div className="flex flex-wrap items-center gap-2 text-sm">
-              {endAt ? <span className="font-bold">⏳ {loading ? 'Picking the winner…' : `${left} s left · ${d.live.count} in it`}</span> : <span className="font-bold">{loading ? 'Picking the winner…' : 'A countdown is on the screen.'}</span>}
+              {endAt ? <span className="font-bold">⏳ {loading ? 'Picking the winner…' : `${left >= 60 ? `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}` : `${left} s`} left · ${d.live.count} in it`}</span> : <span className="font-bold">{loading ? 'Picking the winner…' : 'A countdown is on the screen.'}</span>}
               {(stuck || endAt > 0) && !loading && <button type="button" onClick={() => finishLive()} className="nk-btn nk-green px-3 py-1.5 text-xs">Draw now</button>}
             </div>
           )}

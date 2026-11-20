@@ -214,9 +214,11 @@ body.ls-has-bk .tvc-pos-bl, body.ls-has-bk .tvc-pos-br { bottom: 190px; }
 .lcd-tag { display: inline-flex; align-items: center; gap: 12px; padding: 8px 28px; border-radius: 9999px; background: linear-gradient(135deg, #ffe08a, #e0b93a); color: #2b1f00; font-size: 32px; font-weight: 800; }
 .lcd-prize { margin-top: 20px; font-size: 76px; font-weight: 800; line-height: 1.15; color: #ffe08a; }
 .lcd-rule { margin-top: 8px; font-size: 30px; opacity: 0.85; }
-.lcd-count-row { display: inline-block; margin-top: 18px; padding: 8px 26px; border-radius: 9999px; background: rgba(255, 255, 255, 0.1); font-size: 30px; }
-.lcd-count-row b { color: #ffe08a; font-size: 38px; }
-.lcd-stage { margin-top: 26px; min-height: 300px; display: grid; place-items: center; }
+.lcd-count-row { display: inline-flex; align-items: center; gap: 18px; margin-top: 18px; padding: 10px 40px; border-radius: 28px; background: rgba(255, 255, 255, 0.1); border: 2px solid rgba(242, 201, 76, 0.45); font-size: 40px; font-weight: 700; }
+.lcd-count { display: inline-block; color: #ffe08a; font-size: 84px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+.lcd-bump { animation: lcd-bump 0.7s cubic-bezier(0.2, 1.5, 0.4, 1); }
+@keyframes lcd-bump { 0% { transform: scale(1.45); color: #fff; } 100% { transform: none; } }
+.lcd-stage { margin-top: 18px; min-height: 280px; display: grid; place-items: center; }
 .lcd-when-count, .lcd-when-roll { display: none; }
 .lcd[data-mode='count'] .lcd-when-count, .lcd[data-mode='roll'] .lcd-when-roll, .lcd[data-mode='win'] .lcd-when-roll { display: block; }
 .lcd-clock-l { font-size: 34px; font-weight: 700; opacity: 0.85; }
